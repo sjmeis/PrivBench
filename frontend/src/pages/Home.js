@@ -1,7 +1,6 @@
-import {Box, Button, Grid2, Paper, Typography} from "@mui/material";
+import {Box, Button, Card, Grid, Typography} from "@mui/joy";
 import { useNavigate } from "react-router-dom";
 import {Info, Timeline} from "@mui/icons-material";
-import logo from "../pictures/logo-transp.png";
 
 
 const Home = () => {
@@ -19,13 +18,11 @@ const Home = () => {
                 paddingTop: 0 // Remove padding on top
             }}
         >
-            {/* Logo */}
-            <Box component="img" src={logo} sx={{ width: '20%', display: 'flex', justifyContent: 'center' }} />
             {/* Main grid container for the 2 boxes */}
-            <Grid2 container spacing={5} justifyContent="center" alignItems="center" sx={{ maxWidth: '90vw' }}>
+            <Grid container spacing={5} justifyContent="center" alignItems="center" sx={{ paddingTop: '50px', maxWidth: '90vw' }}>
                 {/* left box */}
-                <Grid2 item xs={12} md={6}>
-                    <Paper
+                <Grid item xs={12} md={6}>
+                    <Card
                         sx={{
                             backgroundColor: 'secondary.main', // Set background color based on theme
                             height: '66vh', // Set fixed height to 66% of the viewport height
@@ -38,7 +35,7 @@ const Home = () => {
                         }}
                     >
                         <Typography
-                            variant="h6" // Text size
+                            level="h3" // Text size
                             sx={{
                                 color: 'primary.textPrimary', // Text color based on theme
                                 textAlign: 'center', // Center the text horizontally
@@ -46,12 +43,12 @@ const Home = () => {
                         >
                             Graph goes here
                         </Typography>
-                    </Paper>
-                </Grid2>
+                    </Card>
+                </Grid>
 
                 {/* Right Box - Content Section */}
-                <Grid2 item xs={12} md={6}>
-                    <Paper
+                <Grid item xs={12} md={6}>
+                    <Card
                         sx={{
                             backgroundColor: 'secondary.main', // Set background color based on theme
                             height: '66vh', // Set fixed height to 66% of the viewport height
@@ -65,7 +62,7 @@ const Home = () => {
                     >
                         {/* Text Content in the Right Box */}
                         <Box>
-                            <Typography variant="h6" align="center" sx={{ color: 'primary.textPrimary' }}>
+                            <Typography level="h3" align="center" sx={{ color: 'primary.textPrimary' }}>
                                 Right Side Content
                             </Typography>
                             <Typography
@@ -86,36 +83,32 @@ const Home = () => {
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3, marginTop: '300px' }}>
                             {/* Rankings Button */}
                             <Button
-                                variant="contained"
-                                color="primary"
-                                startIcon={<Timeline />} // Add icon
+                                variant="soft"
+                                startDecorator={<Timeline />} // Add icon
                                 onClick={() => navigate("/rankings")} // Navigate to the rankings page
                                 sx={{
                                     width: '40%', // Set button width to 40% of the container width
                                     marginLeft: '10px',
-                                    color: 'primary.textPrimary'
                                 }}
                             >
                                 Rankings
                             </Button>
                             {/* How does it work? Button */}
                             <Button
-                                variant="contained"
-                                color="primary"
+                                variant="soft"
                                 startIcon={<Info />} // Add Info icon
                                 onClick={() => navigate("/information")} // Navigate to the information page
                                 sx={{
                                     width: '40%', // Set button width to 40% of the container width
                                     marginRight: '10px', // Add right margin between buttons
-                                    color: 'primary.textPrimary'
                                 }}
                             >
                                 How does it work?
                             </Button>
                         </Box>
-                    </Paper>
-                </Grid2>
-            </Grid2>
+                    </Card>
+                </Grid>
+            </Grid>
         </Box>
     );
 }
