@@ -38,6 +38,7 @@ function App() {
                             <Route path="/rankings/detail" element={<RankingDetailView/>}/>
                             <Route path="/information" element={<Information />} />
                             <Route path="/register" element={<Register />} />
+                            <Route path="/upload" element={<Upload/>}/>
                             <Route
                                 path="/upload"
                                 element={

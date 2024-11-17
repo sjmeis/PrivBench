@@ -34,8 +34,8 @@ const Navbar = () => {
             <Grid container alignItems="center">
                 {/* Left-aligned logo */}
                 <Grid item xs={1} container justifyContent="flex-start">
-                    <Typography 
-                        onClick={() => navigate("/")} 
+                    <Typography
+                        onClick={() => navigate("/")}
                         level="h2"
                         sx={{ cursor: 'pointer' }}
                     >
@@ -66,7 +66,7 @@ const Navbar = () => {
                         startDecorator={<UploadFile/>}
                         sx={{
                             color: "primary.textPrimary",
-                            bgcolor: "transparent !important", 
+                            bgcolor: "transparent !important",
                             textTransform: "none",
                             fontWeight: "medium",
                             fontSize: "1.2rem",
@@ -112,14 +112,14 @@ const Navbar = () => {
                         >
                             <DarkMode />
                         </Button>
-                        
+
                         {isAuthenticated ? (
                             <Stack direction="row" spacing={1} alignItems="center">
                                 <Typography level="body-sm" sx={{ color: 'primary.textPrimary' }}>
                                     {user.username}
                                 </Typography>
-                                <Button 
-                                    variant="soft" 
+                                <Button
+                                    variant="soft"
                                     color="primary"
                                     onClick={handleLogout}
                                     startDecorator={<LogoutRounded />}
@@ -128,9 +128,10 @@ const Navbar = () => {
                                 </Button>
                             </Stack>
                         ) : (
-                            <Button 
-                                variant="soft" 
+                            <Button
+                                variant="soft"
                                 color="primary"
+                                startDecorator={<Login/>}
                                 onClick={() => navigate('/login')}
                             >
                                 Login
