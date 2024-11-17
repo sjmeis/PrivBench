@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { 
+import {
     Box,
     Typography,
     FormControl,
@@ -20,11 +20,11 @@ const Login = () => {
     });
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    
+
     const navigate = useNavigate();
     const location = useLocation();
     const { login } = useAuth();
-    
+
     const from = location.state?.from?.pathname || "/";
 
     const handleInputChange = (e) => {
