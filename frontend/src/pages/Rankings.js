@@ -1,9 +1,12 @@
-import {Box, Typography} from "@mui/joy";
+import {Box} from "@mui/joy";
+import RankingTable from "../components/RankingTable";
 
 const Rankings = () => {
+
+
     return(
         <Box>
-            <Typography variant="body2" color="textSecondary" align="center">Rankings</Typography>
+            <RankingTable></RankingTable>
         </Box>
     );
 }

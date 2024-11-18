@@ -3,6 +3,7 @@ import { Box } from "@mui/joy";
 import { Route, Routes } from "react-router-dom";
 import { CssBaseline, CssVarsProvider } from "@mui/joy";
 import customTheme from "./Theme/CustomTheme";
+import RankingDetailView from "./pages/RankingDetailView";
 import { AuthProvider } from './contexts/AuthContext';
 
 // Components
@@ -34,6 +35,7 @@ function App() {
                             <Route path="/" element={<Home />} />
                             <Route path="/login" element={<Login />} />
                             <Route path="/rankings" element={<Rankings />} />
+                            <Route path="/rankings/detail" element={<RankingDetailView/>}/>
                             <Route path="/information" element={<Information />} />
                             <Route path="/register" element={<Register />} />
                             <Route
