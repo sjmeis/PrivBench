@@ -3,7 +3,6 @@ import { Box } from "@mui/joy";
 import { Route, Routes } from "react-router-dom";
 import { CssBaseline, CssVarsProvider } from "@mui/joy";
 import customTheme from "./Theme/CustomTheme";
-import RankingDetailView from "./pages/RankingDetailView";
 import { AuthProvider } from './contexts/AuthContext';
 
 // Components
@@ -17,6 +16,7 @@ import Information from "./pages/Information";
 import Rankings from "./pages/Rankings";
 import Upload from "./pages/Upload";
 import Register from "./pages/Register";
+import RankingDetailView from "./pages/RankingDetailView";
 
 function App() {
     return (
