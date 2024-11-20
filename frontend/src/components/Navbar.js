@@ -1,27 +1,27 @@
 import React from "react";
-
-import {useNavigate} from "react-router-dom";
-import {Grid, Stack, useColorScheme} from "@mui/joy";
-import {Box, Button, Typography} from "@mui/joy";
-import {DarkMode, Info, Timeline, UploadFile} from "@mui/icons-material";
-
-
+import { useNavigate } from "react-router-dom";
+import { Grid, Stack, useColorScheme } from "@mui/joy";
+import { Box, Button, Typography } from "@mui/joy";
+import { DarkMode, Info, Timeline, UploadFile, LogoutRounded } from "@mui/icons-material";
+import { useAuth } from '../contexts/AuthContext';
 
 const Navbar = () => {
     const navigate = useNavigate();
-
     const { mode, setMode } = useColorScheme();
+    const { user, logout, isAuthenticated } = useAuth();
 
     if (!mode) {
-        return null; // Return nothing if mode is not defined
+        return null;
     }
 
-
     const handleChange = () => {
-        console.log(mode)
-        setMode(mode === 'dark' ? 'light': 'dark' );
+        setMode(mode === 'dark' ? 'light' : 'dark');
     };
 
+    const handleLogout = async () => {
+        await logout();
+        navigate('/');
+    };
 
     return (
         <Box
@@ -31,11 +31,16 @@ const Navbar = () => {
                 borderBottom: '1.5px solid #161a1b',
             }}
         >
-
             <Grid container alignItems="center">
-                {/* Left-aligned avatar */}
+                {/* Left-aligned logo */}
                 <Grid item xs={1} container justifyContent="flex-start">
-                    <Typography onClick={() => navigate("/")} level="h2">PrivBench</Typography>
+                    <Typography 
+                        onClick={() => navigate("/")} 
+                        level="h2"
+                        sx={{ cursor: 'pointer' }}
+                    >
+                        PrivBench
+                    </Typography>
                 </Grid>
 
                 {/* Centered buttons */}
@@ -50,7 +55,7 @@ const Navbar = () => {
                             textTransform: "none",
                             fontWeight: "medium",
                             fontSize: "1.2rem",
-                            mx: 1, // Reduced horizontal margin
+                            mx: 1,
                         }}
                     >
                         Rankings
@@ -61,7 +66,7 @@ const Navbar = () => {
                         startDecorator={<UploadFile/>}
                         sx={{
                             color: "primary.textPrimary",
-                            bgcolor: "transparent !important",
+                            bgcolor: "transparent !important", 
                             textTransform: "none",
                             fontWeight: "medium",
                             fontSize: "1.2rem",
@@ -80,14 +85,14 @@ const Navbar = () => {
                             textTransform: "none",
                             fontWeight: "medium",
                             fontSize: "1.2rem",
-                            mx: 1, // Reduced horizontal margin
+                            mx: 1,
                         }}
                     >
                         How does it work?
                     </Button>
                 </Grid>
 
-                {/* Right-aligned login button */}
+                {/* Right-aligned authentication and theme buttons */}
                 <Grid item xs={1} container justifyContent="flex-end" alignItems="center">
                     <Stack direction="row" spacing={1} alignItems="center">
                         <Button
@@ -96,10 +101,10 @@ const Navbar = () => {
                             color="neutral"
                             size="sm"
                             sx={{
-                                height: 36, // Adjust button size as needed
+                                height: 36,
                                 width: 36,
-                                minWidth: 'auto', // Prevents Joy's default min-width for buttons
-                                padding: 0, // Removes default padding
+                                minWidth: 'auto',
+                                padding: 0,
                                 display: 'flex',
                                 justifyContent: 'center',
                                 alignItems: 'center',
@@ -107,13 +112,33 @@ const Navbar = () => {
                         >
                             <DarkMode />
                         </Button>
-                        <Button variant="soft" color="primary">
-                            Login
-                        </Button>
+                        
+                        {isAuthenticated ? (
+                            <Stack direction="row" spacing={1} alignItems="center">
+                                <Typography level="body-sm" sx={{ color: 'primary.textPrimary' }}>
+                                    {user.username}
+                                </Typography>
+                                <Button 
+                                    variant="soft" 
+                                    color="primary"
+                                    onClick={handleLogout}
+                                    startDecorator={<LogoutRounded />}
+                                >
+                                    Logout
+                                </Button>
+                            </Stack>
+                        ) : (
+                            <Button 
+                                variant="soft" 
+                                color="primary"
+                                onClick={() => navigate('/login')}
+                            >
+                                Login
+                            </Button>
+                        )}
                     </Stack>
                 </Grid>
             </Grid>
-
         </Box>
     );
 }
