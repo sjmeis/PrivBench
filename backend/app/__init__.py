@@ -1,4 +1,5 @@
 from flask import Flask
+from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager
 from celery import Celery
@@ -11,6 +12,11 @@ celery = Celery(__name__, broker=Config.CELERY_BROKER_URL)
 
 def create_app():
     app = Flask(__name__)
+
+    CORS(app, 
+        supports_credentials=True,  # Important for cookies
+        origins=["http://localhost:3000"])
+    
     app.config.from_object(Config)
     
     db.init_app(app)
