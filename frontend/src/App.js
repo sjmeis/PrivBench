@@ -7,8 +7,6 @@ import { AuthProvider } from './contexts/AuthContext';
 
 // Components
 import Navbar from "./components/Navbar";
-import ProtectedRoute from "./components/ProtectedRoute";
-
 // Pages
 import Home from "./pages/Home";
 import Login from "./pages/Login";
@@ -19,6 +17,8 @@ import Register from "./pages/Register";
 import RankingDetailView from "./pages/RankingDetailView";
 
 function App() {
+
+    //fixme: implement protected rout when login context is working properly
     return (
         <AuthProvider>
             <CssVarsProvider defaultMode="dark" theme={customTheme}>
@@ -38,14 +38,7 @@ function App() {
                             <Route path="/rankings/detail" element={<RankingDetailView/>}/>
                             <Route path="/information" element={<Information />} />
                             <Route path="/register" element={<Register />} />
-                            <Route
-                                path="/upload"
-                                element={
-                                    <ProtectedRoute>
-                                        <Upload />
-                                    </ProtectedRoute>
-                                }
-                            />
+                            <Route path="/upload" element={<Upload/>}/>
                         </Routes>
                     </Box>
                 </Box>
