@@ -2,7 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Grid, Stack, useColorScheme } from "@mui/joy";
 import { Box, Button, Typography } from "@mui/joy";
-import { DarkMode, Info, Timeline, UploadFile, LogoutRounded } from "@mui/icons-material";
+import {DarkMode, Info, Timeline, UploadFile, LogoutRounded, Login} from "@mui/icons-material";
 import { useAuth } from '../contexts/AuthContext';
 
 const Navbar = () => {
