@@ -16,6 +16,7 @@ import Information from "./pages/Information";
 import Rankings from "./pages/Rankings";
 import Upload from "./pages/Upload";
 import Register from "./pages/Register";
+import RankingDetailView from "./pages/RankingDetailView";
 
 function App() {
     return (
@@ -34,6 +35,7 @@ function App() {
                             <Route path="/" element={<Home />} />
                             <Route path="/login" element={<Login />} />
                             <Route path="/rankings" element={<Rankings />} />
+                            <Route path="/rankings/detail" element={<RankingDetailView/>}/>
                             <Route path="/information" element={<Information />} />
                             <Route path="/register" element={<Register />} />
                             <Route
