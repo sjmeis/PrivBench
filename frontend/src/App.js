@@ -15,6 +15,7 @@ import Login from "./pages/Login";
 import Information from "./pages/Information";
 import Rankings from "./pages/Rankings";
 import Upload from "./pages/Upload";
+import Register from "./pages/Register";
 
 function App() {
     return (
@@ -34,6 +35,7 @@ function App() {
                             <Route path="/login" element={<Login />} />
                             <Route path="/rankings" element={<Rankings />} />
                             <Route path="/information" element={<Information />} />
+                            <Route path="/register" element={<Register />} />
                             <Route
                                 path="/upload"
                                 element={

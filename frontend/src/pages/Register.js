@@ -13,17 +13,18 @@ import {
 } from "@mui/joy";
 import { useAuth } from '../contexts/AuthContext';
 
-const Login = () => {
+const Register = () => {
     const [formData, setFormData] = useState({
         username: '',
-        password: ''
+        password: '',
+        confirmPassword: ''
     });
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     
     const navigate = useNavigate();
     const location = useLocation();
-    const { login } = useAuth();
+    const { register } = useAuth();
     
     const from = location.state?.from?.pathname || "/";
 
@@ -35,13 +36,34 @@ const Login = () => {
         }));
     };
 
+    const validateForm = () => {
+        if (formData.password !== formData.confirmPassword) {
+            setError("Passwords don't match");
+            return false;
+        }
+        if (formData.password.length < 6) {
+            setError("Password must be at least 6 characters long");
+            return false;
+        }
+        if (formData.username.length < 3) {
+            setError("Username must be at least 3 characters long");
+            return false;
+        }
+        return true;
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+
+        if (!validateForm()) {
+            return;
+        }
+
         setIsLoading(true);
 
         try {
-            await login(formData.username, formData.password);
+            await register(formData.username, formData.password);
             navigate(from, { replace: true });
         } catch (err) {
             setError(err.message);
@@ -67,7 +89,7 @@ const Login = () => {
             }}
         >
             <Typography level="h4" component="h1" sx={{ mb: 2 }}>
-                Login to PrivBench
+                Create Account
             </Typography>
 
             {error && (
@@ -100,7 +122,18 @@ const Login = () => {
                             type="password"
                             value={formData.password}
                             onChange={handleInputChange}
-                            autoComplete="current-password"
+                            autoComplete="new-password"
+                        />
+                    </FormControl>
+
+                    <FormControl required>
+                        <FormLabel>Confirm Password</FormLabel>
+                        <Input
+                            name="confirmPassword"
+                            type="password"
+                            value={formData.confirmPassword}
+                            onChange={handleInputChange}
+                            autoComplete="new-password"
                         />
                     </FormControl>
 
@@ -109,7 +142,7 @@ const Login = () => {
                         loading={isLoading}
                         loadingPosition="center"
                     >
-                        {isLoading ? 'Logging in...' : 'Login'}
+                        {isLoading ? 'Creating Account...' : 'Register'}
                     </Button>
 
                     <Divider>or</Divider>
@@ -117,9 +150,9 @@ const Login = () => {
                     <Button
                         variant="outlined"
                         color="neutral"
-                        onClick={() => navigate('/register')}
+                        onClick={() => navigate('/login')}
                     >
-                        Create new account
+                        Already have an account? Login
                     </Button>
                 </Stack>
             </form>
@@ -127,4 +160,4 @@ const Login = () => {
     );
 };
 
-export default Login;
+export default Register;
