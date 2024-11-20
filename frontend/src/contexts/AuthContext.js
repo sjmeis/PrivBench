@@ -15,9 +15,9 @@ export const AuthProvider = ({ children }) => {
             const response = await fetch('http://localhost:5000/user', {
                 credentials: 'include'
             });
-            const data = await response.json();
             
             if (response.ok) {
+                const data = await response.json();
                 setUser(data);
             } else {
                 setUser(null);
@@ -30,41 +30,83 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    const login = async (username, password) => {
-        const response = await fetch('http://localhost:5000/login', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            credentials: 'include',
-            body: JSON.stringify({ username, password })
-        });
+    const register = async (username, password) => {
+        try {
+            const response = await fetch('http://localhost:5000/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify({ username, password })
+            });
 
-        const data = await response.json();
-        
-        if (!response.ok) {
-            throw new Error(data.message);
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.message || 'Registration failed');
+            }
+
+            // After successful registration, automatically log in
+            if (data.success) {
+                await checkAuth();
+            }
+
+            return data;
+        } catch (error) {
+            throw error;
         }
+    };
 
-        await checkAuth(); // Refresh user data after login
-        return data;
+    const login = async (username, password) => {
+        try {
+            const response = await fetch('http://localhost:5000/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify({ username, password })
+            });
+
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.message || 'Login failed');
+            }
+
+            if (data.success) {
+                await checkAuth();
+            }
+
+            return data;
+        } catch (error) {
+            throw error;
+        }
     };
 
     const logout = async () => {
         try {
-            await fetch('http://localhost:5000/logout', {
+            const response = await fetch('http://localhost:5000/logout', {
                 method: 'POST',
                 credentials: 'include'
             });
-            setUser(null);
+
+            if (response.ok) {
+                setUser(null);
+            } else {
+                throw new Error('Logout failed');
+            }
         } catch (error) {
             console.error('Logout failed:', error);
+            throw error;
         }
     };
 
     const value = {
         user,
         loading,
+        register,
         login,
         logout,
         isAuthenticated: !!user
@@ -84,3 +126,5 @@ export const useAuth = () => {
     }
     return context;
 };
+
+export default AuthProvider;
