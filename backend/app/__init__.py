@@ -2,17 +2,17 @@ from flask import Flask
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager
+from flask_migrate import Migrate
 from celery import Celery
 from .config import Config
 
 db = SQLAlchemy()
 jwt = JWTManager()
-
+migrate = Migrate()
 celery = Celery(__name__, broker=Config.CELERY_BROKER_URL)
 
 def create_app():
     app = Flask(__name__)
-
     CORS(app, 
         supports_credentials=True,  # Important for cookies
         origins=["http://localhost:3000"])
@@ -21,7 +21,7 @@ def create_app():
     
     db.init_app(app)
     jwt.init_app(app)
-    
+    migrate.init_app(app, db)
     celery.conf.update(app.config)
     
     from .routes.auth import auth_bp
