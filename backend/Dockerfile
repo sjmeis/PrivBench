@@ -2,6 +2,8 @@ FROM python:3.9-slim
 
 WORKDIR /app
 
+RUN apt-get update && apt-get install -y postgresql-client
+
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 
@@ -12,5 +14,5 @@ ENV FLASK_ENV=development
 
 EXPOSE 5000
 
-# Run the Flask development server
-CMD ["flask", "run", "--host=0.0.0.0"]
+RUN chmod +x /app/entrypoint.sh
+ENTRYPOINT ["/app/entrypoint.sh"]
