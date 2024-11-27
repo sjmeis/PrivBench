@@ -1,6 +1,16 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import {Avatar, Dropdown, Grid, ListDivider, Menu, MenuButton, MenuItem, Stack, useColorScheme} from "@mui/joy";
+import {
+    Avatar,
+    Dropdown,
+    Grid,
+    ListDivider,
+    Menu,
+    MenuButton,
+    MenuItem,
+    Stack,
+    useColorScheme
+} from "@mui/joy";
 import { Box, Button, Typography } from "@mui/joy";
 import {DarkMode, Info, Timeline, UploadFile, Login} from "@mui/icons-material";
 import { useAuth } from '../../contexts/AuthContext';
@@ -48,7 +58,6 @@ const Navbar = () => {
                         PrivBench
                     </Typography>
                 </Grid>
-
                 {/* Centered buttons */}
                 <Grid item xs={10} container justifyContent="center">
                     <Button
