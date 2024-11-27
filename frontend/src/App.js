@@ -30,7 +30,7 @@ function App() {
                     minHeight="calc(100vh - 65.5px)"
                     backgroundColor="primary.background"
                 >
-                    <Box flex="1" sx={{padding: '40px'}}>
+                    <Box flex="1" sx={{paddingLeft: '40px', paddingRight: '40px', paddingTop: '10px', paddingBottom: '40px'}}>
                         <Routes>
                             <Route path="/" element={<Home/>}/>
                             <Route path="/login" element={<Login/>}/>
