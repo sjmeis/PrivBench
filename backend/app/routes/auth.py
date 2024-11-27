@@ -22,7 +22,7 @@ def register():
         data = request.get_json()
         
         # Validate required fields
-        if not all(k in data for k in ["username", "password"]):
+        if not all(k in data for k in ["username", "mailAddress", "password"]):
             return jsonify({"message": "All fields are required"}), 400
         
         # Validate username length and format if needed
@@ -33,10 +33,18 @@ def register():
         # Check if user already exists
         if User.query.filter_by(username=username).first():
             return jsonify({"message": "Username already taken"}), 409
+
+        #//TODO: check also if is valid mail address in with regex
+
+        mail_address = data["mailAddress"].strip()
+        if User.query.filter_by(mail_address=mail_address).first():
+            return jsonify({"message": "Mail address already registered"}), 409
             
         # Create new user
         new_user = User(
             username=username,
+            mail_address=mail_address,
+            research_institute=data["researchInstitute"],
             password=data["password"]
         )
         
@@ -44,7 +52,7 @@ def register():
         db.session.commit()
         
         # Create and set access token immediately after registration
-        access_token = create_access_token(identity=new_user.id)
+        access_token = create_access_token(identity=str(new_user.id))
         response = jsonify({
             "message": "Registration successful",
             "success": True
@@ -76,7 +84,7 @@ def login():
             return jsonify({"message": "Invalid username or password"}), 401
         
         # Create access token
-        access_token = create_access_token(identity=user.id)
+        access_token = create_access_token(identity=str(user.id))
         
         # Create response with token in cookie
         response = jsonify({
@@ -100,14 +108,16 @@ def login():
 def get_user():
     try:
         user_id = get_jwt_identity()
-        user = User.query.get(user_id)
+        user = User.query.get(int(user_id))
         
         if not user:
             return jsonify({"message": "User not found"}), 404
             
         return jsonify({
             "user": {
+                "mailAddress": user.mail_address,
                 "username": user.username,
+                "researchInstitute": user.research_institute,
                 "id": user.id
             }
         }), 200
@@ -127,24 +137,3 @@ def logout():
     except Exception as e:
         current_app.logger.error(f"Logout error: {str(e)}")
         return jsonify({"message": "Logout failed"}), 500
-
-# Optional: Add a route to check if user is authenticated
-@auth_bp.route("/check-auth", methods=["GET"])
-@jwt_required(optional=True)
-def check_auth():
-    try:
-        current_user_id = get_jwt_identity()
-        if current_user_id:
-            user = User.query.get(current_user_id)
-            return jsonify({
-                "authenticated": True,
-                "user": {
-                    "username": user.username,
-                    "id": user.id
-                }
-            }), 200
-        return jsonify({"authenticated": False}), 200
-        
-    except Exception as e:
-        current_app.logger.error(f"Auth check error: {str(e)}")
-        return jsonify({"authenticated": False}), 200

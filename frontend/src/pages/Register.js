@@ -17,7 +17,9 @@ const Register = () => {
     const [formData, setFormData] = useState({
         username: '',
         password: '',
-        confirmPassword: ''
+        confirmPassword: '',
+        mailAddress: '',
+        researchInstitute: ''
     });
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -63,7 +65,7 @@ const Register = () => {
         setIsLoading(true);
 
         try {
-            await register(formData.username, formData.password);
+            await register(formData);
             navigate(from, { replace: true });
         } catch (err) {
             setError(err.message);
@@ -114,7 +116,26 @@ const Register = () => {
                             autoComplete="username"
                         />
                     </FormControl>
-
+                    <FormControl required>
+                        <FormLabel>Mail Address</FormLabel>
+                        <Input
+                            name="mailAddress"
+                            type="mail"
+                            value={formData.mailAddress}
+                            onChange={handleInputChange}
+                            autoComplete="username"
+                        />
+                    </FormControl>
+                    <FormControl>
+                        <FormLabel>Mail Address</FormLabel>
+                        <Input
+                            name="researchInstitute"
+                            type="text"
+                            value={formData.researchInstitute}
+                            onChange={handleInputChange}
+                            autoComplete="username"
+                        />
+                    </FormControl>
                     <FormControl required>
                         <FormLabel>Password</FormLabel>
                         <Input

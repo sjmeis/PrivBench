@@ -1,10 +1,10 @@
 import { Alert, Box, Button, Snackbar } from "@mui/joy";
 import { useState, Fragment } from "react";
 import {Close, East, Warning, West, BarChart} from "@mui/icons-material";
-import DownloadStep from "../components/DownloadStep";
-import UploadStep from "../components/UploadStep";
-import MetadataStep from "../components/MetadataStep";
-import FinalStep from "../components/FinalStep";
+import DownloadStep from "../components/upload/DownloadStep";
+import UploadStep from "../components/upload/UploadStep";
+import MetadataStep from "../components/upload/MetadataStep";
+import FinalStep from "../components/upload/FinalStep";
 import Stepper from "@mui/joy/Stepper";
 import Step, { stepClasses } from "@mui/joy/Step";
 import StepIndicator, { stepIndicatorClasses } from "@mui/joy/StepIndicator";
@@ -61,52 +61,12 @@ const Upload = () => {
 
     return (
         <Box display="flex" flexDirection="column" alignItems="center" padding={2}>
-            {/* Conditionally render components */}
-            {currentStep === 0 && <DownloadStep />}
-            {currentStep === 1 && <MetadataStep />}
-            {currentStep === 2 && (
-                <UploadStep
-                    storedFiles={storedFiles}
-                    handleFileChange={handleFileChange}
-                    handleDeleteFile={handleDeleteFile}
-                />
-            )}
-            {currentStep === 3 && <FinalStep />}
-
-            {/* Snackbar for error message */}
-            <Snackbar
-                open={openSnackbar}
-                autoHideDuration={6000} // Auto hide after 6000ms
-                onClose={() => setOpenSnackbar(false)}
-                anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-            >
-                <Alert
-                    startDecorator={<Warning />}
-                    variant="soft"
-                    color="danger"
-                    endDecorator={
-                        <Fragment>
-                            <Button
-                                size="small"
-                                color="inherit"
-                                onClick={() => setOpenSnackbar(false)}
-                                style={{ background: "none", border: "none", cursor: "pointer" }}
-                            >
-                                <Close fontSize="small" />
-                            </Button>
-                        </Fragment>
-                    }
-                >
-                    {errorMessage}
-                </Alert>
-            </Snackbar>
-
             {/* Horizontal Stepper */}
             <Stepper
                 size="lg"
                 sx={{
-                    width: "50%",
-                    marginTop: "30px",
+                    width: "60%",
+                    maxWidth: '1000px',
                     marginBottom: "30px",
                     "--StepIndicator-size": "3rem",
                     "--Step-connectorInset": "0px",
@@ -195,7 +155,7 @@ const Upload = () => {
             </Stepper>
 
             {/* Navigation Buttons */}
-            <Box mt={2} display="flex" gap={2}>
+            <Box mt={2} sx={{ marginBottom: '30px'}} display="flex" gap={2}>
                 {currentStep > 0 && currentStep < 3 && (
                     <Button
                         variant="soft"
@@ -226,6 +186,48 @@ const Upload = () => {
                     </Button>
                 )}
             </Box>
+
+
+            {/* Conditionally render components */}
+            {currentStep === 0 && <DownloadStep />}
+            {currentStep === 1 && <MetadataStep />}
+            {currentStep === 2 && (
+                <UploadStep
+                    storedFiles={storedFiles}
+                    handleFileChange={handleFileChange}
+                    handleDeleteFile={handleDeleteFile}
+                />
+            )}
+            {currentStep === 3 && <FinalStep />}
+
+            {/* Snackbar for error message */}
+            <Snackbar
+                open={openSnackbar}
+                autoHideDuration={6000} // Auto hide after 6000ms
+                onClose={() => setOpenSnackbar(false)}
+                anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+            >
+                <Alert
+                    startDecorator={<Warning />}
+                    variant="soft"
+                    color="danger"
+                    endDecorator={
+                        <Fragment>
+                            <Button
+                                size="small"
+                                color="inherit"
+                                onClick={() => setOpenSnackbar(false)}
+                                style={{ background: "none", border: "none", cursor: "pointer" }}
+                            >
+                                <Close fontSize="small" />
+                            </Button>
+                        </Fragment>
+                    }
+                >
+                    {errorMessage}
+                </Alert>
+            </Snackbar>
+
         </Box>
     );
 };
