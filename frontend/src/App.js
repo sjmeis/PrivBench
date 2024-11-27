@@ -15,10 +15,10 @@ import Rankings from "./pages/Rankings";
 import Upload from "./pages/Upload";
 import Register from "./pages/Register";
 import RankingDetailView from "./pages/RankingDetailView";
+import ProtectedRoutes from "./routes/ProtectedRoutes";
+import UserProfile from "./pages/UserProfile";
 
 function App() {
-
-    //fixme: implement protected rout when login context is working properly
     return (
         <AuthProvider>
             <CssVarsProvider defaultMode="dark" theme={customTheme}>
@@ -39,6 +39,10 @@ function App() {
                             <Route path="/information" element={<Information />} />
                             <Route path="/register" element={<Register />} />
                             <Route path="/upload" element={<Upload/>}/>
+
+                            <Route element={<ProtectedRoutes/>}>
+                                <Route path="/profile" element={<UserProfile/>}/>
+                            </Route>
                         </Routes>
                     </Box>
                 </Box>

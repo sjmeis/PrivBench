@@ -1,14 +1,20 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { Grid, Stack, useColorScheme } from "@mui/joy";
+import {Avatar, Dropdown, Grid, ListDivider, Menu, MenuButton, MenuItem, Stack, useColorScheme} from "@mui/joy";
 import { Box, Button, Typography } from "@mui/joy";
-import {DarkMode, Info, Timeline, UploadFile, LogoutRounded, Login} from "@mui/icons-material";
+import {DarkMode, Info, Timeline, UploadFile, Login} from "@mui/icons-material";
 import { useAuth } from '../contexts/AuthContext';
+import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
+import OpenInNewRoundedIcon from '@mui/icons-material/OpenInNewRounded';
+import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
+import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
+import {generateRandomGravatarUrl} from "../utils/Gravatar";
+
 
 const Navbar = () => {
     const navigate = useNavigate();
     const { mode, setMode } = useColorScheme();
-    const { user, logout, isAuthenticated } = useAuth();
+    const { user, logout } = useAuth();
 
     if (!mode) {
         return null;
@@ -113,20 +119,70 @@ const Navbar = () => {
                             <DarkMode />
                         </Button>
 
-                        {isAuthenticated ? (
-                            <Stack direction="row" spacing={1} alignItems="center">
-                                <Typography level="body-sm" sx={{ color: 'primary.textPrimary' }}>
-                                    {user.username}
-                                </Typography>
-                                <Button
+                        {user ? (
+                            <Dropdown>
+
+                                <MenuButton endDecorator={<Avatar sx={{maxWidth: 28, maxHeight: 28}} size="sm" src={generateRandomGravatarUrl()}/>}
                                     variant="soft"
                                     color="primary"
-                                    onClick={handleLogout}
-                                    startDecorator={<LogoutRounded />}
+                                    size="sm" sx={{height: 37}}d
+
                                 >
-                                    Logout
-                                </Button>
-                            </Stack>
+                                    {user.username}
+                                </MenuButton>
+                                <Menu
+                                    placement="bottom-end"
+                                    size="sm"
+                                    sx={{
+                                        zIndex: '99999',
+                                        p: 1,
+                                        gap: 1,
+                                        '--ListItem-radius': 'var(--joy-radius-sm)',
+                                    }}
+                                >
+                                    <MenuItem onClick={() => navigate("/profile")}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                            <Avatar
+                                                src={generateRandomGravatarUrl()}
+                                                sx={{ borderRadius: '50%' }}
+                                            />
+                                            <Box sx={{ ml: 1.5 }}>
+                                                <Typography level="title-sm" textColor="text.primary">
+                                                    {user.username}
+                                                </Typography>
+                                                <Typography level="body-xs" textColor="text.tertiary">
+                                                    rick@email.com
+                                                </Typography>
+                                            </Box>
+                                        </Box>
+                                    </MenuItem>
+                                    <ListDivider />
+                                    <MenuItem>
+                                        <EmojiEventsIcon />
+                                        My Submissions
+                                    </MenuItem>
+                                    <MenuItem>
+                                        <SettingsRoundedIcon />
+                                        Settings
+                                    </MenuItem>
+                                    <ListDivider />
+                                    <MenuItem component="a">
+                                        First look at tbd
+                                        <OpenInNewRoundedIcon />
+                                    </MenuItem>
+                                    <MenuItem
+                                        component="a"
+                                    >
+                                        Sourcecode
+                                        <OpenInNewRoundedIcon />
+                                    </MenuItem>
+                                    <ListDivider />
+                                    <MenuItem onClick={handleLogout}>
+                                        <LogoutRoundedIcon />
+                                        Log out
+                                    </MenuItem>
+                                </Menu>
+                            </Dropdown>
                         ) : (
                             <Button
                                 variant="soft"
