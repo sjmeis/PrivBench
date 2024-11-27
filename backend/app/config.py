@@ -11,7 +11,7 @@ class Config:
     JWT_TOKEN_LOCATION = ["cookies"]
     # JWT_COOKIE_SECURE = os.getenv("FLASK_ENV", "development") == "production"  # Only True in production
     JWT_COOKIE_SECURE = False
-    JWT_COOKIE_CSRF_PROTECT = False
+    JWT_COOKIE_CSRF_PROTECT = False # remove this later one
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(days=1)
     
     # Celery settings
