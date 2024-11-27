@@ -10,7 +10,7 @@ RUN pip install -r requirements.txt
 COPY . .
 
 ENV FLASK_APP=app
-ENV FLASK_ENV=development
+ENV FLASK_DEBUG=1
 
 EXPOSE 5000
 
