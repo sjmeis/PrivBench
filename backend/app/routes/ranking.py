@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify, make_response, current_app
 from ..models import Result, User
 from .. import db
+from sqlalchemy import or_
 
 ranking_bp = Blueprint('ranking', __name__)
 
