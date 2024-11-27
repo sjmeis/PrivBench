@@ -1,12 +1,11 @@
 from flask import Flask
 from flask_cors import CORS
-from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager
 from flask_migrate import Migrate
 from celery import Celery
 from .config import Config
+from .extensions import db
 
-db = SQLAlchemy()
 jwt = JWTManager()
 migrate = Migrate()
 celery = Celery(__name__, broker=Config.CELERY_BROKER_URL)

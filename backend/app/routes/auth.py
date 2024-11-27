@@ -44,7 +44,7 @@ def register():
         db.session.commit()
         
         # Create and set access token immediately after registration
-        access_token = create_access_token(identity=new_user.id)
+        access_token = create_access_token(identity=str(new_user.id))
         response = jsonify({
             "message": "Registration successful",
             "success": True
@@ -76,7 +76,7 @@ def login():
             return jsonify({"message": "Invalid username or password"}), 401
         
         # Create access token
-        access_token = create_access_token(identity=user.id)
+        access_token = create_access_token(identity=str(user.id))
         
         # Create response with token in cookie
         response = jsonify({
@@ -100,7 +100,7 @@ def login():
 def get_user():
     try:
         user_id = get_jwt_identity()
-        user = User.query.get(user_id)
+        user = User.query.get(int(user_id))
         
         if not user:
             return jsonify({"message": "User not found"}), 404
@@ -127,24 +127,3 @@ def logout():
     except Exception as e:
         current_app.logger.error(f"Logout error: {str(e)}")
         return jsonify({"message": "Logout failed"}), 500
-
-# Optional: Add a route to check if user is authenticated
-@auth_bp.route("/check-auth", methods=["GET"])
-@jwt_required(optional=True)
-def check_auth():
-    try:
-        current_user_id = get_jwt_identity()
-        if current_user_id:
-            user = User.query.get(current_user_id)
-            return jsonify({
-                "authenticated": True,
-                "user": {
-                    "username": user.username,
-                    "id": user.id
-                }
-            }), 200
-        return jsonify({"authenticated": False}), 200
-        
-    except Exception as e:
-        current_app.logger.error(f"Auth check error: {str(e)}")
-        return jsonify({"authenticated": False}), 200
