@@ -3,12 +3,12 @@ import { useNavigate } from "react-router-dom";
 import {Avatar, Dropdown, Grid, ListDivider, Menu, MenuButton, MenuItem, Stack, useColorScheme} from "@mui/joy";
 import { Box, Button, Typography } from "@mui/joy";
 import {DarkMode, Info, Timeline, UploadFile, Login} from "@mui/icons-material";
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import OpenInNewRoundedIcon from '@mui/icons-material/OpenInNewRounded';
 import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
-import {generateRandomGravatarUrl} from "../utils/Gravatar";
+import {generateRandomGravatarUrl} from "../../utils/Gravatar";
 
 
 const Navbar = () => {
