@@ -1,4 +1,3 @@
-version: '3.8'
 
 services:
   backend:
@@ -30,7 +29,9 @@ services:
       POSTGRES_PASSWORD: password
       POSTGRES_DB: dbname
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - /var/lib/postgresql/data
+    ports:
+      - "5432:5432"
 
   redis:
     image: redis:6.2
