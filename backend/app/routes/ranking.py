@@ -54,6 +54,7 @@ def get_all_filtered():
                 "submittedBy": {
                     "id": result.submitted_by,
                     "username": result.user.username,
+                    "mailAddress": result.user.mail_address,
                     "badges": result.user.badges
                 },
                 "score": result.score

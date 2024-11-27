@@ -28,9 +28,9 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    const register = async (username, password) => {
+    const register = async (formData) => {
         try {
-            const response = await axiosInstance.post('/register', { username, password });
+            const response = await axiosInstance.post('/register', formData);
 
             if (response.data.success) {
                 await checkAuth();
@@ -43,9 +43,9 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    const login = async (username, password) => {
+    const login = async (formData) => {
         try {
-            const response = await axiosInstance.post('/login', { username, password });
+            const response = await axiosInstance.post('/login', formData);
 
             if (response.data.success) {
                 await checkAuth(); // Update the user state on successful login

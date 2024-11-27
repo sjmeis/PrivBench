@@ -16,6 +16,8 @@ with app.app_context():
     for _ in range(20): #count how many to create
         user = User(
             username=fake.user_name(),
+            mail_address=fake.email(),
+            research_institute=fake.name(),
             password=fake.password(),
             badges=fake.words(nb=2)  # count on how many badges per user
         )

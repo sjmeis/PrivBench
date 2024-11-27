@@ -8,7 +8,7 @@ import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import OpenInNewRoundedIcon from '@mui/icons-material/OpenInNewRounded';
 import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
-import {generateRandomGravatarUrl} from "../../utils/Gravatar";
+import { getGravatarUrl} from "../../utils/Gravatar";
 
 
 const Navbar = () => {
@@ -33,7 +33,7 @@ const Navbar = () => {
         <Box
             sx={{
                 width: '100%',
-                padding: 2,
+                padding: 1.5,
                 borderBottom: '1.5px solid #161a1b',
             }}
         >
@@ -60,7 +60,7 @@ const Navbar = () => {
                             bgcolor: "transparent !important",
                             textTransform: "none",
                             fontWeight: "medium",
-                            fontSize: "1.2rem",
+                            fontSize: "18px",
                             mx: 1,
                         }}
                     >
@@ -75,7 +75,7 @@ const Navbar = () => {
                             bgcolor: "transparent !important",
                             textTransform: "none",
                             fontWeight: "medium",
-                            fontSize: "1.2rem",
+                            fontSize: "18px",
                             mx: 1,
                         }}
                     >
@@ -90,7 +90,7 @@ const Navbar = () => {
                             bgcolor: "transparent !important",
                             textTransform: "none",
                             fontWeight: "medium",
-                            fontSize: "1.2rem",
+                            fontSize: "18px",
                             mx: 1,
                         }}
                     >
@@ -122,11 +122,10 @@ const Navbar = () => {
                         {user ? (
                             <Dropdown>
 
-                                <MenuButton endDecorator={<Avatar sx={{maxWidth: 28, maxHeight: 28}} size="sm" src={generateRandomGravatarUrl()}/>}
+                                <MenuButton endDecorator={<Avatar sx={{maxWidth: 28, maxHeight: 28}} size="sm" src={getGravatarUrl(user.mailAddress)}/>}
                                     variant="soft"
                                     color="primary"
-                                    size="sm" sx={{height: 37}}d
-
+                                    size="sm" sx={{height: 37}}
                                 >
                                     {user.username}
                                 </MenuButton>
@@ -143,7 +142,7 @@ const Navbar = () => {
                                     <MenuItem onClick={() => navigate("/profile")}>
                                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                             <Avatar
-                                                src={generateRandomGravatarUrl()}
+                                                src={getGravatarUrl(user.mailAddress)}
                                                 sx={{ borderRadius: '50%' }}
                                             />
                                             <Box sx={{ ml: 1.5 }}>
@@ -151,7 +150,7 @@ const Navbar = () => {
                                                     {user.username}
                                                 </Typography>
                                                 <Typography level="body-xs" textColor="text.tertiary">
-                                                    rick@email.com
+                                                    {user.mailAddress}
                                                 </Typography>
                                             </Box>
                                         </Box>
