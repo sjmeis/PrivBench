@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import axios from 'axios';
 
 const AuthContext = createContext(null);
 
@@ -10,18 +11,15 @@ export const AuthProvider = ({ children }) => {
         checkAuth();
     }, []);
 
+    const axiosInstance = axios.create({
+        baseURL: 'http://localhost:5000',
+        withCredentials: true, // Automatically send cookies for cross-origin requests
+    });
+
     const checkAuth = async () => {
         try {
-            const response = await fetch('http://localhost:5000/user', {
-                credentials: 'include'
-            });
-            
-            if (response.ok) {
-                const data = await response.json();
-                setUser(data);
-            } else {
-                setUser(null);
-            }
+            const response = await axiosInstance.get('/user');
+            setUser(response.data.user);
         } catch (error) {
             console.error('Auth check failed:', error);
             setUser(null);
@@ -32,74 +30,41 @@ export const AuthProvider = ({ children }) => {
 
     const register = async (username, password) => {
         try {
-            const response = await fetch('http://localhost:5000/register', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'include',
-                body: JSON.stringify({ username, password })
-            });
+            const response = await axiosInstance.post('/register', { username, password });
 
-            const data = await response.json();
-            
-            if (!response.ok) {
-                throw new Error(data.message || 'Registration failed');
-            }
-
-            // After successful registration, automatically log in
-            if (data.success) {
+            if (response.data.success) {
                 await checkAuth();
             }
 
-            return data;
+            return response.data;
         } catch (error) {
-            throw error;
+            console.error('Registration failed:', error);
+            throw new Error(error.response?.data?.message || 'Registration failed');
         }
     };
 
     const login = async (username, password) => {
         try {
-            const response = await fetch('http://localhost:5000/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'include',
-                body: JSON.stringify({ username, password })
-            });
+            const response = await axiosInstance.post('/login', { username, password });
 
-            const data = await response.json();
-            
-            if (!response.ok) {
-                throw new Error(data.message || 'Login failed');
+            if (response.data.success) {
+                await checkAuth(); // Update the user state on successful login
             }
 
-            if (data.success) {
-                await checkAuth();
-            }
-
-            return data;
+            return response.data;
         } catch (error) {
-            throw error;
+            console.error('Login failed:', error);
+            throw new Error(error.response?.data?.message || 'Login failed');
         }
     };
 
     const logout = async () => {
         try {
-            const response = await fetch('http://localhost:5000/logout', {
-                method: 'POST',
-                credentials: 'include'
-            });
-
-            if (response.ok) {
-                setUser(null);
-            } else {
-                throw new Error('Logout failed');
-            }
+            await axiosInstance.post('/logout');
+            setUser(null);
         } catch (error) {
             console.error('Logout failed:', error);
-            throw error;
+            throw new Error(error.response?.data?.message || 'Logout failed');
         }
     };
 
@@ -108,8 +73,7 @@ export const AuthProvider = ({ children }) => {
         loading,
         register,
         login,
-        logout,
-        isAuthenticated: !!user
+        logout
     };
 
     return (
@@ -127,4 +91,6 @@ export const useAuth = () => {
     return context;
 };
 
-export default AuthProvider;
+export const useCurrentUser = () => {
+    return useContext(AuthContext);
+};
