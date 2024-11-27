@@ -26,9 +26,11 @@ def create_app():
     from .routes.auth import auth_bp
     from .routes.main import main_bp
     from .routes.data import data_bp
+    from .routes.ranking import ranking_bp
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
     app.register_blueprint(data_bp)
+    app.register_blueprint(ranking_bp)
     
     return app
 
