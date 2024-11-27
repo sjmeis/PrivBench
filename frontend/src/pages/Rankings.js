@@ -1,4 +1,4 @@
-import {Box, Input, MenuItem, Select} from "@mui/joy";
+import {Box, Breadcrumbs, Input, MenuItem, Select} from "@mui/joy";
 import FormControl from "@mui/joy/FormControl";
 import FormLabel from "@mui/joy/FormLabel";
 import SearchIcon from "@mui/icons-material/Search";
@@ -12,6 +12,8 @@ import Link from "@mui/joy/Link";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import KeyboardArrowLeftIcon from "@mui/icons-material/KeyboardArrowLeft";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
+import HomeRoundedIcon from "@mui/icons-material/HomeRounded";
+import ChevronRightRoundedIcon from "@mui/icons-material/ChevronRightRounded";
 import {Avatar, Button, Chip} from "@mui/joy";
 import {useNavigate} from "react-router-dom";
 import {getGravatarUrl} from "../utils/Gravatar";
@@ -85,8 +87,7 @@ const Rankings = () => {
 
     //fixme: implement this properly
     const onViewClick = (row) => {
-        console.log("clicked on ranking item: ", row)
-        navigate(`/rankings/detail/`);
+        navigate("/rankings/detail", { state: row });
     }
 
     useEffect(() => {
@@ -115,6 +116,34 @@ const Rankings = () => {
 
     return (
         <Box>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Breadcrumbs
+                    size="sm"
+                    aria-label="breadcrumbs"
+                    separator={<ChevronRightRoundedIcon fontSize="sm" />}
+                    sx={{ pl: 0 }}
+                >
+                    <Link
+                        underline="none"
+                        color="neutral"
+                        href="/"
+                        aria-label="Home"
+                    >
+                        <HomeRoundedIcon />
+                    </Link>
+                    <Link
+                        underline="hover"
+                        color="neutral"
+                        href="/rankings"
+                        sx={{ fontSize: 12, fontWeight: 500 }}
+                    >
+                        Ranking
+                    </Link>
+                    <Typography color="primary" sx={{ fontWeight: 500, fontSize: 12 }}>
+                        Dashboard
+                    </Typography>
+                </Breadcrumbs>
+            </Box>
             <Box
                 className="SearchAndFilters-tabletUp"
                 sx={{
@@ -172,7 +201,7 @@ const Rankings = () => {
                                     boxShadow: "sm",
                                     borderRadius: "sm"
                                 }}>
-                <Table aria-labelledby="tableTitle" sx={{minWidth: 750, "--TableCell-paddingX": "10px"}}>
+                <Table aria-labelledby="tableTitle" sx={{minWidth: 750, "--TableCell-paddingX": "10px"}} hoverRow>
                     <thead>
                     <tr>
                         {headCells.map((headCell) => (
@@ -207,7 +236,7 @@ const Rankings = () => {
                     </thead>
                     <tbody>
                     {rankings.results.map((row) => (
-                        <tr>
+                        <tr onClick={() => onViewClick(row)}>
                             <td>{row.score}</td>
                             <td><Typography
                                 sx={{fontWeight: "bold"}}
