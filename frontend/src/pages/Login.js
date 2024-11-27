@@ -41,7 +41,7 @@ const Login = () => {
         setIsLoading(true);
 
         try {
-            await login(formData.username, formData.password);
+            await login(formData);
             navigate(from, { replace: true });
         } catch (err) {
             setError(err.message);

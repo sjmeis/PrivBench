@@ -22,7 +22,7 @@ def register():
         data = request.get_json()
         
         # Validate required fields
-        if not all(k in data for k in ["username", "password"]):
+        if not all(k in data for k in ["username", "mailAddress", "password"]):
             return jsonify({"message": "All fields are required"}), 400
         
         # Validate username length and format if needed
@@ -33,10 +33,18 @@ def register():
         # Check if user already exists
         if User.query.filter_by(username=username).first():
             return jsonify({"message": "Username already taken"}), 409
+
+        #//TODO: check also if is valid mail address in with regex
+
+        mail_address = data["mailAddress"].strip()
+        if User.query.filter_by(mail_address=mail_address).first():
+            return jsonify({"message": "Mail address already registered"}), 409
             
         # Create new user
         new_user = User(
             username=username,
+            mail_address=mail_address,
+            research_institute=data["researchInstitute"],
             password=data["password"]
         )
         
@@ -107,7 +115,9 @@ def get_user():
             
         return jsonify({
             "user": {
+                "mailAddress": user.mail_address,
                 "username": user.username,
+                "researchInstitute": user.research_institute,
                 "id": user.id
             }
         }), 200
