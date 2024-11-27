@@ -2,7 +2,7 @@ import {Box, Input, MenuItem, Select} from "@mui/joy";
 import FormControl from "@mui/joy/FormControl";
 import FormLabel from "@mui/joy/FormLabel";
 import SearchIcon from "@mui/icons-material/Search";
-import React, {useEffect, useRef, useState} from "react";
+import React, {useEffect, useLayoutEffect, useRef, useState} from "react";
 import fetchRankings from "../services/fetchRankings";
 import Table from "@mui/joy/Table";
 import Typography from "@mui/joy/Typography";
@@ -17,29 +17,12 @@ import {useNavigate} from "react-router-dom";
 import {getGravatarUrl} from "../utils/Gravatar";
 
 const headCells = [
-    {id: "rank", numeric: true, label: "Rank"},
+    {id: "score", numeric: true, label: "Privacy Score"},
     {id: "name", numeric: false, label: "Name"},
     {id: "method", numeric: false, label: "Privatization Method"},
     {id: "submittedBy", numeric: false, label: "Submitted By"},
     {id: "badges", numeric: false, label: "User Badges"},
-    {id: "score", numeric: true, label: "Privacy Score"},
 ];
-
-function descendingComparator(a, b, orderBy) {
-    if (b[orderBy] < a[orderBy]) {
-        return -1;
-    }
-    if (b[orderBy] > a[orderBy]) {
-        return 1;
-    }
-    return 0;
-}
-
-function getComparator(order, orderBy) {
-    return order === "desc"
-        ? (a, b) => descendingComparator(a, b, orderBy)
-        : (a, b) => -descendingComparator(a, b, orderBy);
-}
 
 const Rankings = () => {
     const [rankings, setRankings] = useState();
@@ -51,6 +34,14 @@ const Rankings = () => {
     const [searchValue, setSearchValue] = useState('');
     const [searchTerm, setSearchTerm] = useState('')
     const timerRef = useRef(null);
+
+    const updateRowsPerPage = () => {
+        const viewportHeight = window.innerHeight;
+        const availableHeight = viewportHeight - 350;
+        const rowHeight = 45;
+        const rowsCount = Math.floor(availableHeight / rowHeight);
+        setRowsPerPage(rowsCount);
+    };
 
 
     const handleSearchInputChange = (event) => {
@@ -65,23 +56,23 @@ const Rankings = () => {
 
     const navigate = useNavigate();
 
-    useEffect(() => {
+    useLayoutEffect(() => {
 
-        const updateRowsPerPage = () => {
-            const viewportHeight = window.innerHeight;
-            const topMargin = 74 + 40 + 40;
-            const bottomMargin = 50 + 40;
-            const rowHeight = 45;
-            const availableHeight = viewportHeight - topMargin - bottomMargin;
-            const rowsCount = Math.floor(availableHeight / rowHeight);
-            setRowsPerPage(rowsCount);
-        };
-
-        updateRowsPerPage(); // Initial calculation
+        updateRowsPerPage();
         window.addEventListener("resize", updateRowsPerPage); // Update on resize
 
         return () => {
             window.removeEventListener("resize", updateRowsPerPage);
+        };
+    }, []);
+
+    useEffect(() => {
+        const timeout = setTimeout(() => {
+            updateRowsPerPage(); // Recalculate after layout is fully applied
+        }, 0);
+
+        return () => {
+            clearTimeout(timeout); // Cleanup the timeout on unmount
         };
     }, []);
 
@@ -216,10 +207,8 @@ const Rankings = () => {
                     </thead>
                     <tbody>
                     {rankings.results.map((row) => (
-                        <tr
-
-                        >
-                            <td></td>
+                        <tr>
+                            <td>{row.score}</td>
                             <td><Typography
                                 sx={{fontWeight: "bold"}}
                                 color="primary"
@@ -242,7 +231,6 @@ const Rankings = () => {
                                     </Chip>
                                 ))}
                             </td>
-                            <td>{row.score}</td>
                             <td>
                                 <Box sx={{display: 'center'}}>
                                     <Button size="sm" variant="soft" color="primary" onClick={() => onViewClick(row)}>
@@ -255,7 +243,7 @@ const Rankings = () => {
                     </tbody>
                     <tfoot>
                     <tr>
-                        <td colSpan={7}>
+                        <td colSpan={6}>
                             <Box sx={{display: "flex", justifyContent: "space-between", alignItems: "center"}}>
                                 <FormControl orientation="horizontal">
                                     <FormLabel>Rows per page: {rowsPerPage}</FormLabel>
