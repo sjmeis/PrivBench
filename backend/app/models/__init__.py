@@ -2,7 +2,7 @@ from .user import User
 from .dataset import Dataset
 from .submission import Submission
 from .privatized_dataset import PrivatizedDataset
-from .metadata import Metadata
+from .submission_metadata import SubmissionMetadata
 from .benchmark_module import BenchmarkModule
 from .benchmark_score import BenchmarkScore
 from .task import Task
@@ -12,7 +12,7 @@ __all__ = [
     'Dataset',
     'Submission',
     'PrivatizedDataset',
-    'Metadata',
+    'SubmissionMetadata',
     'BenchmarkModule',
     'BenchmarkScore',
     'Task',
