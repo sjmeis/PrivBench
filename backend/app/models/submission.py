@@ -21,7 +21,7 @@ class Submission(db.Model):
 
     # Relationships
     user = db.relationship('User', back_populates='submissions')
-    metadata = db.relationship('Metadata', uselist=False, back_populates='submission')
+    submission_metadata = db.relationship('SubmissionMetadata', uselist=False, back_populates='submission')
     privatized_datasets = db.relationship('PrivatizedDataset', back_populates='submission', lazy=True)
     benchmark_scores = db.relationship('BenchmarkScore', back_populates='submission', lazy=True)
     tasks = db.relationship('Task', back_populates='submission', lazy=True)

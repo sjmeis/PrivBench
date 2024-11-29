@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify, make_response, current_app
-from ..models import Result, User
+from ..models import BenchmarkScore, User
 from .. import db
 from sqlalchemy import or_
 
@@ -7,7 +7,7 @@ ranking_bp = Blueprint('ranking', __name__)
 
 @ranking_bp.route('/ranking', methods=['GET'])
 def ranking():
-    results = Result.query.order_by(Result.score.desc()).all()
+    results = BenchmarkScore.query.order_by(BenchmarkScore.score.desc()).all()
     results_list = [
         {
             "id": result.id,
@@ -29,14 +29,14 @@ def get_all_filtered():
         page = data.get('page', 1)
         limit = data.get('limit', 8)
 
-        query = db.session.query(Result).join(User).order_by(Result.score.desc())
+        query = db.session.query(BenchmarkScore).join(User).order_by(BenchmarkScore.score.desc())
 
         if search_term:
             search_term = f"%{search_term}%"
             query = query.filter(
                 or_(
-                    Result.name.ilike(search_term),
-                    Result.method.ilike(search_term),
+                    BenchmarkScore.name.ilike(search_term),
+                    BenchmarkScore.method.ilike(search_term),
                     User.username.ilike(search_term)
                 )
             )
