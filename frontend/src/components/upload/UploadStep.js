@@ -1,8 +1,52 @@
-import React from "react";
-import { Box, Button, Card, IconButton, Typography } from "@mui/joy";
-import { CloudUpload, Delete } from "@mui/icons-material";
+import React, { useState} from "react";
+import { Box, Button, Card, IconButton, Typography, CircularProgress } from "@mui/joy";
+import { CloudUpload, Delete, Warning } from "@mui/icons-material";
+import axios from "axios";
 
-const UploadStep = ({ storedFiles, handleFileChange, handleDeleteFile }) => {
+const UploadStep = ({ storedFiles, handleFileChange, handleDeleteFile, submissionId, originalDatasetId }) => {
+
+    const [uploading, setUploading] = useState(false);
+    const [error, setError] = useState(null);
+
+    const handleFileSelect = async (event) => {
+        const files = event.target.files;
+        if (!files.length) return;
+
+        setUploading(true);
+        setError(null);
+
+        try {
+            // Upload each file
+            for (let file of files) {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('submission_id', String(submissionId));
+                formData.append('original_dataset_id', String(originalDatasetId));
+
+                await axios.post(
+                    `${process.env.REACT_APP_API_URL}/upload-privatized-dataset`,
+                    formData,
+                    {
+                        headers: {
+                            'Content-Type': 'multipart/form-data',
+                        },
+                    }
+                );
+            }
+
+            // Call parent's handleFileChange to update UI
+            if (handleFileChange) {
+                handleFileChange(event);
+            }
+        } catch (error) {
+            console.error("Error uploading file:", error);
+            setError(error.response?.data?.error || "Failed to upload file");
+        } finally {
+            setUploading(false);
+            event.target.value = '';
+        }
+    };
+
     return (
         <Card variant="outlined" sx={{ width: 800, padding: 4 }}>
             <Typography level="h2" mb={2} sx={{ textAlign: "center" }}>
@@ -29,39 +73,61 @@ const UploadStep = ({ storedFiles, handleFileChange, handleDeleteFile }) => {
                 Make sure all the necessary steps are completed before submitting, as the evaluation will be based on the file you upload.
             </Typography>
 
-
-            {storedFiles.map((file, index) => (
-                <Box key={index} display="flex" alignItems="center" mt={1}>
-                    <Typography variant="body2" color="text.primary" sx={{ flexGrow: 1 }}>
-                        {file.name}
-                    </Typography>
-                    <IconButton
-                        size="small"
-                        onClick={() => handleDeleteFile(file.name)}
-                    >
-                        <Delete fontSize="md" />
-                    </IconButton>
+            {error && (
+                <Box sx={{ 
+                    backgroundColor: "error.softBg", 
+                    p: 2, 
+                    borderRadius: 1,
+                    mb: 2,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1
+                }}>
+                    <Warning color="error" />
+                    <Typography color="error">{error}</Typography>
                 </Box>
-            ))}
+            )}
 
-            {/* File selection button */}
+            {/* Upload button */}
             <Button
                 component="label"
                 size="lg"
-                tabIndex={-1}
                 variant="soft"
-                startDecorator={<CloudUpload />}
+                startDecorator={uploading ? <CircularProgress size="sm" /> : <CloudUpload />}
                 sx={{ mt: 2 }}
+                disabled={uploading}
             >
                 Upload files
                 <input
                     type="file"
                     multiple
                     accept=".csv"
-                    onChange={handleFileChange}
+                    onChange={handleFileSelect}
                     style={{ display: "none" }}
                 />
             </Button>
+
+            {/* Uploaded files list */}
+            {storedFiles.length > 0 && (
+                <Box sx={{ mt: 4 }}>
+                    <Typography level="h4" mb={2}>
+                        Uploaded Files
+                    </Typography>
+                    {storedFiles.map((file, index) => (
+                        <Box key={index} display="flex" alignItems="center" mt={1}>
+                            <Typography variant="body2" color="text.primary" sx={{ flexGrow: 1 }}>
+                                {file.name}
+                            </Typography>
+                            <IconButton
+                                size="small"
+                                onClick={() => handleDeleteFile(file.name)}
+                            >
+                                <Delete fontSize="md" />
+                            </IconButton>
+                        </Box>
+                    ))}
+                </Box>
+            )}
         </Card>
     );
 };

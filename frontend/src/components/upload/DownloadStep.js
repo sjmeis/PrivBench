@@ -2,15 +2,54 @@ import React from "react";
 import { Box, Button, Card, Typography } from "@mui/joy";
 import { CloudDownload } from "@mui/icons-material";
 
-const DownloadStep = () => {
-    // Function to trigger file download
-    const handleDownload = () => {
-        const link = document.createElement("a");
-        link.href = "/orig1.csv"; // File location
-        link.download = "orig1.csv";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+const DownloadStep = ({ onDatasetDownload }) => {
+    // Function to trigger dataset loading and file download
+    const handleDownload = async () => {
+        try {
+            // Create a new dataset entry by calling the backend API
+            const response = await fetch("http://localhost:5000/load-dataset", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    name: "priv1.csv",
+                }),
+            });
+
+            // Check if the request was successful
+            if (response.ok) {
+                const data = await response.json();
+                console.log("Received dataset_id:", data.dataset_id);
+                onDatasetDownload(data.dataset_id);
+            }else{
+                const errorData = await response.json();
+                console.error("Failed to load dataset:", errorData.error);
+                return;
+            }
+            const downloadResponse = await fetch(`http://localhost:5000/datasets/priv1.csv`, {
+                credentials: 'include'
+            });
+            
+            if (!downloadResponse.ok) {
+                console.error("Failed to download file");
+                return;
+            }
+    
+            const blob = await downloadResponse.blob();
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = "priv1.csv";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+    
+        } catch (error) {
+            console.error("An error occurred:", error);
+        }
     };
 
     return (
