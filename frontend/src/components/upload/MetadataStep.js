@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Button, Card, FormControl, Input, Textarea, Typography, Select, Option } from "@mui/joy";
-import {AddCircle} from "@mui/icons-material";
+import { AddCircle, Save } from "@mui/icons-material";
+import axios from "axios"; 
 
 const MetadataStep = () => {
     const [metadata, setMetadata] = useState({
@@ -31,6 +32,34 @@ const MetadataStep = () => {
         }));
     };
 
+    const handleSave = async () => {
+        try {
+            // Construct the API endpoint
+            const endpoint = "http://localhost:5000/upload"; 
+    
+            // Send a POST request with metadata
+            const response = await fetch(endpoint, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${localStorage.getItem("accessToken")}`, // Include JWT if needed
+                },
+                body: JSON.stringify(metadata),
+            });
+    
+            // Check if the request was successful
+            if (response.ok) {
+                alert("Metadata saved successfully!");
+            } else {
+                const errorData = await response.json();
+                alert(`Failed to save metadata: ${errorData.message || response.statusText}`);
+            }
+        } catch (error) {
+            console.error("Error saving metadata:", error);
+            alert("Failed to save metadata. Please try again.");
+        }
+    };
+    
     // Generate Markdown content
     // Generate Markdown content
     const generateMarkdown = () => {
@@ -226,7 +255,6 @@ ${metadata.bibtexCitation || "More information needed"}
                     onChange={(e) => handleChange("bibtexCitation", e.target.value)}
                     sx={{ marginBottom: 2, bgcolor: "grey.200" }}
                 />
-            </FormControl>
 
             <Button
                 variant="soft"
@@ -237,6 +265,17 @@ ${metadata.bibtexCitation || "More information needed"}
             >
                 Create Model Card Markdown
             </Button>
+            <Button
+                    variant="solid"
+                    size="lg"
+                    color="primary"
+                    onClick={handleSave}
+                    sx={{ mt: 2 }}
+                    startDecorator={<Save />}
+                >
+                    Save Model Data
+                </Button>
+            </FormControl>
         </Card>
     );
 };
