@@ -1,3 +1,4 @@
+from importlib import metadata
 from flask import Flask
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
@@ -27,10 +28,12 @@ def create_app():
     from .routes.main import main_bp
     from .routes.data import data_bp
     from .routes.ranking import ranking_bp
+    from .routes.metadata import metadata_bp
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
     app.register_blueprint(data_bp)
     app.register_blueprint(ranking_bp)
+    app.register_blueprint(metadata_bp)
     
     return app
 
