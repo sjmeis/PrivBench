@@ -6,7 +6,7 @@ from ..extensions import db
 
 metadata_bp = Blueprint("metadata", __name__)
 
-@metadata_bp.route("/upload", methods=["POST"])
+@metadata_bp.route("/metadata", methods=["POST"])
 @jwt_required()
 def save_metadata():
     try:

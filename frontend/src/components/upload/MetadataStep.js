@@ -35,15 +35,15 @@ const MetadataStep = () => {
     const handleSave = async () => {
         try {
             // Construct the API endpoint
-            const endpoint = "http://localhost:5000/upload"; 
+            const endpoint = "http://localhost:5000/metadata"; 
     
             // Send a POST request with metadata
             const response = await fetch(endpoint, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    Authorization: `Bearer ${localStorage.getItem("accessToken")}`, // Include JWT if needed
                 },
+                credentials: 'include',
                 body: JSON.stringify(metadata),
             });
     
