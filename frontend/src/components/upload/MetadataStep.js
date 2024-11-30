@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { Button, Card, FormControl, Input, Textarea, Typography, Select, Option } from "@mui/joy";
-import {AddCircle} from "@mui/icons-material";
+import { AddCircle, Save } from "@mui/icons-material";
 
-const MetadataStep = () => {
+const MetadataStep = ({ onMetadataSave }) => {
     const [metadata, setMetadata] = useState({
         modelName: "",
         modelDescription: "",
@@ -31,6 +31,35 @@ const MetadataStep = () => {
         }));
     };
 
+    const handleSave = async () => {
+        try {
+            // Construct the API endpoint
+            const endpoint = "http://localhost:5000/metadata"; 
+    
+            // Send a POST request with metadata
+            const response = await fetch(endpoint, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                credentials: 'include',
+                body: JSON.stringify(metadata),
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                alert("Metadata saved successfully!");
+                onMetadataSave(data.submission_id);
+            } else {
+                const errorData = await response.json();
+                alert(`Failed to save metadata: ${errorData.message || response.statusText}`);
+            }
+        } catch (error) {
+            console.error("Error saving metadata:", error);
+            alert("Failed to save metadata. Please try again.");
+        }
+    };
+    
     // Generate Markdown content
     // Generate Markdown content
     const generateMarkdown = () => {
@@ -226,7 +255,6 @@ ${metadata.bibtexCitation || "More information needed"}
                     onChange={(e) => handleChange("bibtexCitation", e.target.value)}
                     sx={{ marginBottom: 2, bgcolor: "grey.200" }}
                 />
-            </FormControl>
 
             <Button
                 variant="soft"
@@ -237,6 +265,17 @@ ${metadata.bibtexCitation || "More information needed"}
             >
                 Create Model Card Markdown
             </Button>
+            <Button
+                    variant="solid"
+                    size="lg"
+                    color="primary"
+                    onClick={handleSave}
+                    sx={{ mt: 2 }}
+                    startDecorator={<Save />}
+                >
+                    Save Model Data
+                </Button>
+            </FormControl>
         </Card>
     );
 };
