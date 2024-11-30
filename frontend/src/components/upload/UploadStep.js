@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState} from "react";
 import { Box, Button, Card, IconButton, Typography, CircularProgress } from "@mui/joy";
 import { CloudUpload, Delete, Warning } from "@mui/icons-material";
 import axios from "axios";
@@ -7,25 +7,6 @@ const UploadStep = ({ storedFiles, handleFileChange, handleDeleteFile, submissio
 
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState(null);
-    const [datasets, setDatasets] = useState([]);
-
-    useEffect(() => {
-        const fetchDatasets = async () => {
-            try {
-                const response = await axios.get(
-                    `${process.env.REACT_APP_API_URL}/submission-datasets/${submissionId}`
-                );
-                setDatasets(response.data);
-            } catch (error) {
-                console.error("Error fetching datasets:", error);
-                setError("Failed to load datasets");
-            }
-        };
-    
-        if (submissionId) {
-            fetchDatasets();
-        }
-    }, [submissionId]);
 
     const handleFileSelect = async (event) => {
         const files = event.target.files;
