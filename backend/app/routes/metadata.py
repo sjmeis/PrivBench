@@ -48,7 +48,8 @@ def save_metadata():
         db.session.add(metadata)
         db.session.commit()
 
-        return jsonify({"message": "Submission and metadata saved successfully"}), 201
+        return jsonify({"message": "Submission and metadata saved successfully", 
+                        "submission_id": new_submission.id}), 201
 
     except Exception as e:
         db.session.rollback()

@@ -1,9 +1,8 @@
 import React, { useState } from "react";
 import { Button, Card, FormControl, Input, Textarea, Typography, Select, Option } from "@mui/joy";
 import { AddCircle, Save } from "@mui/icons-material";
-import axios from "axios"; 
 
-const MetadataStep = () => {
+const MetadataStep = ({ onMetadataSave }) => {
     const [metadata, setMetadata] = useState({
         modelName: "",
         modelDescription: "",
@@ -46,10 +45,11 @@ const MetadataStep = () => {
                 credentials: 'include',
                 body: JSON.stringify(metadata),
             });
-    
-            // Check if the request was successful
+
             if (response.ok) {
+                const data = await response.json();
                 alert("Metadata saved successfully!");
+                onMetadataSave(data.submission_id);
             } else {
                 const errorData = await response.json();
                 alert(`Failed to save metadata: ${errorData.message || response.statusText}`);

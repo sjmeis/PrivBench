@@ -2,7 +2,7 @@ import React from "react";
 import { Box, Button, Card, Typography } from "@mui/joy";
 import { CloudDownload } from "@mui/icons-material";
 
-const DownloadStep = () => {
+const DownloadStep = ({ onDatasetDownload }) => {
     // Function to trigger dataset loading and file download
     const handleDownload = async () => {
         try {
@@ -19,7 +19,11 @@ const DownloadStep = () => {
             });
 
             // Check if the request was successful
-            if (!response.ok) {
+            if (response.ok) {
+                const data = await response.json();
+                console.log("Received dataset_id:", data.dataset_id);
+                onDatasetDownload(data.dataset_id);
+            }else{
                 const errorData = await response.json();
                 console.error("Failed to load dataset:", errorData.error);
                 return;
