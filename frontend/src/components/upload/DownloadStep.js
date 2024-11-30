@@ -24,19 +24,27 @@ const DownloadStep = () => {
                 console.error("Failed to load dataset:", errorData.error);
                 return;
             }
-
-            console.log("Dataset entry loaded successfully");
+            const downloadResponse = await fetch(`http://localhost:5000/datasets/priv1.csv`, {
+                credentials: 'include'
+            });
             
-            // If successful, proceed with file download
+            if (!downloadResponse.ok) {
+                console.error("Failed to download file");
+                return;
+            }
+    
+            const blob = await downloadResponse.blob();
+            const url = window.URL.createObjectURL(blob);
             const link = document.createElement("a");
-            link.href = "/priv1.csv"; // File location
+            link.href = url;
             link.download = "priv1.csv";
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-
+            window.URL.revokeObjectURL(url);
+    
         } catch (error) {
-            console.error("An error occurred while loading the dataset:", error);
+            console.error("An error occurred:", error);
         }
     };
 
