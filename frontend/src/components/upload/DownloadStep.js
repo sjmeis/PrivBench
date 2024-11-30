@@ -3,14 +3,41 @@ import { Box, Button, Card, Typography } from "@mui/joy";
 import { CloudDownload } from "@mui/icons-material";
 
 const DownloadStep = () => {
-    // Function to trigger file download
-    const handleDownload = () => {
-        const link = document.createElement("a");
-        link.href = "/orig1.csv"; // File location
-        link.download = "orig1.csv";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+    // Function to trigger dataset loading and file download
+    const handleDownload = async () => {
+        try {
+            // Create a new dataset entry by calling the backend API
+            const response = await fetch("http://localhost:5000/load-dataset", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    name: "priv1.csv",
+                }),
+            });
+
+            // Check if the request was successful
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.error("Failed to load dataset:", errorData.error);
+                return;
+            }
+
+            console.log("Dataset entry loaded successfully");
+            
+            // If successful, proceed with file download
+            const link = document.createElement("a");
+            link.href = "/priv1.csv"; // File location
+            link.download = "priv1.csv";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+        } catch (error) {
+            console.error("An error occurred while loading the dataset:", error);
+        }
     };
 
     return (
