@@ -9,6 +9,8 @@ services:
       - FLASK_ENV=development
       - DATABASE_URL=postgresql://user:password@db:5432/dbname
       - JWT_SECRET_KEY=jwtsecretkey
+    volumes:
+      - ./data:/data
     depends_on:
       db:
         condition: service_healthy

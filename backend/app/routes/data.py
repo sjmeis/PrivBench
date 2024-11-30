@@ -1,15 +1,21 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from flask import send_from_directory
 from ..extensions import db
 from datetime import datetime
 from ..models import Dataset
 import os
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 # Get the project root directory
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
-
-# Define the folder where the datasets are stored
 DATASET_FOLDER = os.path.join(PROJECT_ROOT, "data")
+
+# Log the path when module loads
+logger.info(f"Dataset folder path: {DATASET_FOLDER}")
 
 data_bp = Blueprint('data', __name__)
 
@@ -22,9 +28,23 @@ def load_dataset():
         
         # Construct full file path
         file_path = os.path.join(DATASET_FOLDER, dataset_name)
+        
+        # Debug logs
+        logger.info("=== Debug Information ===")
+        logger.info(f"Looking for file at: {file_path}")
+        logger.info(f"DATASET_FOLDER is: {DATASET_FOLDER}")
+        logger.info(f"File exists: {os.path.exists(file_path)}")
+        
+        # List contents of DATASET_FOLDER
+        logger.info("Contents of DATASET_FOLDER:")
+        if os.path.exists(DATASET_FOLDER):
+            logger.info(os.listdir(DATASET_FOLDER))
+        else:
+            logger.info("DATASET_FOLDER does not exist!")
 
         # Check if the dataset file exists
         if not os.path.exists(file_path):
+            logger.error(f"File not found at path: {file_path}")
             return jsonify({'error': 'Dataset file not found'}), 404
 
         # Create a new Dataset entry
