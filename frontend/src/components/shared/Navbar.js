@@ -88,7 +88,7 @@ const Navbar = () => {
                             mx: 1,
                         }}
                     >
-                        Upload
+                        Submission
                     </Button>
                     <Button
                         onClick={() => navigate("/information")}
