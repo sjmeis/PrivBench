@@ -24,6 +24,7 @@ def save_metadata():
             submission_date=datetime.utcnow(),
             user_id=user.id,
             status="PENDING",  # Assuming initial status is PENDING
+            score=0,
             is_public=True,  # Adjust based on requirements
         )
         db.session.add(new_submission)
