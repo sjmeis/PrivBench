@@ -9,7 +9,7 @@ from app.models import (
 )
 from faker import Faker
 from datetime import datetime
-from app.models.submission import SubmissionStatusEnum  
+from app.enums import SubmissionStatus
 
 fake = Faker()
 
@@ -71,7 +71,7 @@ with app.app_context():
                 name=fake.word(),
                 submission_date=datetime.utcnow(),
                 user_id=user.id,
-                status=SubmissionStatusEnum.COMPLETED,  # Use the Enum
+                status=SubmissionStatus.COMPLETED,  # Use the Enum
                 score=round(fake.random.uniform(50, 100), 2),
                 is_public=True
             )

@@ -17,11 +17,12 @@ import ChevronRightRoundedIcon from "@mui/icons-material/ChevronRightRounded";
 import {Avatar, Button, Chip} from "@mui/joy";
 import {useNavigate} from "react-router-dom";
 import {getGravatarUrl} from "../utils/Gravatar";
+import { format } from 'date-fns';
 
 const headCells = [
     {id: "score", numeric: true, label: "Privacy Score"},
-    {id: "name", numeric: false, label: "Name"},
     {id: "method", numeric: false, label: "Privatization Method"},
+    {id: "date", numeric: false, label: "Submission Date"},
     {id: "submittedBy", numeric: false, label: "Submitted By"},
     {id: "badges", numeric: false, label: "User Badges"},
 ];
@@ -94,7 +95,7 @@ const Rankings = () => {
         const loadRankings = async () => {
             try {
                 const data = await fetchRankings(searchTerm, currentPage, rowsPerPage); // Adjust parameters as needed
-                setRankings(data);
+                setRankings(data.results);
                 setTotalPages(data.totalPages);
                 setCurrentPage(data.currentPage)
             } catch (error) {
@@ -235,26 +236,26 @@ const Rankings = () => {
                     </tr>
                     </thead>
                     <tbody>
-                    {rankings.results.map((row) => (
-                        <tr onClick={() => onViewClick(row)}>
-                            <td>{row.score}</td>
+                    {rankings.map((row) => (
+                        <tr key={row.id} onClick={() => onViewClick(row)}>
+                            <td>{row.overallScore}</td>
                             <td><Typography
                                 sx={{fontWeight: "bold"}}
                                 color="primary"
                                 level="body-sm"
                                 noWrap
                             >{row.name}</Typography></td>
-                            <td>{row.method || "N/A"}</td>
+                            <td>{format(new Date(row.submissionDate), 'dd MMM yyyy')}</td>
                             <td><Box sx={{display: 'flex', alignItems: 'center', gap: 1.5}}>
-                                <Avatar size="sm" src={getGravatarUrl(row.submittedBy.mailAddress)}/>
+                                <Avatar size="sm" src={getGravatarUrl(row.user.mailAddress)}/>
                                 <Box sx={{minWidth: 0}}>
                                     <Typography noWrap>
-                                        {row.submittedBy.username}
+                                        {row.user.username}
                                     </Typography>
                                 </Box>
                             </Box></td>
                             <td>
-                                {row.submittedBy.badges.map((item, index) => (
+                                {row.user.badges.map((item, index) => (
                                     <Chip key={index} variant='outlined' color="primary" sx={{marginRight: 1}}>
                                         {item}
                                     </Chip>
@@ -275,7 +276,7 @@ const Rankings = () => {
                         <td colSpan={6}>
                             <Box sx={{display: "flex", justifyContent: "space-between", alignItems: "center"}}>
                                 <FormControl orientation="horizontal">
-                                    <FormLabel>Rows per page: {rowsPerPage}</FormLabel>
+                                    <FormLabel>Rows per page: {rankings.length}</FormLabel>
                                 </FormControl>
                                 <Box sx={{display: "flex", alignItems: "center"}}>
                                     <IconButton
