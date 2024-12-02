@@ -3,7 +3,7 @@ import FormControl from "@mui/joy/FormControl";
 import FormLabel from "@mui/joy/FormLabel";
 import SearchIcon from "@mui/icons-material/Search";
 import React, {useEffect, useLayoutEffect, useRef, useState} from "react";
-import fetchRankings from "../services/fetchRankings";
+import {fetchRankings} from "../services/RankingsService";
 import Table from "@mui/joy/Table";
 import Typography from "@mui/joy/Typography";
 import Sheet from "@mui/joy/Sheet";
@@ -17,7 +17,7 @@ import ChevronRightRoundedIcon from "@mui/icons-material/ChevronRightRounded";
 import {Avatar, Button, Chip} from "@mui/joy";
 import {useNavigate} from "react-router-dom";
 import {getGravatarUrl} from "../utils/Gravatar";
-import { format } from 'date-fns';
+import {getDateString} from "../utils/Date";
 
 const headCells = [
     {id: "score", numeric: true, label: "Privacy Score"},
@@ -245,7 +245,7 @@ const Rankings = () => {
                                 level="body-sm"
                                 noWrap
                             >{row.name}</Typography></td>
-                            <td>{format(new Date(row.submissionDate), 'dd MMM yyyy')}</td>
+                            <td>{getDateString(row.submissionDate)}</td>
                             <td><Box sx={{display: 'flex', alignItems: 'center', gap: 1.5}}>
                                 <Avatar size="sm" src={getGravatarUrl(row.user.mailAddress)}/>
                                 <Box sx={{minWidth: 0}}>

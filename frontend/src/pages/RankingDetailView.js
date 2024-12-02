@@ -3,21 +3,51 @@ import ChevronRightRoundedIcon from "@mui/icons-material/ChevronRightRounded";
 import Link from "@mui/joy/Link";
 import HomeRoundedIcon from "@mui/icons-material/HomeRounded";
 import Typography from "@mui/joy/Typography";
-import React from "react";
+import React, {useEffect, useState} from "react";
 import {useLocation} from "react-router-dom";
+import {fetchSubmissionDetails} from "../services/RankingsService"
+import LoadingSpinner from "../components/shared/LoadingSpinner";
+import ModelCard from "../components/cards/ModelCard";
+import ChartCard from "../components/cards/ChartCard";
+import CircularProgressCountUp from "../components/CircularProgressCountUp";
+import UserCard from "../components/cards/UserCard";
+import BenchmarkingModulesOverview from "../components/BenchmarkingModulesOverview";
 
 const RankingDetailView = () => {
     const {state} = useLocation();
+    const [submission, setSubmission] = useState(null);
+    const [error, setError] = useState(null);
+    const [loading, setLoading] = useState(true)
+
+
+    useEffect(() => {
+        if (state.id) {
+            const getSubmissionDetails = async () => {
+                const data = await fetchSubmissionDetails(state.id);
+                if (data.error) {
+                    setError(data.error);
+                    setLoading(false)
+                } else {
+                    setSubmission(data);
+                    setLoading(false)
+                }
+            };
+
+            getSubmissionDetails();
+        }
+    }, [state.id]);
+
 
     const cardStyle = {
         minHeight: '35vh',
         '&:hover': {
             transform: 'scale(1.05)',
             transition: 'transform 0.2s ease-in-out',
-        }
+        },
+        overflow: 'hidden'
     }
     return (
-        <Box>
+        !loading && submission ? <Box>
             <Box sx={{display: 'flex', alignItems: 'center', paddingBottom: '20px'}}>
                 <Breadcrumbs
                     size="sm"
@@ -48,55 +78,35 @@ const RankingDetailView = () => {
             </Box>
             <Box>
                 <Grid container spacing={3}>
+                    <Grid item xs={6}>
+                        <ModelCard cardStyle={cardStyle} submission={submission} />
+                    </Grid>
                     <Grid item xs={3}>
-                        <Card sx={cardStyle}>
-                            <CardContent>
-                                <Typography level='h2'>Name and Rank</Typography>
-                                <Typography level='h6'>{state.name}</Typography>
-                                <Typography level='h6'>{state.submittedBy.username}</Typography>
-                                <Typography level='h6'>{state.submittedBy.mailAddress}</Typography>
-                            </CardContent>
-                        </Card>
-                    </Grid>
-                    <Grid item xs={4}>
-                        <Card sx={cardStyle}>
-                            <CardContent>
-                                <Typography level='h2'>Submitted by</Typography>
-                            </CardContent>
-                        </Card>
-                    </Grid>
-                    <Grid item xs={5}>
-                        <Card sx={cardStyle}>
-                            <CardContent>
-                                <Typography level='h2'>Model Card</Typography>
-                            </CardContent>
-                        </Card>
-                    </Grid>
-                    <Grid item xs={5}>
-                        <Card sx={cardStyle}>
-                            <CardContent>
-                                <Typography level='h2'>Fancy Graph</Typography>
-                            </CardContent>
-                        </Card>
-                    </Grid>
-                    <Grid item xs={4}>
-                        <Card sx={cardStyle}>
-                            <CardContent>
-                                <Typography level='h2'>Scoring Models</Typography>
-                            </CardContent>
-                        </Card>
+                        <UserCard user={submission.user} cardStyle={cardStyle}></UserCard>
                     </Grid>
                     <Grid item xs={3}>
                         <Card sx={cardStyle}>
                             <CardContent>
-                                <Typography level='h2'>Information</Typography>
+                                <Typography level='h2'>Overall Score</Typography>
+                                <CircularProgressCountUp overallScore={submission.overallScore} />
                             </CardContent>
+                        </Card>
+                    </Grid>
+                    <Grid item xs={5}>
+                            <ChartCard cardStyle={cardStyle} benchmarkScores={submission.benchmarkScores } overallScore={submission.overallScore}/>
+                    </Grid>
+                    <Grid item xs={7}>
+                        <Card sx={cardStyle}>
+                            <BenchmarkingModulesOverview benchmarkScores={submission.benchmarkScores}></BenchmarkingModulesOverview>
                         </Card>
                     </Grid>
                 </Grid>
             </Box>
         </Box>
-    );
+:
+    <LoadingSpinner/>
+
+);
 }
 
 export default RankingDetailView;
