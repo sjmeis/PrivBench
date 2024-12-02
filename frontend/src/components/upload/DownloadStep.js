@@ -6,51 +6,38 @@ const DownloadStep = ({ onDatasetDownload }) => {
     // Function to trigger dataset loading and file download
     const handleDownload = async () => {
         try {
-            // Create a new dataset entry by calling the backend API
-            const response = await fetch("http://localhost:5000/load-dataset", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                credentials: 'include',
-                body: JSON.stringify({
-                    name: "priv1.csv",
-                }),
+            // Fetch the ZIP file containing all datasets from the `/datasets` endpoint
+            const response = await fetch("http://localhost:5000/datasets", {
+                credentials: "include",
             });
-
+    
             // Check if the request was successful
-            if (response.ok) {
-                const data = await response.json();
-                console.log("Received dataset_id:", data.dataset_id);
-                onDatasetDownload(data.dataset_id);
-            }else{
+            if (!response.ok) {
                 const errorData = await response.json();
                 console.error("Failed to load dataset:", errorData.error);
                 return;
             }
-            const downloadResponse = await fetch(`http://localhost:5000/datasets/priv1.csv`, {
-                credentials: 'include'
-            });
-            
-            if (!downloadResponse.ok) {
-                console.error("Failed to download file");
-                return;
-            }
+            onDatasetDownload("Datasets downloaded");
     
-            const blob = await downloadResponse.blob();
+            // Convert the response to a Blob
+            const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
+    
+            // Create a temporary link to download the file
             const link = document.createElement("a");
             link.href = url;
-            link.download = "priv1.csv";
+            link.download = "datasets.zip"; // Name for the downloaded ZIP file
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            window.URL.revokeObjectURL(url);
     
+            // Revoke the object URL to free memory
+            window.URL.revokeObjectURL(url);
         } catch (error) {
             console.error("An error occurred:", error);
         }
     };
+    
 
     return (
         <Card variant="outlined" sx={{ width: 800, padding: 4 }}>
