@@ -70,6 +70,7 @@ with app.app_context():
                 submission_date=datetime.utcnow(),
                 user_id=user.id,
                 status=SubmissionStatusEnum.COMPLETED,  # Use the Enum
+                score=round(fake.random.uniform(50, 100), 2),
                 is_public=True
             )
             db.session.add(submission)
