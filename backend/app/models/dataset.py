@@ -22,3 +22,6 @@ class Dataset(db.Model):
 
     # One-to-many relationship with PrivatizedDataset
     privatized_datasets = db.relationship('PrivatizedDataset', back_populates='original_dataset', lazy=True)
+
+    # One-to-many relationship with BenchmarkModule
+    benchmark_modules = db.relationship('BenchmarkModule', back_populates='dataset', lazy=True)
