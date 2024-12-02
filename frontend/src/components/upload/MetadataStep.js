@@ -1,16 +1,12 @@
 import React, { useState } from "react";
-import { Button, Card, FormControl, Input, Textarea, Typography, Select, Option } from "@mui/joy";
-import { AddCircle, Save } from "@mui/icons-material";
+import {Button, Card, FormControl, Input, Textarea, Typography, Select, Option, Checkbox} from "@mui/joy";
+import { Save } from "@mui/icons-material";
 
 const MetadataStep = ({ onMetadataSave }) => {
     const [metadata, setMetadata] = useState({
         modelName: "",
         modelDescription: "",
         license: "",
-        libraryName: "",
-        parentModel: "",
-        datasets: "",
-        metrics: "",
         tags: "",
         authors: "",
         relatedResearchPaper: "",
@@ -18,10 +14,11 @@ const MetadataStep = ({ onMetadataSave }) => {
         bibtexCitation: "",
     });
 
+    const [shouldDownload, setShouldDownload] = useState(false);
+
+
     // Mock data for dropdowns
     const licenseOptions = ["MIT", "Apache 2.0", "GPLv3", "BSD"];
-    const libraryOptions = ["TensorFlow", "PyTorch", "Keras", "Hugging Face"];
-    const metricOptions = ["Accuracy", "Precision", "Recall", "F1-Score"];
 
     // Handle input changes
     const handleChange = (field, value) => {
@@ -33,6 +30,10 @@ const MetadataStep = ({ onMetadataSave }) => {
 
     const handleSave = async () => {
         try {
+            if (shouldDownload) {
+                handleDownload();
+            }
+
             // Construct the API endpoint
             const endpoint = "http://localhost:5000/metadata"; 
     
@@ -74,35 +75,19 @@ ${metadata.modelDescription || "Some cool model..."}
 
 # Table of Contents
 - [Model Details](#model-details)
-- [Uses](#uses)
-- [Bias, Risks, and Limitations](#bias-risks-and-limitations)
-- [Training Details](#training-details)
-- [Evaluation](#evaluation)
-- [Model Examination](#model-examination)
-- [Environmental Impact](#environmental-impact)
-- [Technical Specifications](#technical-specifications)
+  - [License](#license)
+  - [Tags](#tags)
+  - [Authors](#authors)
+  - [Related Research Paper](#related-research-paper)
+  - [Related GitHub Repository](#related-github-repository)
 - [Citation](#citation)
-- [Glossary](#glossary)
-- [More Information](#more-information)
-- [Model Card Authors](#model-card-authors)
-- [Model Card Contact](#model-card-contact)
+  - [BibTeX](#bibtex)
+
 
 ## Model Details
 
 ### License
 ${metadata.license || "Unknown"}
-
-### Library Name
-${metadata.libraryName || "Unknown"}
-
-### Parent Model
-${metadata.parentModel || "More information needed"}
-
-### Datasets
-${metadata.datasets || "More information needed"}
-
-### Metrics
-${metadata.metrics || "More information needed"}
 
 ### Tags
 ${metadata.tags || "None"}
@@ -133,6 +118,8 @@ ${metadata.bibtexCitation || "More information needed"}
         link.download = `${metadata.modelName || "Model_Card"}.md`;
         link.click();
     };
+
+
 
     return (
         <Card variant="outlined" sx={{ width: 800, padding: 4 }}>
@@ -172,50 +159,6 @@ ${metadata.bibtexCitation || "More information needed"}
                     ))}
                 </Select>
 
-                <Typography level="h5" sx={{ marginTop: 2 }}>Library Name</Typography>
-                <Select
-                    placeholder="Select a library"
-                    value={metadata.libraryName}
-                    onChange={(e, value) => handleChange("libraryName", value)}
-                    sx={{ marginBottom: 2, bgcolor: "grey.200" }}
-                >
-                    {libraryOptions.map((library) => (
-                        <Option key={library} value={library}>
-                            {library}
-                        </Option>
-                    ))}
-                </Select>
-
-                <Typography level="h5" sx={{ marginTop: 2 }}>Parent Model (URL)</Typography>
-                <Input
-                    placeholder="Provide the parent model's URL"
-                    value={metadata.parentModel}
-                    onChange={(e) => handleChange("parentModel", e.target.value)}
-                    sx={{ marginBottom: 2, bgcolor: "grey.200" }}
-                />
-
-                <Typography level="h5" sx={{ marginTop: 2 }}>Datasets</Typography>
-                <Input
-                    placeholder="Enter datasets (comma-separated)"
-                    value={metadata.datasets}
-                    onChange={(e) => handleChange("datasets", e.target.value)}
-                    sx={{ marginBottom: 2, bgcolor: "grey.200" }}
-                />
-
-                <Typography level="h5" sx={{ marginTop: 2 }}>Metrics</Typography>
-                <Select
-                    placeholder="Select a metric"
-                    value={metadata.metrics}
-                    onChange={(e, value) => handleChange("metrics", value)}
-                    sx={{ marginBottom: 2, bgcolor: "grey.200" }}
-                >
-                    {metricOptions.map((metric) => (
-                        <Option key={metric} value={metric}>
-                            {metric}
-                        </Option>
-                    ))}
-                </Select>
-
                 <Typography level="h5" sx={{ marginTop: 2 }}>Tags</Typography>
                 <Input
                     placeholder="Enter tags (comma-separated)"
@@ -249,22 +192,20 @@ ${metadata.bibtexCitation || "More information needed"}
                 />
 
                 <Typography level="h5" sx={{ marginTop: 2 }}>Bibtex Citation</Typography>
-                <Input
+                <Textarea
                     placeholder="Provide the Bibtex citation"
                     value={metadata.bibtexCitation}
                     onChange={(e) => handleChange("bibtexCitation", e.target.value)}
+                    minRows={4}
                     sx={{ marginBottom: 2, bgcolor: "grey.200" }}
                 />
 
-            <Button
-                variant="soft"
-                size="lg"
-                onClick={handleDownload}
-                sx={{ mt: 2 }}
-                startDecorator={<AddCircle />}
-            >
-                Create Model Card Markdown
-            </Button>
+                <Checkbox
+                    checked={shouldDownload}
+                    onChange={(e) => setShouldDownload(e.target.checked)}
+                    label="Download model card as markdown"
+                    sx={{ mt: 2 }}
+                />
             <Button
                     variant="solid"
                     size="lg"
