@@ -1,25 +1,10 @@
 from flask import Blueprint, request, jsonify, make_response, current_app
-from ..models import BenchmarkScore, User
+from ..models import User, Submission
 from .. import db
+from ..enums import SubmissionStatus
 from sqlalchemy import or_
 
 ranking_bp = Blueprint('ranking', __name__)
-
-@ranking_bp.route('/ranking', methods=['GET'])
-def ranking():
-    results = BenchmarkScore.query.order_by(BenchmarkScore.score.desc()).all()
-    results_list = [
-        {
-            "id": result.id,
-            "submission_date": result.submission_date.isoformat(),
-            "name": result.name,
-            "method": result.method,
-            "submitted_by": result.submitted_by,
-            "score": result.score
-        }
-        for result in results
-    ]
-    return jsonify(results_list)
 
 @ranking_bp.route('/ranking', methods=['POST'])
 def get_all_filtered():
@@ -29,38 +14,49 @@ def get_all_filtered():
         page = data.get('page', 1)
         limit = data.get('limit', 8)
 
-        query = db.session.query(BenchmarkScore).join(User).order_by(BenchmarkScore.score.desc())
+        # Base query: filter submissions with status=Completed and is_public=True
+        query = (
+            db.session.query(Submission)
+            .join(User)
+            .filter(
+                Submission.status == SubmissionStatus.COMPLETED,
+                Submission.is_public == True  # Ensure submission is public
+            )
+            .order_by(Submission.score.desc())
+        )
 
+        # Apply search filter if provided
         if search_term:
             search_term = f"%{search_term}%"
             query = query.filter(
                 or_(
-                    BenchmarkScore.name.ilike(search_term),
-                    BenchmarkScore.method.ilike(search_term),
-                    User.username.ilike(search_term)
+                    Submission.name.ilike(search_term),
+                    User.username.ilike(search_term),
                 )
             )
 
+        #Pagination
         offset = (page - 1) * limit
-        results = query.offset(offset).limit(limit).all()
+        paginated_results = query.offset(offset).limit(limit).all()
 
         total = query.count()
 
         results_list = [
             {
-                "id": result.id,
-                "submissionDate": result.submission_date.isoformat(),
-                "name": result.name,
-                "method": result.method,
-                "submittedBy": {
-                    "id": result.submitted_by,
-                    "username": result.user.username,
-                    "mailAddress": result.user.mail_address,
-                    "badges": result.user.badges
+                "id": submission.id,
+                "name": submission.name,
+                "submissionDate": submission.submission_date.isoformat(),
+                "status": submission.status.value,
+                "isPublic": submission.is_public,
+                "overallScore": submission.score,  # You can retain the overall score if required
+                "user": {
+                    "id": submission.user.id,
+                    "username": submission.user.username,
+                    "mailAddress": submission.user.mail_address,
+                    "badges": submission.user.badges,
                 },
-                "score": result.score
             }
-            for result in results
+            for submission in paginated_results
         ]
 
         response = {
@@ -72,4 +68,3 @@ def get_all_filtered():
 
     except Exception as e:
         return jsonify({"message": "Internal server error", "error": str(e)}), 500
-
