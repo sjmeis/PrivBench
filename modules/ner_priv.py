@@ -2,11 +2,12 @@ import pandas as pd
 import spacy
 from collections import Counter
 from tqdm.auto import tqdm
+from base_benchmark import BaseBenchmark
 
 spacy.prefer_gpu()
 
 
-class NERpriv():
+class NERpriv(BaseBenchmark):
 
     def __init__(self):
         self.nlp = spacy.load("en_core_web_sm")
@@ -33,5 +34,8 @@ class NERpriv():
                 if ent not in priv_ents and ent.lower() not in priv_ents:
                     removed += counts[ent]
                 total += counts[ent]
+
+        if total == 0:
+            return 0.0  
 
         return round(removed / total, 3)

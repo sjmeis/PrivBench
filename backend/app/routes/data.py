@@ -8,6 +8,7 @@ from datetime import datetime
 import logging
 import zipfile
 from io import BytesIO
+from urllib.parse import unquote
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -79,8 +80,27 @@ def load_dataset():
         # Handle any errors
         logger.error(f"Error occurred: {str(e)}")
         return jsonify({'error': str(e)}), 500
+    
+@data_bp.route('/datasets/list', methods=['GET'])
+def get_dataset_list():
+    try:
+        # Get a list of all files in the dataset folder
+        files = [f for f in os.listdir(DATASET_FOLDER) if os.path.isfile(os.path.join(DATASET_FOLDER, f))]
+        if not files:
+            return jsonify({'error': 'No files found in the dataset folder'}), 404
 
-@data_bp.route('/datasets/<filename>', methods=['GET'])
+        datasets = []
+        for idx, filename in enumerate(files, start=1):
+            datasets.append({'id': idx, 'name': filename})
+
+        return jsonify({'datasets': datasets}), 200
+
+    except Exception as e:
+        logger.error(f"Error fetching datasets: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+"""@data_bp.route('/datasets/<filename>', methods=['GET'])
 def get_dataset(filename):
     try:
         # Ensure the file exists in the dataset folder
@@ -90,6 +110,22 @@ def get_dataset(filename):
         # Serve the file
         return send_from_directory(DATASET_FOLDER, filename, as_attachment=True)
     except Exception as e:
+        return jsonify({'error': str(e)}), 500"""
+    
+
+@data_bp.route('/datasets/<path:filename>', methods=['GET'])
+def get_dataset(filename):
+    try:
+        # Decode the filename in case it contains spaces or special characters
+        filename = unquote(filename)
+        file_path = os.path.join(DATASET_FOLDER, filename)
+        if not os.path.isfile(file_path):
+            return jsonify({'error': 'Dataset not found'}), 404
+
+        return send_from_directory(DATASET_FOLDER, filename, as_attachment=True, conditional=False)
+
+    except Exception as e:
+        logger.error(f"Error fetching dataset {filename}: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @data_bp.route('/datasets', methods=['GET'])
