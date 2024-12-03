@@ -54,7 +54,9 @@ with app.app_context():
         module = BenchmarkModule(
             name=fake.word(),
             version=fake.pystr(max_chars=5),
-            is_active=True
+            is_active=True,
+            path=fake.pystr(max_chars=15),
+            dataset_id=fake.random_element(elements=[d.id for d in datasets])
         )
         benchmark_modules.append(module)
         db.session.add(module)

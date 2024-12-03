@@ -12,6 +12,7 @@ services:
     volumes:
       - ./data:/data
       - ./data/privatized_datasets:/data/privatized_datasets
+      - ./modules:/modules
     depends_on:
       db:
         condition: service_healthy
