@@ -9,7 +9,10 @@ class BenchmarkModule(db.Model):
     version = db.Column(db.String(50), nullable=False)
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    path = db.Column(db.String(255), nullable=False)
+    dataset_id = db.Column(db.Integer, db.ForeignKey('dataset.id'), nullable=False)
 
     # One-to-many relationships
     benchmark_scores = db.relationship('BenchmarkScore', back_populates='benchmark_module', lazy=True)
     tasks = db.relationship('Task', back_populates='benchmark_module', lazy=True)
+    dataset = db.relationship('Dataset', back_populates='benchmark_modules')

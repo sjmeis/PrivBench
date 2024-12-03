@@ -5,7 +5,10 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y postgresql-client
 
 COPY requirements.txt .
-RUN pip install -r requirements.txt
+RUN pip install --upgrade -r requirements.txt
+
+# TODO remove this from dockerfile
+RUN python -m spacy download en_core_web_sm
 
 COPY . .
 

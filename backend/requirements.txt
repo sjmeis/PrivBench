@@ -11,3 +11,9 @@ Werkzeug==2.2.2
 gunicorn==20.1.0
 minio==7.1.1
 Faker==33.0.0
+
+# requirements for benchmark module
+numpy
+pandas
+tqdm
+spacy

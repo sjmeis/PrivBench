@@ -1,5 +1,5 @@
 import { Alert, Box, Button, Snackbar } from "@mui/joy";
-import { useState, Fragment } from "react";
+import { useState, Fragment, useEffect } from "react";
 import { Close, East, Warning, West, BarChart } from "@mui/icons-material";
 import DownloadStep from "../components/upload/DownloadStep";
 import UploadStep from "../components/upload/UploadStep";
@@ -14,40 +14,31 @@ import CloudUploadRoundedIcon from "@mui/icons-material/CloudUploadRounded";
 import InfoRoundedIcon from "@mui/icons-material/InfoRounded";
 
 const Upload = () => {
-  const [errorMessage, setErrorMessage] = useState(""); // Error message state for Snackbar
-  const [openSnackbar, setOpenSnackbar] = useState(false); // Snackbar open state
-  const [storedFiles, setStoredFiles] = useState([]); // State to store valid CSV files
-  const [currentStep, setCurrentStep] = useState(0); // Track the current step
+  const [errorMessage, setErrorMessage] = useState("");
+  const [openSnackbar, setOpenSnackbar] = useState(false);
+  const [currentStep, setCurrentStep] = useState(0);
   const [submissionId, setSubmissionId] = useState(null);
-  const [originalDatasetId, setOriginalDatasetId] = useState(null);
+  const [downloadedDatasets, setDownloadedDatasets] = useState([]);
+  const [datasets, setDatasets] = useState([]);
+  const [uploadedFiles, setUploadedFiles] = useState({});
 
-  // Handle file selection
-  const handleFileChange = (event) => {
-    const files = Array.from(event.target.files); // Convert FileList to array
-
-    // Check for duplicates by file name
-    const newFiles = files.filter(
-      (file) => !storedFiles.some((storedFile) => storedFile.name === file.name)
-    );
-
-    // Set error if duplicate files were found
-    if (newFiles.length < files.length) {
-      setErrorMessage("The file(s) have already been uploaded!");
-      setOpenSnackbar(true);
-    }
-
-    // Update storedFiles with unique, valid CSV files
-    setStoredFiles((prevFiles) => [...prevFiles, ...newFiles]);
-    // Set the hidden input field value to ""
-    event.target.value = "";
-  };
-
-  // Handle deletion of a specific file by name
-  const handleDeleteFile = (fileName) => {
-    setStoredFiles((prevFiles) =>
-      prevFiles.filter((file) => file.name !== fileName)
-    );
-  };
+  useEffect(() => {
+    const fetchDatasets = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/datasets/list");
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error("Failed to fetch datasets:", errorData.error);
+          return;
+        }
+        const data = await response.json();
+        setDatasets(data.datasets);
+      } catch (error) {
+        console.error("An error occurred:", error);
+      }
+    };
+    fetchDatasets();
+  }, []);
 
   // Function to handle step change when clicking on StepIndicator
   const handleStepClick = (step) => {
@@ -56,10 +47,12 @@ const Upload = () => {
 
   // Handle Next button click
   const handleNext = () => {
-    if (currentStep === 0 && !originalDatasetId) {
-      setErrorMessage("Please download the dataset before proceeding.");
-      setOpenSnackbar(true);
-      return;
+    if (currentStep === 0) {
+      if (datasets.length > 0 && downloadedDatasets.length < datasets.length) {
+        setErrorMessage("Please download all datasets before proceeding.");
+        setOpenSnackbar(true);
+        return;
+      }
     }
 
     if (currentStep === 1 && !submissionId) {
@@ -68,13 +61,21 @@ const Upload = () => {
       return;
     }
 
+    if (currentStep === 2) {
+      if (datasets.length > 0 && Object.keys(uploadedFiles).length < datasets.length) {
+        setErrorMessage("Please upload files for all datasets before proceeding.");
+        setOpenSnackbar(true);
+        return;
+      }
+    }
+
     setCurrentStep((prev) => prev + 1);
   };
 
   // Handle Submit action
   const handleSubmit = () => {
-    // POST request to be sent
-    console.log("Submitting files for evaluation:", storedFiles);
+    // Implement submission logic here
+    console.log("Submitting files for evaluation");
 
     // Move to the fourth step
     setCurrentStep(3);
@@ -96,21 +97,21 @@ const Upload = () => {
           },
           [`& .${stepClasses.completed}`]: {
             [`& .${stepIndicatorClasses.root}`]: {
-              borderColor: "success.600", // Border for completed steps
-              color: "common.white", // Icon color for visibility
-              backgroundColor: "success.600", // Fill background of completed steps
+              borderColor: "success.600",
+              color: "common.white",
+              backgroundColor: "success.600",
             },
             "&::after": {
-              bgcolor: "success.600", // Connector color for completed steps
+              bgcolor: "success.600",
             },
           },
           [`& .${stepClasses.active}`]: {
             [`& .${stepIndicatorClasses.root}`]: {
-              borderColor: "currentColor", // Border for active steps
+              borderColor: "currentColor",
             },
           },
           [`& .${stepClasses.disabled} *`]: {
-            color: "neutral.outlinedDisabledColor", // Style for disabled steps
+            color: "neutral.outlinedDisabledColor",
           },
         }}
       >
@@ -121,7 +122,7 @@ const Upload = () => {
             <StepIndicator
               variant="soft"
               color={currentStep === 0 ? "primary" : "neutral"}
-              onClick={() => handleStepClick(0)} // Clickable step
+              onClick={() => handleStepClick(0)}
             >
               <GetAppRoundedIcon />
             </StepIndicator>
@@ -136,7 +137,7 @@ const Upload = () => {
             <StepIndicator
               variant="soft"
               color={currentStep === 1 ? "primary" : "neutral"}
-              onClick={() => handleStepClick(1)} // Clickable step
+              onClick={() => handleStepClick(1)}
             >
               <InfoRoundedIcon />
             </StepIndicator>
@@ -151,7 +152,7 @@ const Upload = () => {
             <StepIndicator
               variant="soft"
               color={currentStep === 2 ? "primary" : "neutral"}
-              onClick={() => handleStepClick(2)} // Clickable step
+              onClick={() => handleStepClick(2)}
             >
               <CloudUploadRoundedIcon />
             </StepIndicator>
@@ -186,24 +187,14 @@ const Upload = () => {
             Back
           </Button>
         )}
-        {currentStep < 2 && (
+        {currentStep < 3 && (
           <Button
             variant="soft"
             color="primary"
             onClick={handleNext}
             endDecorator={<East />}
           >
-            Next
-          </Button>
-        )}
-        {currentStep === 2 && (
-          <Button
-            variant="solid"
-            color="primary"
-            onClick={handleSubmit}
-            endDecorator={<East />}
-          >
-            Submit
+            {currentStep === 2 ? "Submit" : "Next"}
           </Button>
         )}
       </Box>
@@ -211,10 +202,13 @@ const Upload = () => {
       {/* Conditionally render components with props */}
       {currentStep === 0 && (
         <DownloadStep
-          onDatasetDownload={(id) => {
-            console.log("Setting originalDatasetId to:", id);
-            setOriginalDatasetId(id);
+          onDatasetDownloaded={(datasetName) => {
+            setDownloadedDatasets((prev) => [...prev, datasetName]);
           }}
+          onDatasetsFetched={(fetchedDatasets) => {
+            setDatasets(fetchedDatasets);
+          }}
+          downloadedDatasets={downloadedDatasets}
         />
       )}
 
@@ -228,21 +222,17 @@ const Upload = () => {
       )}
 
       {currentStep === 2 && (
-        <>
-          {console.log(
-            "At UploadStep, submissionId:",
-            submissionId,
-            "originalDatasetId:",
-            originalDatasetId
-          )}
-          <UploadStep
-            storedFiles={storedFiles}
-            handleFileChange={handleFileChange}
-            handleDeleteFile={handleDeleteFile}
-            submissionId={submissionId}
-            originalDatasetId={originalDatasetId}
-          />
-        </>
+        <UploadStep
+          submissionId={submissionId}
+          datasets={datasets}
+          uploadedFiles={uploadedFiles}
+          onFileUploaded={(datasetId, fileName) => {
+            setUploadedFiles((prev) => ({
+              ...prev,
+              [datasetId]: fileName,
+            }));
+          }}
+        />
       )}
 
       {currentStep === 3 && <FinalStep />}
@@ -250,7 +240,7 @@ const Upload = () => {
       {/* Snackbar for error message */}
       <Snackbar
         open={openSnackbar}
-        autoHideDuration={6000} // Auto hide after 6000ms
+        autoHideDuration={6000}
         onClose={() => setOpenSnackbar(false)}
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >

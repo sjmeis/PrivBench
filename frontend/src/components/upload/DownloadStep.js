@@ -1,103 +1,118 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Box, Button, Card, Typography } from "@mui/joy";
 import { CloudDownload } from "@mui/icons-material";
 
-const DownloadStep = ({ onDatasetDownload }) => {
-    // Function to trigger dataset loading and file download
-    const handleDownload = async () => {
+const DownloadStep = ({ onDatasetDownloaded, onDatasetsFetched, downloadedDatasets }) => {
+    const [datasets, setDatasets] = useState([]);
+  
+    useEffect(() => {
+      const fetchDatasets = async () => {
         try {
-            // Create a new dataset entry by calling the backend API
-            const response = await fetch("http://localhost:5000/load-dataset", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                credentials: 'include',
-                body: JSON.stringify({
-                    name: "priv1.csv",
-                }),
-            });
-
-            // Check if the request was successful
-            if (response.ok) {
-                const data = await response.json();
-                console.log("Received dataset_id:", data.dataset_id);
-                onDatasetDownload(data.dataset_id);
-            }else{
-                const errorData = await response.json();
-                console.error("Failed to load dataset:", errorData.error);
-                return;
-            }
-            const downloadResponse = await fetch(`http://localhost:5000/datasets/priv1.csv`, {
-                credentials: 'include'
-            });
-            
-            if (!downloadResponse.ok) {
-                console.error("Failed to download file");
-                return;
-            }
-    
-            const blob = await downloadResponse.blob();
-            const url = window.URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.href = url;
-            link.download = "priv1.csv";
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            window.URL.revokeObjectURL(url);
-    
+          const response = await fetch("http://localhost:5000/datasets/list", {
+            credentials: 'include',
+          });
+          if (!response.ok) {
+            const errorData = await response.json();
+            console.error("Failed to fetch datasets:", errorData.error);
+            return;
+          }
+          const data = await response.json();
+          setDatasets(data.datasets);
+          onDatasetsFetched(data.datasets);
         } catch (error) {
-            console.error("An error occurred:", error);
+          console.error("An error occurred:", error);
         }
-    };
+      };
+      fetchDatasets();
+    }, []);
 
-    return (
-        <Card variant="outlined" sx={{ width: 800, padding: 4 }}>
-            <Typography level="h2" mb={2} sx={{ textAlign: "center" }}>
-                Download dataset
-            </Typography>
-            <Box sx={{ textAlign: "center", mb: 2 }}>
-                <Typography level="body1">
-                    In this step, you need to download the original dataset provided. The dataset contains sensitive
-                    information, and your goal is to apply a data privatization method of your choice to ensure the privacy
-                    and security of the dataset.
-                </Typography>
-            </Box>
+  const handleDownloadDataset = async (datasetName) => {
+    try {
+      console.log("Downloading dataset:", datasetName);
+      const response = await fetch(`http://localhost:5000/datasets/${encodeURIComponent(datasetName)}`, {
+        credentials: 'include',
+        cache: 'no-cache', // Prevent caching issues
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Failed to load dataset:", errorData.error);
+        return;
+      }
 
-            <Box sx={{ textAlign: "center", mb: 2 }}>
-                <Typography level="body1">
-                    You can use any suitable technique, such as data masking, encryption, anonymization, or synthetic data
-                    generation. The objective is to protect sensitive information while retaining the dataset's utility for
-                    analysis.
-                </Typography>
-            </Box>
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
 
-            <Box sx={{ textAlign: "center", mb: 2 }}>
-                <Typography level="body1">
-                    Once the privatization process is complete, save the resulting privatized dataset. You will need to
-                    upload it in the final step of this workflow. Ensure that the privatized dataset aligns with the
-                    required format and adheres to the constraints specified for upload compatibility.
-                </Typography>
-            </Box>
+      const link = document.createElement("a");
+      link.href = url;
+      // Use decodeURIComponent to handle any URL-encoded characters
+      link.download = decodeURIComponent(datasetName);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
 
-            <Box sx={{ textAlign: "center", mb: 2 }}>
-                <Typography level="body1" sx={{ fontWeight: "bold" }}>
-                    Please make sure you have downloaded the dataset before going to the next step!
-                </Typography>
-            </Box>
+      window.URL.revokeObjectURL(url);
 
-            <Button
-                variant="soft"
-                size="lg"
-                startDecorator={<CloudDownload />}
-                sx={{ mt: 2 }}
-                onClick={handleDownload} // Attach the function here
-            >
-                Download
-            </Button>
-        </Card>
-    );
+      // Inform parent that dataset has been downloaded
+      onDatasetDownloaded(datasetName);
+    } catch (error) {
+      console.error("An error occurred:", error);
+    }
+  };
+
+  return (
+    <Card variant="outlined" sx={{ width: 800, padding: 4 }}>
+      <Typography level="h2" mb={2} sx={{ textAlign: "center" }}>
+        Download Datasets
+      </Typography>
+      <Box sx={{ textAlign: "center", mb: 2 }}>
+        <Typography level="body1">
+          In this step, you need to download the original dataset provided. The dataset contains sensitive
+          information, and your goal is to apply a data privatization method of your choice to ensure the privacy
+          and security of the dataset.
+        </Typography>
+      </Box>
+
+      <Box sx={{ textAlign: "center", mb: 2 }}>
+        <Typography level="body1">
+          You can use any suitable technique, such as data masking, encryption, anonymization, or synthetic data
+          generation. The objective is to protect sensitive information while retaining the dataset's utility for
+          analysis.
+        </Typography>
+      </Box>
+
+      <Box sx={{ textAlign: "center", mb: 2 }}>
+        <Typography level="body1">
+          Once the privatization process is complete, save the resulting privatized dataset. You will need to
+          upload it in the final step of this workflow. Ensure that the privatized dataset aligns with the
+          required format and adheres to the constraints specified for upload compatibility.
+        </Typography>
+      </Box>
+
+      <Box sx={{ textAlign: "center", mb: 2 }}>
+        <Typography level="body1" sx={{ fontWeight: "bold" }}>
+          Please make sure you have downloaded the dataset before going to the next step!
+        </Typography>
+      </Box>
+
+      {datasets.map((dataset) => (
+        <Box key={dataset.name} sx={{ textAlign: "center", mb: 2 }}>
+          <Typography level="body1">
+            Dataset: {dataset.name}
+          </Typography>
+          <Button
+            variant="soft"
+            size="lg"
+            startDecorator={<CloudDownload />}
+            sx={{ mt: 2 }}
+            onClick={() => handleDownloadDataset(dataset.name)}
+            disabled={downloadedDatasets.includes(dataset.name)} // Disable if already downloaded
+          >
+            {downloadedDatasets.includes(dataset.name) ? "Downloaded" : `Download ${dataset.name}`}
+          </Button>
+        </Box>
+      ))}
+    </Card>
+  );
 };
 
 export default DownloadStep;
