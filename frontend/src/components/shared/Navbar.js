@@ -30,6 +30,8 @@ const Navbar = () => {
         return null;
     }
 
+    const isLightMode = mode === 'light';
+
     const handleChange = () => {
         setMode(mode === 'dark' ? 'light' : 'dark');
     };
@@ -44,7 +46,7 @@ const Navbar = () => {
             sx={{
                 width: '100%',
                 padding: 1.5,
-                borderBottom: '1.5px solid #161a1b',
+                borderBottom: isLightMode ? '1.5px solid #f0f4f8' :'1.5px solid #161a1b',
             }}
         >
             <Grid container alignItems="center">
@@ -107,7 +109,6 @@ const Navbar = () => {
                     </Button>
                 </Grid>
 
-                {/* Right-aligned authentication and theme buttons */}
                 <Grid item xs={1} container justifyContent="flex-end" alignItems="center">
                     <Stack direction="row" spacing={1} alignItems="center">
                         <Button
