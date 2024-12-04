@@ -166,7 +166,7 @@ const Rankings = () => {
                     borderRadius: "sm",
                 }}
             >
-                <Table aria-labelledby="tableTitle" sx={{minWidth: 750, "--TableCell-paddingX": "10px"}} hoverRow>
+                <Table aria-labelledby="tableTitle" sx={{minWidth: 750, "--TableCell-paddingX": "10px"}} >
                     <thead>
                     <tr>
                         {headCells.map((headCell) => (
