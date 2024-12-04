@@ -4,6 +4,10 @@ export const getDateString = (timestamp) => {
     return format(new Date(timestamp), 'dd MMM yyyy')
 }
 
+export const getDateTimeString = (timestamp) => {
+    return format(new Date(timestamp), 'dd.MM.yy HH:mm');
+};
+
 export const isNewDate = (date) => {
     const now = new Date();
     const differenceInMillis = now - new Date(date);
