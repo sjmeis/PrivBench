@@ -8,22 +8,20 @@ import ListItemDecorator from '@mui/joy/ListItemDecorator';
 import ListItemContent from '@mui/joy/ListItemContent';
 import PeopleRoundedIcon from '@mui/icons-material/PeopleRounded';
 import AssignmentIndRoundedIcon from '@mui/icons-material/AssignmentIndRounded';
-import AccountTreeRoundedIcon from '@mui/icons-material/AccountTreeRounded';
-import TodayRoundedIcon from '@mui/icons-material/TodayRounded';
-import ArticleRoundedIcon from '@mui/icons-material/ArticleRounded';
+import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import Chip from '@mui/joy/Chip';
 
-export function SideNav(props) {
+export function SideNav({ selectedItem, onSelect }) {
     return (
         <Box
             component="nav"
             className="Navigation"
-            {...props}
             sx={{
-                position: 'sticky', // Make the nav sticky
-                top: 0, // Stop when it hits the top of the viewport
-                height: '100vh', // Ensure it occupies full height
-                overflowY: 'auto', // Allow scrolling if content overflows
+                width: '220px',
+                position: 'sticky',
+                top: 0,
+                height: '100vh',
+                overflowY: 'auto',
                 p: 2,
                 bgcolor: 'background.surface',
                 borderRight: '1px solid',
@@ -49,16 +47,12 @@ export function SideNav(props) {
                         aria-labelledby="nav-list"
                         sx={{ '& .JoyListItemButton-root': { p: '8px' } }}
                     >
+
                         <ListItem>
-                            <ListItemButton selected>
-                                <ListItemDecorator>
-                                    <PeopleRoundedIcon fontSize="small" />
-                                </ListItemDecorator>
-                                <ListItemContent>Profile</ListItemContent>
-                            </ListItemButton>
-                        </ListItem>
-                        <ListItem>
-                            <ListItemButton>
+                            <ListItemButton
+                                selected={selectedItem === 'account'}
+                                onClick={() => onSelect('account')}
+                            >
                                 <ListItemDecorator sx={{ color: 'neutral.500' }}>
                                     <AssignmentIndRoundedIcon fontSize="small" />
                                 </ListItemDecorator>
@@ -66,29 +60,26 @@ export function SideNav(props) {
                             </ListItemButton>
                         </ListItem>
                         <ListItem>
-                            <ListItemButton>
-                                <ListItemDecorator sx={{ color: 'neutral.500' }}>
-                                    <AccountTreeRoundedIcon fontSize="small" />
+                            <ListItemButton
+                                selected={selectedItem === 'profile'}
+                                onClick={() => onSelect('profile')}
+                            >
+                                <ListItemDecorator>
+                                    <PeopleRoundedIcon fontSize="small" />
                                 </ListItemDecorator>
-                                <ListItemContent>Projects</ListItemContent>
+                                <ListItemContent>Public Profile</ListItemContent>
                             </ListItemButton>
                         </ListItem>
                         <ListItem>
-                            <ListItemButton>
+                            <ListItemButton
+                                selected={selectedItem === 'submissions'}
+                                onClick={() => onSelect('submissions')}>
                                 <ListItemDecorator sx={{ color: 'neutral.500' }}>
-                                    <TodayRoundedIcon fontSize="small" />
+                                    <EmojiEventsIcon fontSize="small" />
                                 </ListItemDecorator>
-                                <ListItemContent>Schedule</ListItemContent>
-                            </ListItemButton>
-                        </ListItem>
-                        <ListItem>
-                            <ListItemButton>
-                                <ListItemDecorator sx={{ color: 'neutral.500' }}>
-                                    <ArticleRoundedIcon fontSize="small" />
-                                </ListItemDecorator>
-                                <ListItemContent>Policies</ListItemContent>
-                                <Chip variant="soft" color="warning" size="sm">
-                                    2
+                                <ListItemContent>Submissions</ListItemContent>
+                                <Chip variant="soft" color="success" size="sm">
+                                    1
                                 </Chip>
                             </ListItemButton>
                         </ListItem>

@@ -50,7 +50,6 @@ const Navbar = () => {
             }}
         >
             <Grid container alignItems="center">
-                {/* Left-aligned logo */}
                 <Grid item xs={1} container justifyContent="flex-start">
                     <Typography
                         onClick={() => navigate("/")}
@@ -60,7 +59,6 @@ const Navbar = () => {
                         PrivBench
                     </Typography>
                 </Grid>
-                {/* Centered buttons */}
                 <Grid item xs={10} container justifyContent="center">
                     <Button
                         onClick={() => navigate("/rankings")}
@@ -149,7 +147,7 @@ const Navbar = () => {
                                         '--ListItem-radius': 'var(--joy-radius-sm)',
                                     }}
                                 >
-                                    <MenuItem onClick={() => navigate("/profile")}>
+                                    <MenuItem onClick={() => navigate("/profile", {state: 'account'})}>
                                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                             <Avatar
                                                 src={getGravatarUrl(user.mailAddress)}
@@ -166,11 +164,11 @@ const Navbar = () => {
                                         </Box>
                                     </MenuItem>
                                     <ListDivider />
-                                    <MenuItem>
+                                    <MenuItem onClick={() => navigate("/profile", {state: 'submissions'})}>
                                         <EmojiEventsIcon />
                                         My Submissions
                                     </MenuItem>
-                                    <MenuItem>
+                                    <MenuItem onClick={() => navigate("/profile", {state: 'account'})}>
                                         <SettingsRoundedIcon />
                                         Settings
                                     </MenuItem>
