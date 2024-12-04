@@ -1,17 +1,21 @@
 import { useState, useEffect } from 'react';
-import { 
-    Box, 
-    Typography, 
-    Card, 
-    Button, 
+import {
+    Box,
+    Typography,
+    Card,
+    Button,
     IconButton,
     Sheet
 } from "@mui/joy";
+import { useTheme } from "@mui/joy";
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 
 const Home = () => {
     const [scrolled, setScrolled] = useState(false);
     const [activeIndex, setActiveIndex] = useState(0);
+    const theme = useTheme();
+
+    const isLightMode = theme.palette.mode === 'light';
 
     useEffect(() => {
         const handleScroll = () => {
@@ -33,29 +37,34 @@ const Home = () => {
     };
 
     const highlights = [
-        { 
+        {
             title: "Privacy-First Benchmarking",
             description: "Evaluate your text privatization methods securely and confidentially"
         },
-        { 
+        {
             title: "Comprehensive Metrics",
             description: "Get detailed insights across multiple privacy dimensions"
         },
-        { 
+        {
             title: "Active Community",
             description: "Join researchers pushing the boundaries of text privacy"
         }
     ];
 
     return (
-        <Sheet 
-            sx={{ 
+        <Sheet
+            sx={{
+                marginTop: '-10px',
+                marginRight: '-40px',
+                marginLeft: '-40px',
+                marginBottom: '-40px',
                 minHeight: '100vh',
                 bgcolor: 'background.body',
-                background: `linear-gradient(to bottom, var(--joy-palette-neutral-900), var(--joy-palette-neutral-800))`,
+                background: isLightMode
+                    ? 'linear-gradient(to bottom, #ffffff, #f5f5f5)'
+                    : 'linear-gradient(to bottom, var(--joy-palette-neutral-900), var(--joy-palette-neutral-800))',
             }}
         >
-            {/* Hero Section */}
             <Box sx={{
                 height: '100vh',
                 display: 'flex',
@@ -64,7 +73,6 @@ const Home = () => {
                 position: 'relative',
                 overflow: 'hidden'
             }}>
-                {/* Animated background */}
                 <Box sx={{
                     position: 'absolute',
                     inset: 0,
@@ -73,7 +81,9 @@ const Home = () => {
                     <Box sx={{
                         position: 'absolute',
                         inset: 0,
-                        background: `linear-gradient(to right, var(--joy-palette-primary-500), var(--joy-palette-primary-600))`,
+                        background: isLightMode
+                            ? 'linear-gradient(to right, #bbdefb, #64b5f6)'
+                            : 'linear-gradient(to right, var(--joy-palette-primary-500), var(--joy-palette-primary-600))',
                         animation: 'pulse 2s infinite',
                         '@keyframes pulse': {
                             '0%, 100%': { opacity: 0.5 },
@@ -83,13 +93,15 @@ const Home = () => {
                     <Box sx={{
                         position: 'absolute',
                         inset: 0,
-                        background: 'radial-gradient(circle 500px at 50% 50%, transparent, #000)'
+                        background: isLightMode
+                            ? 'radial-gradient(circle 500px at 50% 50%, transparent, #e3f2fd)'
+                            : 'radial-gradient(circle 500px at 50% 50%, transparent, #000)'
                     }} />
                 </Box>
-                
-                <Box sx={{ 
-                    textAlign: 'center', 
-                    zIndex: 1, 
+
+                <Box sx={{
+                    textAlign: 'center',
+                    zIndex: 1,
                     p: 4,
                     maxWidth: '4xl'
                 }}>
@@ -98,7 +110,7 @@ const Home = () => {
                         sx={{
                             fontSize: { xs: '2.5rem', md: '4rem' },
                             mb: 2,
-                            background: `linear-gradient(to right, var(--joy-palette-primary-300), var(--joy-palette-primary-400))`,
+                            background: 'linear-gradient(to right, var(--joy-palette-primary-300), var(--joy-palette-primary-400))',
                             WebkitBackgroundClip: 'text',
                             WebkitTextFillColor: 'transparent',
                             animation: 'fadeIn 1s ease-out',
@@ -110,18 +122,18 @@ const Home = () => {
                     >
                         PrivBench
                     </Typography>
-                    
+
                     <Typography
                         level="h3"
                         sx={{
                             mb: 4,
-                            color: 'neutral.300',
+                            color: isLightMode ? 'text.secondary' : 'neutral.300',
                             animation: 'fadeIn 1s ease-out 0.3s backwards'
                         }}
                     >
                         The Premier Platform for Text Privacy Benchmarking
                     </Typography>
-                    
+
                     <Box sx={{ height: '100px', position: 'relative', mt: 4 }}>
                         {highlights.map((highlight, idx) => (
                             <Box
@@ -134,10 +146,10 @@ const Home = () => {
                                     transform: `translateY(${idx === activeIndex ? 0 : '20px'})`
                                 }}
                             >
-                                <Typography level="h4" sx={{ mb: 1, color: 'primary.400' }}>
+                                <Typography level="h4" sx={{ mb: 1, color: isLightMode ? 'primary.main' : 'primary.400' }}>
                                     {highlight.title}
                                 </Typography>
-                                <Typography sx={{ color: 'neutral.300' }}>
+                                <Typography sx={{ color: isLightMode ? 'text.primary' : 'neutral.300' }}>
                                     {highlight.description}
                                 </Typography>
                             </Box>
@@ -147,7 +159,7 @@ const Home = () => {
                     <Box sx={{ mt: 8, display: 'flex', gap: 2, justifyContent: 'center' }}>
                         <Button
                             size="lg"
-                            sx={{ 
+                            sx={{
                                 bgcolor: 'primary.500',
                                 '&:hover': { bgcolor: 'primary.600' },
                                 px: 4
@@ -158,12 +170,12 @@ const Home = () => {
                         <Button
                             size="lg"
                             variant="outlined"
-                            sx={{ 
+                            sx={{
                                 borderColor: 'primary.400',
                                 color: 'primary.400',
-                                '&:hover': { 
+                                '&:hover': {
                                     bgcolor: 'primary.400',
-                                    opacity: 0.1 
+                                    opacity: 0.1
                                 },
                                 px: 4
                             }}
@@ -174,7 +186,6 @@ const Home = () => {
                 </Box>
             </Box>
 
-            {/* Features Grid */}
             <Box sx={{ px: { xs: 2, md: 4 }, py: 8, maxWidth: '6xl', mx: 'auto' }}>
                 <Box sx={{
                     display: 'grid',
@@ -184,9 +195,9 @@ const Home = () => {
                     <Card
                         variant="outlined"
                         sx={{
-                            bgcolor: 'neutral.800',
-                            borderColor: 'neutral.700',
-                            '&:hover': { 
+                            bgcolor: isLightMode ? 'background.paper' : 'neutral.800',
+                            borderColor: isLightMode ? 'divider' : 'neutral.700',
+                            '&:hover': {
                                 borderColor: 'primary.500',
                                 transform: 'translateY(-4px)',
                                 transition: 'all 0.3s'
@@ -196,10 +207,10 @@ const Home = () => {
                         <Typography level="h3" sx={{ color: 'primary.400', mb: 2 }}>
                             Comprehensive Evaluation
                         </Typography>
-                        <Typography level="body-md" sx={{ color: 'neutral.300', mb: 2 }}>
+                        <Typography level="body-md" sx={{ color: isLightMode ? 'text.secondary' : 'neutral.300', mb: 2 }}>
                             Our platform provides thorough assessment of text privatization methods across multiple dimensions
                         </Typography>
-                        <Box component="ul" sx={{ color: 'neutral.400', pl: 4 }}>
+                        <Box component="ul" sx={{ color: isLightMode ? 'text.primary' : 'neutral.400', pl: 4 }}>
                             <li>Privacy preservation metrics</li>
                             <li>Real-time performance analysis</li>
                             <li>Comparative benchmarking</li>
@@ -210,9 +221,9 @@ const Home = () => {
                     <Card
                         variant="outlined"
                         sx={{
-                            bgcolor: 'neutral.800',
-                            borderColor: 'neutral.700',
-                            '&:hover': { 
+                            bgcolor: isLightMode ? 'background.paper' : 'neutral.800',
+                            borderColor: isLightMode ? 'divider' : 'neutral.700',
+                            '&:hover': {
                                 borderColor: 'primary.500',
                                 transform: 'translateY(-4px)',
                                 transition: 'all 0.3s'
@@ -222,12 +233,12 @@ const Home = () => {
                         <Typography level="h3" sx={{ color: 'primary.400', mb: 2 }}>
                             How It Works
                         </Typography>
-                        <Typography level="body-md" sx={{ color: 'neutral.300', mb: 4 }}>
+                        <Typography level="body-md" sx={{ color: isLightMode ? 'text.secondary' : 'neutral.300', mb: 4 }}>
                             Submit your privatized datasets for evaluation using our standardized benchmarking process. Track your progress in real-time and compare your results with other researchers.
                         </Typography>
                         <Box sx={{ display: 'flex', gap: 2, mt: 'auto' }}>
                             <Button
-                                sx={{ 
+                                sx={{
                                     flex: 1,
                                     bgcolor: 'primary.500',
                                     '&:hover': { bgcolor: 'primary.600' }
@@ -238,10 +249,10 @@ const Home = () => {
                             </Button>
                             <Button
                                 variant="outlined"
-                                sx={{ 
+                                sx={{
                                     flex: 1,
                                     borderColor: 'neutral.600',
-                                    color: 'neutral.300',
+                                    color: isLightMode ? 'text.primary' : 'neutral.300',
                                     '&:hover': { borderColor: 'primary.400' }
                                 }}
                                 onClick={() => window.location.href = "/documentation"}
@@ -253,7 +264,6 @@ const Home = () => {
                 </Box>
             </Box>
 
-            {/* Scroll to Top Button */}
             <IconButton
                 onClick={scrollToTop}
                 sx={{
