@@ -10,6 +10,19 @@ from flask_jwt_extended import (
 
 ranking_bp = Blueprint('ranking', __name__)
 
+@ranking_bp.route('/ranking/user/count', methods=['GET'])
+@jwt_required()
+def count_user_submissions():
+    try:
+        current_user_id = get_jwt_identity()
+
+        submission_count = db.session.query(Submission).filter_by(user_id=current_user_id).count()
+
+        return jsonify({"submissionCount": submission_count}), 200
+
+    except Exception as e:
+        return jsonify({"message": "Internal server error", "error": str(e)}), 500
+
 @ranking_bp.route('/ranking/update', methods=['POST'])
 @jwt_required()
 def make_submission_public():

@@ -64,6 +64,18 @@ const getUserSubmissions = async () => {
     }
 };
 
+const getUserSubmissionsCount = async () => {
+    try {
+        const url = `${API_BASE_URL}/ranking/user/count`;
+        const response = await axios.get(url, {withCredentials: true});
+        return response.data; // Return the API response data
+    } catch (error) {
+        console.error('Error fetching user submissions:', error);
+        throw error.response ? error.response.data : error; // Throw error to be handled by caller
+    }
+};
+
+
 const updateSubmissionVisibility = async (submissionId, isPublic) => {
     try {
         const url = `${API_BASE_URL}/ranking/update`;
@@ -78,4 +90,4 @@ const updateSubmissionVisibility = async (submissionId, isPublic) => {
     }
 };
 
-export {fetchRankings, fetchSubmissionDetails, getUserSubmissions, updateSubmissionVisibility};
+export {fetchRankings, fetchSubmissionDetails, getUserSubmissions, getUserSubmissionsCount, updateSubmissionVisibility};

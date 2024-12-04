@@ -10,8 +10,27 @@ import PeopleRoundedIcon from '@mui/icons-material/PeopleRounded';
 import AssignmentIndRoundedIcon from '@mui/icons-material/AssignmentIndRounded';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import Chip from '@mui/joy/Chip';
+import * as rankingService from "../../services/RankingsService";
+import {useEffect, useState} from "react";
 
 export function SideNav({ selectedItem, onSelect }) {
+    const [submissionsCount, setSubmissionsCount] = useState(0)
+
+    const fetchSubmissionsCount = async () => {
+        try {
+            const data = await rankingService.getUserSubmissionsCount();
+            setSubmissionsCount(data.submissionCount);
+        } catch (err) {
+            console.log('Submissions Count error fetching')
+        }
+    };
+
+    useEffect(() => {
+
+        fetchSubmissionsCount();
+    }, []);
+
+
     return (
         <Box
             component="nav"
@@ -78,9 +97,9 @@ export function SideNav({ selectedItem, onSelect }) {
                                     <EmojiEventsIcon fontSize="small" />
                                 </ListItemDecorator>
                                 <ListItemContent>Submissions</ListItemContent>
-                                <Chip variant="soft" color="success" size="sm">
-                                    1
-                                </Chip>
+                                {submissionsCount > 0 && <Chip variant="soft" color="success" size="sm">
+                                    {submissionsCount}
+                                </Chip>}
                             </ListItemButton>
                         </ListItem>
                     </List>
