@@ -3,8 +3,132 @@ from ..models import User, Submission, SubmissionMetadata, BenchmarkModule, Benc
 from .. import db
 from ..enums import SubmissionStatus
 from sqlalchemy import or_
+from flask_jwt_extended import (
+    get_jwt_identity,
+    jwt_required,
+)
 
 ranking_bp = Blueprint('ranking', __name__)
+
+@ranking_bp.route('/ranking/user/count', methods=['GET'])
+@jwt_required()
+def count_user_submissions():
+    try:
+        current_user_id = get_jwt_identity()
+
+        submission_count = db.session.query(Submission).filter_by(user_id=current_user_id).count()
+
+        return jsonify({"submissionCount": submission_count}), 200
+
+    except Exception as e:
+        return jsonify({"message": "Internal server error", "error": str(e)}), 500
+
+@ranking_bp.route('/ranking/update', methods=['POST'])
+@jwt_required()
+def make_submission_public():
+    try:
+        current_user_id = get_jwt_identity()
+        data = request.get_json()
+        submission_id = data.get('id')
+        is_public = data.get('isPublic')
+
+        if not submission_id:
+            return jsonify({"message": "Submission ID is required"}), 400
+
+        submission = db.session.query(Submission).filter_by(id=submission_id, user_id=current_user_id).first()
+
+        if not submission:
+            return jsonify({"message": "Submission not found or access denied"}), 404
+
+        if submission.status != SubmissionStatus.COMPLETED:
+            return jsonify({"message": "Submission must be completed to make it public"}), 400
+
+        submission.is_public = is_public;
+        db.session.commit()
+
+        return jsonify({"message": "Submission made public successfully", "submissionId": submission_id}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": "Internal server error", "error": str(e)}), 500
+
+
+@ranking_bp.route('/ranking/user', methods=['GET'])
+@jwt_required()
+def get_user_submissions():
+    try:
+        current_user_id = get_jwt_identity()
+
+        submissions = (
+            db.session.query(Submission)
+            .filter(Submission.user_id == current_user_id)
+            .join(User)
+            .join(SubmissionMetadata, isouter=True)
+            .join(BenchmarkScore, isouter=True)
+            .join(BenchmarkModule, BenchmarkScore.benchmark_module, isouter=True)
+            .order_by(Submission.submission_date.desc())
+            .all()
+        )
+
+        submissions_data = []
+        for submission in submissions:
+            submission_detail = {
+                "id": submission.id,
+                "name": submission.name,
+                "submissionDate": submission.submission_date.isoformat(),
+                "status": submission.status.value,
+                "isPublic": submission.is_public,
+                "overallScore": submission.score,
+                "metadata": None,
+                "user": {
+                    "id": submission.user.id,
+                    "username": submission.user.username,
+                    "mailAddress": submission.user.mail_address,
+                    "badges": submission.user.badges or [],
+                    "researchInstitute": submission.user.research_institute,
+                },
+                "benchmarkScores": []
+            }
+
+            if submission.submission_metadata:
+                submission_detail["metadata"] = {
+                    "modelName": submission.submission_metadata.model_name,
+                    "modelDescription": submission.submission_metadata.model_description,
+                    "license": submission.submission_metadata.license,
+                    "tags": submission.submission_metadata.tags.split(",") if submission.submission_metadata.tags else [],
+                    "authors": submission.submission_metadata.authors,
+                    "researchPaperUrl": submission.submission_metadata.research_paper_url,
+                    "githubUrl": submission.submission_metadata.github_url,
+                    "bibtexCitation": submission.submission_metadata.bibtex_citation,
+                }
+
+            if submission.benchmark_scores:
+                submission_detail["benchmarkScores"] = [
+                    {
+                        "id": score.id,
+                        "score": score.score,
+                        "createdAt": score.created_at.isoformat(),
+                        "benchmarkModule": {
+                            "id": score.benchmark_module.id,
+                            "name": score.benchmark_module.name,
+                            "version": score.benchmark_module.version,
+                            "isActive": score.benchmark_module.is_active,
+                            "createdAt": score.benchmark_module.created_at.isoformat(),
+                        }
+                    }
+                    for score in submission.benchmark_scores
+                ]
+
+            submissions_data.append(submission_detail)
+
+        return jsonify({"submissions": submissions_data}), 200
+
+    except Exception as e:
+        return jsonify({"message": "Internal server error", "error": str(e)}), 500
+
+
+
+
 
 @ranking_bp.route('/ranking', methods=['POST'])
 def get_all_filtered():
