@@ -3,7 +3,7 @@ import axios from 'axios';
 
 const API_BASE_URL = 'http://localhost:5000';
 
-const fetchRankings = async (searchTerm = '', page = 1, limit = 8) => {
+const fetchRankings = async (searchTerm = '', page = 1, limit = 8, sortOrder = 'desc', orderBy = 'score') => {
     try {
         const url = `${API_BASE_URL}/ranking`;
 
@@ -11,6 +11,8 @@ const fetchRankings = async (searchTerm = '', page = 1, limit = 8) => {
             searchTerm: searchTerm,
             page: page,
             limit: limit,
+            sortOrder: sortOrder,
+            orderBy: orderBy
         };
 
         const response = await axios.post(url, requestBody, {
