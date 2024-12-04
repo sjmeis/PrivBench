@@ -35,9 +35,7 @@ const ModelCard = ({cardStyle, submission}) => {
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             maxHeight: '50px',
-                            marginBottom: 2,
                             display: 'flex',
-                            alignItems: 'center',
                             gap: 1,
                         }}
                     >

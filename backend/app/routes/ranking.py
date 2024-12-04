@@ -13,8 +13,10 @@ def get_all_filtered():
         search_term = data.get('searchTerm', '')
         page = data.get('page', 1)
         limit = data.get('limit', 8)
+        sort_by = data.get('sortBy', 'score')
+        sort_order = data.get('sortOrder', 'desc')
 
-        # Base query: filter submissions with status=Completed and is_public=True
+        # Base query
         query = (
             db.session.query(Submission)
             .join(User)
@@ -22,10 +24,9 @@ def get_all_filtered():
                 Submission.status == SubmissionStatus.COMPLETED,
                 Submission.is_public == True  # Ensure submission is public
             )
-            .order_by(Submission.score.desc())
         )
 
-        # Apply search filter if provided
+        #Search filter
         if search_term:
             search_term = f"%{search_term}%"
             query = query.filter(
@@ -35,7 +36,21 @@ def get_all_filtered():
                 )
             )
 
-        #Pagination
+        #Sorting
+        sort_column_map = {
+            "score": Submission.score,
+            "name": Submission.name,
+            "submissionDate": Submission.submission_date,
+            "username": User.username
+        }
+
+        sort_column = sort_column_map.get(sort_by, Submission.score)  # Default to score
+        if sort_order == 'desc':
+            query = query.order_by(sort_column.desc())
+        else:
+            query = query.order_by(sort_column.asc())
+
+        # Pagination
         offset = (page - 1) * limit
         paginated_results = query.offset(offset).limit(limit).all()
 
@@ -48,7 +63,7 @@ def get_all_filtered():
                 "submissionDate": submission.submission_date.isoformat(),
                 "status": submission.status.value,
                 "isPublic": submission.is_public,
-                "overallScore": submission.score,  # You can retain the overall score if required
+                "overallScore": submission.score,
                 "user": {
                     "id": submission.user.id,
                     "username": submission.user.username,
@@ -62,7 +77,7 @@ def get_all_filtered():
 
         response = {
             "results": results_list,
-            "totalPages": (total + limit - 1) // limit,  # Calculate total pages
+            "totalPages": (total + limit - 1) // limit,
             "currentPage": page
         }
         return jsonify(response), 200

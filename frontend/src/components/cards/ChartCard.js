@@ -8,18 +8,25 @@ const ChartCard = ({cardStyle, benchmarkScores, overallScore}) => {
 
 
     useEffect(() => {
-        setYData(benchmarkScores.map(item => item.score).concat(overallScore));
-        setXLables(benchmarkScores.map(item => item.benchmarkModule.name).concat('Overall Score'));
+        setYData([overallScore].concat(benchmarkScores.map(item => item.score)));
+        setXLables(["Overall Score"].concat(benchmarkScores.map(item => item.benchmarkModule.name)));
 
-    }, [benchmarkScores]);
+    }, [benchmarkScores, overallScore]);
 
 
     return (
         <Card variant="outlined" sx={cardStyle}>
             <CardContent>
-                <Typography level="h2">Benchmark Scores by Module</Typography>
+                <Typography level="h2">Benchmark Score Breakdown</Typography>
                 {benchmarkScores ? (
                     <BarChart
+                        margin={{
+                            left: 100,
+                            right: 15,
+                            top: 20,
+                            bottom: 20,
+                        }}
+                        barLabel="value"
                         series={[
                             {data: yData, id: ''},
                         ]}
@@ -27,7 +34,8 @@ const ChartCard = ({cardStyle, benchmarkScores, overallScore}) => {
                             {
                                 colorMap: {
                                     type: 'ordinal',
-                                    colors: ['#ccebc5', '#a8ddb5', '#7bccc4', '#4eb3d3', '#2b8cbe', '#08589e']
+                                    colors: ['#a8c2a5', '#86b2a0', '#5fa6a1', '#3a92a8', '#256b96', '#064474']
+
                                 },
                                 data: xLabels,
                                 scaleType: 'band'
