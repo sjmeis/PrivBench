@@ -12,7 +12,8 @@ const RankingDetailView = () => {
     const cardStyle = {
         minHeight: '35vh',
         '&:hover': {
-            transform: 'scale(1.05)',
+            borderColor: 'primary.500',
+            transform: 'scale(1.02)',
             transition: 'transform 0.2s ease-in-out',
         }
     }
