@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify
 from ..extensions import db
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from ..models import BenchmarkModule, Submission, User, Dataset, PrivatizedDataset, BenchmarkScore
-from ..models.submission import SubmissionStatusEnum
+from ..enums import SubmissionStatus
 import os
 from datetime import datetime
 from app.tasks.run_benchmark import run_benchmark
@@ -22,7 +22,7 @@ def benchmark():
         user_id = get_jwt_identity()
         
         # Retrieve submission
-        submission = db.session.query(Submission).filter_by(user_id=user_id, status=SubmissionStatusEnum.PENDING).first()
+        submission = db.session.query(Submission).filter_by(user_id=user_id, status=SubmissionStatus.PENDING).first()
         if not submission:
             return jsonify({"message": "No pending submissions found"}), 404
         submission_id = submission.id
@@ -37,7 +37,7 @@ def benchmark():
 
                 dataset = db.session.query(Dataset).filter_by(id=dataset_id).first()
                 if not dataset:
-                    submission.status = SubmissionStatusEnum.FAILED
+                    submission.status = SubmissionStatus.FAILED
                     db.session.commit()
                     return jsonify({"message": "Dataset not found"}), 404
                 dataset_path = dataset.file_path
@@ -47,7 +47,7 @@ def benchmark():
                     original_dataset_id=dataset_id
                 ).first()
                 if not privatized_dataset:
-                    submission.status = SubmissionStatusEnum.FAILED
+                    submission.status = SubmissionStatus.FAILED
                     db.session.commit()
                     return jsonify({"message": "Privatized dataset not found"}), 404
 
@@ -69,11 +69,11 @@ def benchmark():
         if scores:
             average_score = sum(scores) / len(scores)
             submission.score = average_score
-            submission.status = SubmissionStatusEnum.COMPLETED
+            submission.status = SubmissionStatus.COMPLETED
             db.session.commit()
             return jsonify({"message": "Benchmark completed successfully", "average_score": average_score}), 200
         else:
-            submission.status = SubmissionStatusEnum.FAILED
+            submission.status = SubmissionStatus.FAILED
             db.session.commit()
             return jsonify({"message": "No scores calculated"}), 400
 
@@ -82,13 +82,13 @@ def benchmark():
         try:
             # Update submission status to FAILED
             if submission:  # Reuse the submission object if valid
-                submission.status = SubmissionStatusEnum.FAILED
+                submission.status = SubmissionStatus.FAILED
                 db.session.commit()
             else:
                 # Fallback: Re-query if submission is invalid
-                submission = db.session.query(Submission).filter_by(user_id=user_id, status=SubmissionStatusEnum.PENDING).first()
+                submission = db.session.query(Submission).filter_by(user_id=user_id, status=SubmissionStatus.PENDING).first()
                 if submission:
-                    submission.status = SubmissionStatusEnum.FAILED
+                    submission.status = SubmissionStatus.FAILED
                     db.session.commit()
         except Exception as update_error:
             return jsonify({"message": f"Error updating submission to FAILED: {update_error}"}), 500
