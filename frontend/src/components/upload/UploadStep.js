@@ -21,7 +21,7 @@ const UploadStep = ({ submissionId, datasets, uploadedFiles, onFileUploaded }) =
       formData.append('original_dataset_id', String(originalDatasetId));
 
       await axios.post(
-        `${process.env.REACT_APP_API_URL}/upload-privatized-dataset`,
+        `http://localhost:5000/upload-privatized-dataset`,
         formData,
         {
           headers: {

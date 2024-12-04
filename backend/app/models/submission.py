@@ -1,13 +1,8 @@
 from ..extensions import db
 from datetime import datetime
-from enum import Enum
-
+from ..enums import SubmissionStatus
 from .dataset import submission_datasets  # Import the association table
 
-class SubmissionStatusEnum(Enum):
-    PENDING = "Pending"
-    COMPLETED = "Completed"
-    FAILED = "Failed"
 
 class Submission(db.Model):
     __tablename__ = 'submission'
@@ -16,7 +11,7 @@ class Submission(db.Model):
     name = db.Column(db.String(120), nullable=False)
     submission_date = db.Column(db.DateTime, default=datetime.utcnow)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    status = db.Column(db.Enum(SubmissionStatusEnum), nullable=False)
+    status = db.Column(db.Enum(SubmissionStatus), nullable=False)
     score = db.Column(db.Integer, nullable=False)
     is_public = db.Column(db.Boolean, nullable=False)
 

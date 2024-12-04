@@ -5,11 +5,12 @@ from app.models import (
     BenchmarkModule,
     Dataset,
     PrivatizedDataset,
-    BenchmarkScore
+    BenchmarkScore,
+    SubmissionMetadata
 )
 from faker import Faker
 from datetime import datetime
-from app.models.submission import SubmissionStatusEnum  
+from app.enums import SubmissionStatus
 
 fake = Faker()
 
@@ -71,12 +72,28 @@ with app.app_context():
                 name=fake.word(),
                 submission_date=datetime.utcnow(),
                 user_id=user.id,
-                status=SubmissionStatusEnum.COMPLETED,  # Use the Enum
+                status=SubmissionStatus.COMPLETED,  # Use the Enum
                 score=round(fake.random.uniform(50, 100), 2),
                 is_public=True
             )
             db.session.add(submission)
             db.session.commit()  # Commit to get submission.id
+
+            # Create corresponding SubmissionMetadata for the new submission
+            submission_metadata = SubmissionMetadata(
+                submission_id=submission.id,
+                model_name=fake.word(),
+                model_description=fake.text(),
+                license=fake.word(),
+                tags=fake.words(nb=3),  # Example tags
+                authors=fake.name(),
+                research_paper_url=fake.url(),
+                github_url=fake.url(),
+                bibtex_citation=fake.text()
+            )
+            db.session.add(submission_metadata)
+            db.session.commit()  # Commit the metadata
+
             submissions.append(submission)
 
             # Create PrivatizedDatasets for each Submission
@@ -95,15 +112,16 @@ with app.app_context():
 
             # Create BenchmarkScores for each PrivatizedDataset and BenchmarkModule
             for module in benchmark_modules:
-                for privatized_dataset in privatized_datasets:
-                    benchmark_score = BenchmarkScore(
-                        submission_id=submission.id,
-                        module_id=module.id,
-                        privatized_dataset_id=privatized_dataset.id,
-                        score=round(fake.random.uniform(50, 100), 2),  # Random float between 50 and 100
-                        created_at=datetime.utcnow()
-                    )
-                    db.session.add(benchmark_score)
+                privatized_dataset = privatized_datasets[0]
+                benchmark_score = BenchmarkScore(
+                    submission_id=submission.id,
+                    module_id=module.id,
+                    privatized_dataset_id=privatized_dataset.id,  # Use the chosen dataset
+                    score=round(fake.random.uniform(50, 100), 2),  # Random float between 50 and 100
+                    created_at=datetime.utcnow()
+                )
+                db.session.add(benchmark_score)
+
 
     db.session.commit()
 
