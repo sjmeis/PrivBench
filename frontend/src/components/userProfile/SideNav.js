@@ -39,7 +39,7 @@ export function SideNav({ selectedItem, onSelect }) {
                 width: '220px',
                 position: 'sticky',
                 top: 0,
-                height: '100vh',
+                minHeight: "calc(100vh - 65.5px)",
                 overflowY: 'auto',
                 p: 2,
                 bgcolor: 'background.surface',

@@ -37,7 +37,7 @@ export default function UserProfile() {
     //todo: implement form logic if used
     return (
 
-        <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.body', marginTop: '-10px', marginBottom: '-40px', marginLeft: '-40px', marginRight: '-40px' }}>
+        <Box sx={{ display: 'flex', minHeight: "calc(100vh - 65.5px)", bgcolor: 'background.body', marginTop: '-10px', marginBottom: '-40px', marginLeft: '-40px', marginRight: '-40px' }}>
             <SideNav selectedItem={selectedItem} onSelect={setSelectedItem} sx={{ width: 260 }} />
             <Box sx={{ flex: 1, p: 3 }}>{renderContent()}</Box>
         </Box>
