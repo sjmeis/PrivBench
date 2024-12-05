@@ -13,7 +13,7 @@ import {
 import { Save } from "@mui/icons-material";
 import CustomSnackbar from "../shared/CustomSnackbar";
 
-const MetadataStep = ({ initialMetadata, onMetadataSave }) => {
+const MetadataStep = ({ initialMetadata, submissionId, onMetadataSave }) => {
     const [metadata, setMetadata] = useState({
         modelName: "",
         modelDescription: "",
@@ -31,7 +31,6 @@ const MetadataStep = ({ initialMetadata, onMetadataSave }) => {
         message: "",
         severity: "success",
     });
-
     // Mock data for dropdowns
     const licenseOptions = ["MIT", "Apache 2.0", "GPLv3", "BSD"];
 
@@ -57,41 +56,72 @@ const MetadataStep = ({ initialMetadata, onMetadataSave }) => {
                 handleDownload();
             }
 
-            const endpoint = "http://localhost:5000/metadata";
+            const isUpdate = !!submissionId; // Determine whether it's an update or create request
+            const endpoint = isUpdate
+                ? `http://localhost:5000/ranking/detail`
+                : `http://localhost:5000/metadata`;
+
+            const method = isUpdate ? "PUT" : "POST";
+
+            const body = isUpdate
+                ? JSON.stringify({
+                    id: submissionId,
+                    metadata: {
+                        modelName: metadata.modelName,
+                        modelDescription: metadata.modelDescription,
+                        license: metadata.license,
+                        tags: metadata.tags,
+                        authors: metadata.authors,
+                        researchPaperUrl: metadata.relatedResearchPaper,
+                        githubUrl: metadata.relatedGithubRepo,
+                        bibtexCitation: metadata.bibtexCitation,
+                    },
+                })
+                : JSON.stringify(metadata);
+
             const response = await fetch(endpoint, {
-                method: "POST",
+                method,
                 headers: {
                     "Content-Type": "application/json",
                 },
                 credentials: "include",
-                body: JSON.stringify(metadata),
+                body,
             });
 
             if (response.ok) {
                 const data = await response.json();
                 setSnackbar({
                     open: true,
-                    message: "Metadata saved successfully!",
+                    message: isUpdate
+                        ? "Metadata updated successfully!"
+                        : "Metadata saved successfully!",
                     severity: "success",
                 });
-                onMetadataSave(data.submission_id);
+                if (!isUpdate) {
+                    onMetadataSave(data.submission_id); // Handle new submission ID after POST
+                } else {
+                    onMetadataSave(data.submission.id); // Handle updated submission ID after PUT
+                }
             } else {
                 const errorData = await response.json();
                 setSnackbar({
                     open: true,
-                    message: `Failed to save metadata: ${errorData.message || response.statusText}`,
+                    message: `Failed to ${
+                        isUpdate ? "update" : "save"
+                    } metadata: ${errorData.message || response.statusText}`,
                     severity: "error",
                 });
             }
         } catch (error) {
-            console.error("Error saving metadata:", error);
+            console.error("Error saving/updating metadata:", error);
             setSnackbar({
                 open: true,
-                message: "Failed to save metadata. Please try again.",
+                message: `Failed to save metadata. Please try again!`,
                 severity: "error",
             });
         }
     };
+
 
     // Generate Markdown content
     const generateMarkdown = () => `
@@ -258,3 +288,5 @@ ${metadata.bibtexCitation || "More information needed"}
 };
 
 export default MetadataStep;
+
+

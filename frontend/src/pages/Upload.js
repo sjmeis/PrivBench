@@ -201,11 +201,11 @@ const Upload = () => {
 
             {currentStep === 1 && (
                 <MetadataStep
-                    initialMetadata={metadata} // Pass pre-filled metadata to MetadataStep
+                    initialMetadata={metadata}
                     onMetadataSave={(id) => {
-                        console.log("Setting submissionId to:", id);
                         setSubmissionId(id);
                     }}
+                    submissionId={submissionId}
                 />
             )}
 

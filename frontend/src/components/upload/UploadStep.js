@@ -1,12 +1,11 @@
 import React, { useState } from "react";
 import { Box, Button, Card, Typography, CircularProgress } from "@mui/joy";
-import { CloudUpload, Warning } from "@mui/icons-material";
+import { CloudUpload } from "@mui/icons-material";
 import axios from "axios";
 import CustomSnackbar from "../shared/CustomSnackbar";
 
 const UploadStep = ({ submissionId, datasets, uploadedFiles, onFileUploaded }) => {
   const [uploadingDatasetId, setUploadingDatasetId] = useState(null);
-  const [error, setError] = useState(null);
   const [openSnackbar, setOpenSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState("info");
@@ -16,7 +15,6 @@ const UploadStep = ({ submissionId, datasets, uploadedFiles, onFileUploaded }) =
     if (!file) return;
 
     setUploadingDatasetId(originalDatasetId);
-    setError(null);
 
     try {
       const formData = new FormData();
@@ -41,7 +39,6 @@ const UploadStep = ({ submissionId, datasets, uploadedFiles, onFileUploaded }) =
       setSnackbarSeverity("success");
       setOpenSnackbar(true);
     } catch (error) {
-      setError(error.response?.data?.error || "Failed to upload file");
       setSnackbarMessage(error.response?.data?.error || "Failed to upload file");
       setSnackbarSeverity("error");
       setOpenSnackbar(true);

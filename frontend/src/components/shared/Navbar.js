@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { useNavigate } from "react-router-dom";
 import {
     Avatar,
@@ -26,12 +26,6 @@ const Navbar = () => {
     const { mode, setMode } = useColorScheme();
     const { user, logout } = useAuth();
 
-    // State for current submission and step
-    const [pendingSubmission, setPendingSubmission] = useState(null);
-    const [currentStep, setCurrentStep] = useState(0); // Default to step 0
-    const [submissionId, setSubmissionId] = useState(null);
-    const [metadata, setMetadata] = useState({});
-
     // Avoid returning early before hooks are called
     const isLightMode = mode === 'light';
 
@@ -44,35 +38,35 @@ const Navbar = () => {
         navigate('/');
     };
 
-    // Fetch user submission and check for pending status
-    useEffect(() => {
-        const fetchUserSubmission = async () => {
-            try {
-                const data = await getUserSubmissions();
-                const pendingSubmission = data.submissions.find(sub => sub.status === "Pending");
-                if (pendingSubmission) {
-                    setCurrentStep(1);
-                    setSubmissionId(pendingSubmission.id);
-                    setMetadata(pendingSubmission.metadata);
-                    setPendingSubmission(pendingSubmission);
-                }
-            } catch (error) {
-                console.error("An error occurred while fetching user submission:", error);
+    const handleSubmissionClick = async () => {
+        try {
+            // Fetch user submissions
+            const data = await getUserSubmissions();
+            const pendingSubmission = data.submissions.find(sub => sub.status === "Pending");
+
+            if (pendingSubmission) {
+
+                navigate("/upload", {
+                    state: {
+                        currentStep: 1,
+                        metadata: pendingSubmission.metadata,
+                        submissionId: pendingSubmission.id
+                    }
+                });
+            } else {
+                // No pending submission, navigate with initial state
+                navigate("/upload", {
+                    state: {
+                        currentStep: 0,
+                        metadata: {}
+                    }
+                });
             }
-        };
-
-        fetchUserSubmission();
-    }, []);
-
-    const handleSubmissionClick = () => {
-        if (pendingSubmission) {
-            // Navigate to the upload page with current step and metadata
-            navigate("/upload", { state: { currentStep, metadata, submissionId } });
-        } else {
-            // Handle case where there is no pending submission
-            navigate("/upload", { state: { currentStep: 0, metadata: {} } });
+        } catch (error) {
+            console.error("An error occurred while fetching user submission:", error);
         }
     };
+
 
     // Only return null if mode is falsy, after all hooks are called
     if (!mode) {
