@@ -11,6 +11,7 @@ class BenchmarkModule(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     path = db.Column(db.String(255), nullable=False)
     dataset_id = db.Column(db.Integer, db.ForeignKey('dataset.id'), nullable=False)
+    description = db.Column(db.String(400), nullable=True)
 
     # One-to-many relationships
     benchmark_scores = db.relationship('BenchmarkScore', back_populates='benchmark_module', lazy=True)
