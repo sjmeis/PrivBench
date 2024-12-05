@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
     Button,
     Card,
@@ -13,7 +13,7 @@ import {
 import { Save } from "@mui/icons-material";
 import CustomSnackbar from "../shared/CustomSnackbar";
 
-const MetadataStep = ({ onMetadataSave }) => {
+const MetadataStep = ({ initialMetadata, onMetadataSave }) => {
     const [metadata, setMetadata] = useState({
         modelName: "",
         modelDescription: "",
@@ -34,6 +34,13 @@ const MetadataStep = ({ onMetadataSave }) => {
 
     // Mock data for dropdowns
     const licenseOptions = ["MIT", "Apache 2.0", "GPLv3", "BSD"];
+
+    // Set initial metadata if provided
+    useEffect(() => {
+        if (initialMetadata) {
+            setMetadata(initialMetadata);
+        }
+    }, [initialMetadata]);
 
     // Handle input changes
     const handleChange = (field, value) => {
@@ -251,7 +258,3 @@ ${metadata.bibtexCitation || "More information needed"}
 };
 
 export default MetadataStep;
-
-
-
-

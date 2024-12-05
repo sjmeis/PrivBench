@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
     Avatar,
@@ -12,24 +12,27 @@ import {
     useColorScheme
 } from "@mui/joy";
 import { Box, Button, Typography } from "@mui/joy";
-import {DarkMode, Info, Timeline, UploadFile, Login} from "@mui/icons-material";
+import { DarkMode, Info, Timeline, UploadFile, Login } from "@mui/icons-material";
 import { useAuth } from '../../contexts/AuthContext';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import OpenInNewRoundedIcon from '@mui/icons-material/OpenInNewRounded';
 import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
-import { getGravatarUrl} from "../../utils/Gravatar";
-
+import { getGravatarUrl } from "../../utils/Gravatar";
+import { getUserSubmissions } from '../../services/RankingsService';
 
 const Navbar = () => {
     const navigate = useNavigate();
     const { mode, setMode } = useColorScheme();
     const { user, logout } = useAuth();
 
-    if (!mode) {
-        return null;
-    }
+    // State for current submission and step
+    const [pendingSubmission, setPendingSubmission] = useState(null);
+    const [currentStep, setCurrentStep] = useState(0); // Default to step 0
+    const [submissionId, setSubmissionId] = useState(null);
+    const [metadata, setMetadata] = useState({});
 
+    // Avoid returning early before hooks are called
     const isLightMode = mode === 'light';
 
     const handleChange = () => {
@@ -41,12 +44,47 @@ const Navbar = () => {
         navigate('/');
     };
 
+    // Fetch user submission and check for pending status
+    useEffect(() => {
+        const fetchUserSubmission = async () => {
+            try {
+                const data = await getUserSubmissions();
+                const pendingSubmission = data.submissions.find(sub => sub.status === "Pending");
+                if (pendingSubmission) {
+                    setCurrentStep(1);
+                    setSubmissionId(pendingSubmission.id);
+                    setMetadata(pendingSubmission.metadata);
+                    setPendingSubmission(pendingSubmission);
+                }
+            } catch (error) {
+                console.error("An error occurred while fetching user submission:", error);
+            }
+        };
+
+        fetchUserSubmission();
+    }, []);
+
+    const handleSubmissionClick = () => {
+        if (pendingSubmission) {
+            // Navigate to the upload page with current step and metadata
+            navigate("/upload", { state: { currentStep, metadata, submissionId } });
+        } else {
+            // Handle case where there is no pending submission
+            navigate("/upload", { state: { currentStep: 0, metadata: {} } });
+        }
+    };
+
+    // Only return null if mode is falsy, after all hooks are called
+    if (!mode) {
+        return null;
+    }
+
     return (
         <Box
             sx={{
                 width: '100%',
                 padding: 1.5,
-                borderBottom: isLightMode ? '1.5px solid #f0f4f8' :'1.5px solid #161a1b',
+                borderBottom: isLightMode ? '1.5px solid #f0f4f8' : '1.5px solid #161a1b',
             }}
         >
             <Grid container alignItems="center">
@@ -63,7 +101,7 @@ const Navbar = () => {
                     <Button
                         onClick={() => navigate("/rankings")}
                         color="inherit"
-                        startDecorator={<Timeline/>}
+                        startDecorator={<Timeline />}
                         sx={{
                             color: "primary.textPrimary",
                             bgcolor: "transparent !important",
@@ -76,9 +114,9 @@ const Navbar = () => {
                         Rankings
                     </Button>
                     <Button
-                        onClick={() => navigate("/upload")}
+                        onClick={handleSubmissionClick} // Trigger submission handling
                         color="inherit"
-                        startDecorator={<UploadFile/>}
+                        startDecorator={<UploadFile />}
                         sx={{
                             color: "primary.textPrimary",
                             bgcolor: "transparent !important",
@@ -93,7 +131,7 @@ const Navbar = () => {
                     <Button
                         onClick={() => navigate("/information")}
                         color="inherit"
-                        startDecorator={<Info/>}
+                        startDecorator={<Info />}
                         sx={{
                             color: "primary.textPrimary",
                             bgcolor: "transparent !important",
@@ -129,11 +167,10 @@ const Navbar = () => {
 
                         {user ? (
                             <Dropdown>
-
-                                <MenuButton endDecorator={<Avatar sx={{maxWidth: 28, maxHeight: 28}} size="sm" src={getGravatarUrl(user.mailAddress)}/>}
-                                    variant="soft"
-                                    color="primary"
-                                    size="sm" sx={{height: 37}}
+                                <MenuButton endDecorator={<Avatar sx={{ maxWidth: 28, maxHeight: 28 }} size="sm" src={getGravatarUrl(user.mailAddress)} />}
+                                            variant="soft"
+                                            color="primary"
+                                            size="sm" sx={{ height: 37 }}
                                 >
                                     {user.username}
                                 </MenuButton>
@@ -147,7 +184,7 @@ const Navbar = () => {
                                         '--ListItem-radius': 'var(--joy-radius-sm)',
                                     }}
                                 >
-                                    <MenuItem onClick={() => navigate("/profile", {state: 'account'})}>
+                                    <MenuItem onClick={() => navigate("/profile", { state: 'account' })}>
                                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                             <Avatar
                                                 src={getGravatarUrl(user.mailAddress)}
@@ -164,11 +201,11 @@ const Navbar = () => {
                                         </Box>
                                     </MenuItem>
                                     <ListDivider />
-                                    <MenuItem onClick={() => navigate("/profile", {state: 'submissions'})}>
+                                    <MenuItem onClick={() => navigate("/profile", { state: 'submissions' })}>
                                         <EmojiEventsIcon />
                                         My Submissions
                                     </MenuItem>
-                                    <MenuItem onClick={() => navigate("/profile", {state: 'account'})}>
+                                    <MenuItem onClick={() => navigate("/profile", { state: 'account' })}>
                                         <SettingsRoundedIcon />
                                         Settings
                                     </MenuItem>
@@ -194,7 +231,7 @@ const Navbar = () => {
                             <Button
                                 variant="soft"
                                 color="primary"
-                                startDecorator={<Login/>}
+                                startDecorator={<Login />}
                                 onClick={() => navigate('/login')}
                             >
                                 Login

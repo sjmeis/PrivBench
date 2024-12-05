@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import {Box, Button, Stepper, Step, Typography, stepClasses} from "@mui/joy";
-import {  East,  West, BarChart } from "@mui/icons-material";
-import CustomSnackbar from "../components/shared/CustomSnackbar"; // import your CustomSnackbar
+import { Box, Button, Stepper, Step, Typography, stepClasses } from "@mui/joy";
+import { East, West, BarChart } from "@mui/icons-material";
+import CustomSnackbar from "../components/shared/CustomSnackbar";
 import DownloadStep from "../components/upload/DownloadStep";
 import UploadStep from "../components/upload/UploadStep";
 import MetadataStep from "../components/upload/MetadataStep";
@@ -10,16 +10,21 @@ import StepIndicator, { stepIndicatorClasses } from "@mui/joy/StepIndicator";
 import GetAppRoundedIcon from "@mui/icons-material/GetAppRounded";
 import CloudUploadRoundedIcon from "@mui/icons-material/CloudUploadRounded";
 import InfoRoundedIcon from "@mui/icons-material/InfoRounded";
+import { useLocation } from "react-router-dom";
 
 const Upload = () => {
+    const location = useLocation();
+    const { state } = location;
+
     const [errorMessage, setErrorMessage] = useState("");
     const [openSnackbar, setOpenSnackbar] = useState(false);
     const [severity, setSeverity] = useState("");
-    const [currentStep, setCurrentStep] = useState(0);
-    const [submissionId, setSubmissionId] = useState(null);
+    const [currentStep, setCurrentStep] = useState(state?.currentStep || 0); // Use state passed through navigation, default to 0
+    const [submissionId, setSubmissionId] = useState(state?.submissionId || null);
     const [downloadedDatasets, setDownloadedDatasets] = useState([]);
     const [datasets, setDatasets] = useState([]);
     const [uploadedFiles, setUploadedFiles] = useState({});
+    const [metadata, setMetadata] = useState(state?.metadata || null);
 
     useEffect(() => {
         const fetchDatasets = async () => {
@@ -39,14 +44,11 @@ const Upload = () => {
         fetchDatasets();
     }, []);
 
-    // Function to handle step change when clicking on StepIndicator
     const handleStepClick = (step) => {
         setCurrentStep(step);
     };
 
-    // Handle Next button click
     const handleNext = () => {
-
         if (currentStep === 1 && !submissionId) {
             setErrorMessage("Please save metadata before proceeding!");
             setSeverity("error");
@@ -199,6 +201,7 @@ const Upload = () => {
 
             {currentStep === 1 && (
                 <MetadataStep
+                    initialMetadata={metadata} // Pass pre-filled metadata to MetadataStep
                     onMetadataSave={(id) => {
                         console.log("Setting submissionId to:", id);
                         setSubmissionId(id);
