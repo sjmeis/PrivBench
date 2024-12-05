@@ -21,6 +21,7 @@ import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import { getGravatarUrl } from "../../utils/Gravatar";
 import { getUserSubmissions } from '../../services/RankingsService';
 
+
 const Navbar = () => {
     const navigate = useNavigate();
     const { mode, setMode } = useColorScheme();
@@ -39,13 +40,17 @@ const Navbar = () => {
     };
 
     const handleSubmissionClick = async () => {
+        // If the user is not logged in, redirect to /login
+        if (!user) {
+            navigate("/login");
+            return;
+        }
         try {
             // Fetch user submissions
             const data = await getUserSubmissions();
             const pendingSubmission = data.submissions.find(sub => sub.status === "Pending");
 
             if (pendingSubmission) {
-
                 navigate("/upload", {
                     state: {
                         currentStep: 1,
@@ -239,3 +244,4 @@ const Navbar = () => {
 }
 
 export default Navbar;
+

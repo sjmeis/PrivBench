@@ -100,7 +100,7 @@ const FinalStep = () => {
                                 }}
                             >
                                 <Typography level="body1" sx={{ fontWeight: "bold" }}>
-                                    Average Score
+                                    Overall Score
                                 </Typography>
                                 <Typography level="body1" color="success">
                                     {averageScore}
