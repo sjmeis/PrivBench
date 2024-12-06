@@ -57,9 +57,7 @@ const MetadataStep = ({ initialMetadata, submissionId, onMetadataSave }) => {
             }
 
             const isUpdate = !!submissionId; // Determine whether it's an update or create request
-            const endpoint = isUpdate
-                ? `http://localhost:5000/ranking/detail`
-                : `http://localhost:5000/metadata`;
+            const endpoint = `http://localhost:5000/metadata`;
 
             const method = isUpdate ? "PUT" : "POST";
 
