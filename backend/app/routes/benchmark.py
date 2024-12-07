@@ -71,7 +71,15 @@ def benchmark():
             submission.score = average_score
             submission.status = SubmissionStatus.COMPLETED
             db.session.commit()
-            return jsonify({"message": "Benchmark completed successfully", "average_score": average_score}), 200
+            module_scores = [
+                {"module_name": module.name, "score": score}
+                for module, score in zip(benchmark_modules, scores)
+            ]
+            return jsonify({
+                "message": "Benchmark completed successfully",
+                "average_score": average_score,
+                "module_scores": module_scores
+            }), 200
         else:
             submission.status = SubmissionStatus.FAILED
             db.session.commit()

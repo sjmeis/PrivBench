@@ -41,12 +41,14 @@ def create_app():
     from .routes.ranking import ranking_bp
     from .routes.metadata import metadata_bp
     from .routes.benchmark import benchmark_bp
+    from .routes.module import module_bp
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
     app.register_blueprint(data_bp)
     app.register_blueprint(ranking_bp)
     app.register_blueprint(metadata_bp)
     app.register_blueprint(benchmark_bp)
+    app.register_blueprint(module_bp)
     
     # Log registered routes
     logger.info("\n=== Registered Routes ===")
