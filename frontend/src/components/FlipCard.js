@@ -10,8 +10,10 @@ const FlipCard = ({ title, content }) => {
             sx={{
                 perspective: '1000px',
                 cursor: 'pointer',
-                width: 300,
-                height: 350,
+                width: '100%',
+                height: '100%',
+                minWidth: 250,
+                minHeight: 250,
             }}
         >
             <Box

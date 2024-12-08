@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Card, Typography, Box } from '@mui/joy';
+import {Card, Typography, Box, Grid, Step, Stepper} from '@mui/joy';
 import FlipCard from '../components/FlipCard';
+import StepIndicator from "@mui/joy/StepIndicator";
 
 const Information = () => {
     const [modules, setModules] = useState([]);
@@ -36,83 +37,91 @@ const Information = () => {
             }}
         >
             {/* Main Information Card */}
-            <Card variant="outlined" sx={{ width: 800, padding: 4 }}>
-                <Typography level="h2" mb={2} sx={{ textAlign: 'center' }}>
-                    Platform Overview
-                </Typography>
+            <Grid container spacing={3}>
+                <Grid sx={{height: '80vh'}} item xs={4}>
+                    <Box sx={{ margin: 'auto', padding: 4 }}>
+                        <Stepper orientation="vertical" sx={{ '--Stepper-verticalGap': '2rem' }}>
+                            <Step
+                                completed
+                                indicator={<StepIndicator variant="soft" color="success">1</StepIndicator>}
+                            >
+                                <Typography level="body1" sx={{ fontWeight: 'bold' }}>
+                                  Download Datasets
+                                </Typography>
+                                <Typography level="body2">
+                                    Start by downloading datasets from our platform containing sensitive personal data.
+                                </Typography>
+                            </Step>
+                            <Step
+                                completed
+                                indicator={<StepIndicator variant="soft" color="success">2</StepIndicator>}
+                            >
+                                <Typography level="body1" sx={{ fontWeight: 'bold' }}>
+                                   Fill Metadata Form
+                                </Typography>
+                                <Typography level="body2">
+                                    Complete a metadata form detailing the chosen data privatization technique.
+                                </Typography>
+                            </Step>
+                            <Step
+                                active
+                                indicator={<StepIndicator variant="soft" color="success">3</StepIndicator>}
+                            >
+                                <Typography level="body1" sx={{ fontWeight: 'bold' }}>
+                                     Apply Data Privatization
+                                </Typography>
+                                <Typography level="body2">
+                                    Apply your own data privatization algorithm to the downloaded datasets.
+                                </Typography>
+                            </Step>
+                            <Step
+                                active
+                                indicator={<StepIndicator variant="soft" color="success">4</StepIndicator>}
+                            >
+                                <Typography level="body1" sx={{ fontWeight: 'bold' }}>
+                                   Upload Privatized Data
+                                </Typography>
+                                <Typography level="body2">
+                                    Upload the privatized datasets back to our platform for evaluation.
+                                </Typography>
+                            </Step>
+                            <Step
+                                active
+                                indicator={<StepIndicator variant="soft" color="success">5</StepIndicator>}
+                            >
+                                <Typography level="body1" sx={{ fontWeight: 'bold' }}>
+                                    Evaluation
+                                </Typography>
+                                <Typography level="body2">
+                                    Our platform evaluates the privatized datasets to assess privacy preservation and data utility.
+                                </Typography>
+                            </Step>
+                        </Stepper>
+                    </Box>
+                </Grid>
+                <Grid item sx={{height: '80vh', padding: 2}} xs={8}>
 
-                <Box sx={{ textAlign: 'center', mb: 2 }}>
-                    <Typography level="body1">
-                        Welcome to our data privatization benchmarking platform! Here's how it works:
-                    </Typography>
-                </Box>
-
-                <Box sx={{ textAlign: 'center', mb: 2 }}>
-                    <Typography level="body1">
-                        The process starts by downloading datasets from our platform. These datasets contain sensitive personal data. After downloading, users are required to fill out a metadata form detailing their chosen data privatization technique.
-                    </Typography>
-                </Box>
-
-                <Box sx={{ textAlign: 'center', mb: 2 }}>
-                    <Typography level="body1">
-                        Once the metadata form is complete, users apply their own data privatization algorithm to the downloaded datasets. After the data is privatized, the resulting datasets must be uploaded back to the platform.
-                    </Typography>
-                </Box>
-
-                <Box sx={{ textAlign: 'center', mb: 2 }}>
-                    <Typography level="body1">
-                        Our platform then evaluates the uploaded privatized datasets using various modules. These modules run advanced algorithms to calculate different metrics, providing insights into the effectiveness of the data privatization model in terms of privacy preservation and data utility.
-                    </Typography>
-                </Box>
-
-                <Box sx={{ textAlign: 'center', mb: 2 }}>
-                    <Typography level="body1" sx={{ fontWeight: 'bold' }}>
-                        The flipcards below explain the different modules used in this evaluation process.
-                    </Typography>
-                </Box>
-            </Card>
-
-            {/* FlipCards Section */}
-            <Box
-                sx={{
-                    display: 'flex',
-                    justifyContent: 'center', // Center the content
-                    flexWrap: 'wrap', // Allow wrapping for smaller screens
-                    gap: 2, // Add spacing between cards
-                    width: '80%',
-                    padding: 1,
-                }}
-            >
-                {loading ? (
-                    <Typography level="body1" sx={{ textAlign: 'center', margin: 'auto' }}>
-                        Loading modules...
-                    </Typography>
-                ) : error ? (
-                    <Typography level="body1" sx={{ textAlign: 'center', color: 'red', margin: 'auto' }}>
-                        {error}
-                    </Typography>
-                ) : modules.length > 0 ? (
-                    modules.map((module) => (
-                        <Box
-                            key={module.id}
-                            sx={{
-                                width: 350, // Fixed width for each FlipCard
-                                textAlign: 'center', // Center the FlipCard within the box
-                            }}
-                        >
-                            <FlipCard
-                                title={module.name}
-                                content={module.description || 'No description available.'}
-                            />
-                        </Box>
-                    ))
-                ) : (
-                    <Typography level="body1" sx={{ textAlign: 'center', margin: 'auto' }}>
-                        No modules found.
-                    </Typography>
-                )}
-            </Box>
-
+                        <Card sx={{ height: '100%'}} >
+                            <Typography level="body1" sx={{ fontWeight: 'bold' }}>
+                                Benchmarking Modules used for Privatization Scoring
+                            </Typography>
+                            <Grid container spacing={1}>
+                                {modules.map((module) => (
+                                    <Grid
+                                        key={module.id}
+                                        item
+                                        xs={4}
+                                    >
+                                        <FlipCard
+                                            title={module.name}
+                                            content={module.description || 'No description available.'}
+                                        />
+                                    </Grid>
+                                ))}
+                            </Grid>
+                        </Card>
+                </Grid>
+            </Grid>
         </Box>
     );
 };
