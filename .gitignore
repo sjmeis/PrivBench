@@ -15,3 +15,5 @@ dist/
 # Optional: ignore virtual environments
 venv/
 .env/
+
+data/privatized_datasets/
