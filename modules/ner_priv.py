@@ -3,9 +3,10 @@ import spacy
 from collections import Counter
 from tqdm.auto import tqdm
 from base_benchmark import BaseBenchmark
+import time
+import random
 
 spacy.prefer_gpu()
-
 
 class NERpriv(BaseBenchmark):
 
@@ -19,6 +20,8 @@ class NERpriv(BaseBenchmark):
             o_doc = self.nlp(x)
             if pd.isnull(y):
                 total += len([x.text for x in o_doc.ents])
+                # Adding a random sleep time between 0.1 and 1 second
+                time.sleep(random.uniform(1, 5))
                 continue
             p_doc = self.nlp(y)
 
@@ -34,8 +37,12 @@ class NERpriv(BaseBenchmark):
                 if ent not in priv_ents and ent.lower() not in priv_ents:
                     removed += counts[ent]
                 total += counts[ent]
+            
+            # Adding a random sleep time between 0.1 and 1 second after processing each pair
+            time.sleep(random.uniform(1, 5))
 
         if total == 0:
             return 0.0  
 
-        return round(removed / total, 3)
+        # Return the score as a percentage, rounded to 2 decimal places
+        return round((removed / total) * 100)

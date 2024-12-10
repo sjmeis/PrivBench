@@ -1,26 +1,23 @@
 import { useState, useEffect } from "react";
-import { Typography, Card, CircularProgress, Box, Button } from "@mui/joy";
+import { Typography, Card, CircularProgress, Box, Button, LinearProgress } from "@mui/joy";
 import { useNavigate } from "react-router-dom";
 import CustomSnackbar from "../shared/CustomSnackbar";
-import {RemoveRedEye} from "@mui/icons-material";
+import { RemoveRedEye } from "@mui/icons-material";
 
 const FinalStep = () => {
     const [loading, setLoading] = useState(true);
     const [averageScore, setAverageScore] = useState(null);
     const [moduleScores, setModuleScores] = useState([]);
+    const [tasks, setTasks] = useState([]);
     const [openSnackbar, setOpenSnackbar] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState("");
     const [snackbarSeverity, setSnackbarSeverity] = useState("info");
-    const navigate = useNavigate();  // Added useNavigate hook
+    const navigate = useNavigate();
 
     useEffect(() => {
-        const runBenchmark = async () => {
+        const startBenchmark = async () => {
             try {
-                setLoading(true);
-
-                const endpoint = "http://localhost:5000/run-benchmark";
-
-                const response = await fetch(endpoint, {
+                const response = await fetch("http://localhost:5000/run-benchmark", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -30,66 +27,150 @@ const FinalStep = () => {
 
                 if (!response.ok) {
                     const errorData = await response.json();
-                    setSnackbarMessage(errorData.message || "Failed to run benchmark!");
-                    setSnackbarSeverity("error");
-                    setOpenSnackbar(true);
-                    return;
+                    throw new Error(errorData.message || "Failed to run benchmark!");
                 }
 
                 const data = await response.json();
-                setAverageScore(data.average_score);
-                setModuleScores(data.module_scores);
+                // Initialize tasks with their IDs and names
+                setTasks(data.task_ids.map(task => ({
+                    ...task,
+                    progress: 0,
+                    status: 'Starting...',
+                    completed: false,
+                    score: null,
+                    error: null
+                })));
 
-                setSnackbarMessage("Benchmark completed successfully!");
-                setSnackbarSeverity("success");
-                setOpenSnackbar(true);
             } catch (err) {
-                setSnackbarMessage(err.message || "An unexpected error occurred!");
+                setSnackbarMessage(err.message);
                 setSnackbarSeverity("error");
                 setOpenSnackbar(true);
-            } finally {
                 setLoading(false);
             }
         };
 
-        runBenchmark();
+        startBenchmark();
     }, []);
 
-    // Handle the button click to navigate to 'submissions'
+    useEffect(() => {
+        if (tasks.length === 0) return;
+
+        const pollTasks = async () => {
+            const updatedTasks = await Promise.all(
+                tasks.map(async (task) => {
+                    try {
+                        const response = await fetch(
+                            `http://localhost:5000/task-status/${task.task_id}`,
+                            {
+                                headers: {
+                                    // Add Authorization header if you're using JWT
+                                    "Authorization": `Bearer ${localStorage.getItem('token')}`
+                                },
+                                credentials: "include"
+                            }
+                        );
+                        
+                        if (!response.ok) {
+                            throw new Error("Failed to fetch task status");
+                        }
+                        
+                        const data = await response.json();
+                        
+                        return {
+                            ...task,
+                            progress: Math.round((data.current / data.total) * 100),
+                            status: data.status,
+                            completed: data.state === 'SUCCESS',
+                            error: data.state === 'FAILURE' ? data.status : null,
+                            score: data.score,
+                            state: data.state
+                        };
+                    } catch (error) {
+                        console.error(`Error polling task ${task.task_id}:`, error);
+                        return {
+                            ...task,
+                            error: error.message
+                        };
+                    }
+                })
+            );
+
+            setTasks(updatedTasks);
+
+            // Check if all tasks are completed or failed
+            const allTasksFinished = updatedTasks.every(
+                task => task.completed || task.error || task.state === 'FAILURE'
+            );
+
+            if (allTasksFinished) {
+                setLoading(false);
+                const successfulTasks = updatedTasks.filter(
+                    task => task.completed && task.score !== null
+                );
+                
+                if (successfulTasks.length > 0) {
+                    const scores = successfulTasks.map(t => ({
+                        module_name: t.module_name,
+                        score: t.score
+                    }));
+                    setModuleScores(scores);
+                    setAverageScore(
+                        scores.reduce((sum, curr) => sum + curr.score, 0) / scores.length
+                    );
+                }
+            }
+        };
+
+        const intervalId = setInterval(pollTasks, 1000);
+        return () => clearInterval(intervalId);
+    }, [tasks.length]);
+
     const handleViewSubmissions = () => {
         navigate("/profile", { state: "submissions" });
     };
 
     return (
         <Card variant="outlined" sx={{ width: "100%", maxWidth: 800, mx: "auto", textAlign: "center", p: 3 }}>
-            {loading ? (
-                <>
-                    <Typography level="h2" mb={2}>
-                        Evaluation in Progress
-                    </Typography>
-                    <CircularProgress />
-                </>
-            ) : snackbarSeverity === "error" ? (
-                <>
-                    <Typography level="h2" mb={2} color="error">
-                        Evaluation Failed
-                    </Typography>
-                    <Typography level="body1" color="error">
-                        {snackbarMessage}
-                    </Typography>
-                </>
-            ) : (
-                <>
-                    <Typography level="h2" mb={2}>
-                        Evaluation Completed
-                    </Typography>
+            <Typography level="h2" mb={2}>
+                {loading ? "Evaluation in Progress" : "Evaluation Completed"}
+            </Typography>
 
+            {loading ? (
+                <Box sx={{ width: '100%', mt: 3 }}>
+                    {tasks.map((task, index) => (
+                        <Box key={index} sx={{ mb: 3 }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                                <Typography level="body1">
+                                    {task.module_name}
+                                </Typography>
+                                <Typography level="body1">
+                                    {task.progress}%
+                                </Typography>
+                            </Box>
+                            <LinearProgress 
+                                determinate 
+                                value={task.progress} 
+                                sx={{ mb: 1 }}
+                                color={task.error ? "danger" : "success"}
+                            />
+                            <Typography 
+                                level="body2" 
+                                sx={{ 
+                                    color: task.error ? 'error.main' : 'text.secondary' 
+                                }}
+                            >
+                                {task.error || task.status}
+                                </Typography>
+                        </Box>
+                    ))}
+                </Box>
+            ) : moduleScores.length > 0 ? (
+                <>
                     <Card variant="outlined" sx={{ p: 3, textAlign: "center" }}>
                         <Typography level="h3" mb={3} sx={{ textAlign: "center", fontWeight: "bold" }}>
                             Evaluation Summary
                         </Typography>
                         <Box sx={{ display: "flex", flexDirection: "column", gap: 2, textAlign: "left" }}>
-                            {/* Display Average Score */}
                             <Card
                                 variant="soft"
                                 sx={{
@@ -107,7 +188,6 @@ const FinalStep = () => {
                                 </Typography>
                             </Card>
 
-                            {/* Display Module Scores */}
                             {moduleScores.map((module, index) => (
                                 <Card
                                     key={index}
@@ -131,7 +211,6 @@ const FinalStep = () => {
                         </Box>
                     </Card>
 
-                    {/* View my submissions Button */}
                     <Button
                         variant="solid"
                         color="primary"
@@ -142,6 +221,13 @@ const FinalStep = () => {
                         View My Submissions
                     </Button>
                 </>
+            ) : (
+                <Typography level="h2" mb={2} color="error">
+                    Evaluation Failed
+                    <Typography level="body1" color="error">
+                        {snackbarMessage}
+                    </Typography>
+                </Typography>
             )}
 
             <CustomSnackbar
@@ -155,8 +241,3 @@ const FinalStep = () => {
 };
 
 export default FinalStep;
-
-
-
-
-
