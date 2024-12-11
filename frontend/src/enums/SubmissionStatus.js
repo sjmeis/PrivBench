@@ -1,5 +1,6 @@
 export const SubmissionStatus = Object.freeze({
-    PENDING: "Pending",
-    COMPLETED: "Completed",
-    FAILED: "Failed",
+    PENDING: "pending",
+    COMPLETED: "completed",
+    IN_PROGRESS: "in_progress",
+    FAILED: "failed",
 });
