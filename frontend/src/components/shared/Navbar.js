@@ -1,5 +1,5 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import {useLocation, useNavigate} from "react-router-dom";
 import {
     Avatar,
     Dropdown,
@@ -24,8 +24,24 @@ import { getUserSubmissions } from '../../services/RankingsService';
 
 const Navbar = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const { mode, setMode } = useColorScheme();
     const { user, logout } = useAuth();
+
+    const isAtRankings = location.pathname === '/rankings'
+    const isAtSubmission = location.pathname === '/upload'
+    const isAtInformation = location.pathname === '/information'
+
+    const navButtonStyle = {
+        textTransform: "none",
+        fontWeight: "medium",
+        fontSize: "18px",
+        paddingTop: 0,
+        paddingBottom: 0,
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+    }
 
     // Avoid returning early before hooks are called
     const isLightMode = mode === 'light';
@@ -97,51 +113,33 @@ const Navbar = () => {
                     </Typography>
                 </Grid>
                 <Grid item xs={10} container justifyContent="center">
-                    <Button
-                        onClick={() => navigate("/rankings")}
-                        color="inherit"
-                        startDecorator={<Timeline />}
-                        sx={{
-                            color: "primary.textPrimary",
-                            bgcolor: "transparent !important",
-                            textTransform: "none",
-                            fontWeight: "medium",
-                            fontSize: "18px",
-                            mx: 1,
-                        }}
-                    >
-                        Rankings
-                    </Button>
-                    <Button
-                        onClick={handleSubmissionClick} // Trigger submission handling
-                        color="inherit"
-                        startDecorator={<UploadFile />}
-                        sx={{
-                            color: "primary.textPrimary",
-                            bgcolor: "transparent !important",
-                            textTransform: "none",
-                            fontWeight: "medium",
-                            fontSize: "18px",
-                            mx: 1,
-                        }}
-                    >
-                        Submission
-                    </Button>
-                    <Button
-                        onClick={() => navigate("/information")}
-                        color="inherit"
-                        startDecorator={<Info />}
-                        sx={{
-                            color: "primary.textPrimary",
-                            bgcolor: "transparent !important",
-                            textTransform: "none",
-                            fontWeight: "medium",
-                            fontSize: "18px",
-                            mx: 1,
-                        }}
-                    >
-                        How does it work?
-                    </Button>
+                    <Stack direction='row' spacing={2}>
+                        <Button
+                            onClick={() => navigate("/rankings")}
+                            variant={isAtRankings? 'soft': 'text'}
+                            startDecorator={<Timeline />}
+                            sx={navButtonStyle}
+                        >
+                            Rankings
+                        </Button>
+                        <Button
+                            onClick={handleSubmissionClick} // Trigger submission handling
+                            variant={isAtSubmission? 'soft': 'text'}
+                            startDecorator={<UploadFile />}
+                            sx={navButtonStyle}
+                        >
+                            Submission
+                        </Button>
+                        <Button
+                            onClick={() => navigate("/information")}
+                            variant={isAtInformation? 'soft': 'text'}
+                            startDecorator={<Info />}
+                            sx={navButtonStyle}
+                        >
+                            How does it work?
+                        </Button>
+                    </Stack>
+
                 </Grid>
 
                 <Grid item xs={1} container justifyContent="flex-end" alignItems="center">
@@ -168,9 +166,7 @@ const Navbar = () => {
                             <Dropdown>
                                 <MenuButton endDecorator={<Avatar sx={{ maxWidth: 28, maxHeight: 28 }} size="sm" src={getGravatarUrl(user.mailAddress)} />}
                                             variant="soft"
-                                            color="primary"
-                                            size="sm" sx={{ height: 37 }}
-                                >
+                                            color="primary">
                                     {user.username}
                                 </MenuButton>
                                 <Menu

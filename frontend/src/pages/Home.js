@@ -9,12 +9,14 @@ import {
 } from "@mui/joy";
 import { useTheme } from "@mui/joy";
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
+import {useNavigate} from "react-router-dom";
 
 const Home = () => {
     const [scrolled, setScrolled] = useState(false);
     const [activeIndex, setActiveIndex] = useState(0);
     const theme = useTheme();
 
+    const navigate = useNavigate();
     const isLightMode = theme.palette.mode === 'light';
 
     useEffect(() => {
@@ -159,6 +161,7 @@ const Home = () => {
                     <Box sx={{ mt: 8, display: 'flex', gap: 2, justifyContent: 'center' }}>
                         <Button
                             size="lg"
+                            onClick={() => navigate('/upload')}
                             sx={{
                                 bgcolor: 'primary.500',
                                 '&:hover': { bgcolor: 'primary.600' },
@@ -170,6 +173,7 @@ const Home = () => {
                         <Button
                             size="lg"
                             variant="outlined"
+                            onClick={() => navigate('/information')}
                             sx={{
                                 borderColor: 'primary.400',
                                 color: 'primary.400',
@@ -243,7 +247,7 @@ const Home = () => {
                                     bgcolor: 'primary.500',
                                     '&:hover': { bgcolor: 'primary.600' }
                                 }}
-                                onClick={() => window.location.href = "/rankings"}
+                                onClick={() => navigate('/rankings')}
                             >
                                 View Rankings
                             </Button>
@@ -255,9 +259,9 @@ const Home = () => {
                                     color: isLightMode ? 'text.primary' : 'neutral.300',
                                     '&:hover': { borderColor: 'primary.400' }
                                 }}
-                                onClick={() => window.location.href = "/documentation"}
+                                onClick={() => navigate('/information')}
                             >
-                                Documentation
+                                Learn More
                             </Button>
                         </Box>
                     </Card>
