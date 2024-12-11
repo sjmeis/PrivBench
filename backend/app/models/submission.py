@@ -14,6 +14,7 @@ class Submission(db.Model):
     status = db.Column(db.Enum(SubmissionStatus), nullable=False)
     score = db.Column(db.Integer, nullable=False)
     is_public = db.Column(db.Boolean, nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
     # Relationships
     user = db.relationship('User', back_populates='submissions')
