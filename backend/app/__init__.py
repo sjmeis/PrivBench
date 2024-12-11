@@ -10,7 +10,22 @@ import logging
 
 jwt = JWTManager()
 migrate = Migrate()
-celery = Celery(__name__, broker=Config.CELERY_BROKER_URL)
+
+def make_celery(app):
+    celery = Celery(
+        app.import_name,
+        backend=app.config['CELERY_RESULT_BACKEND'],
+        broker=app.config['CELERY_BROKER_URL']
+    )
+    celery.conf.update(app.config)
+
+    class ContextTask(celery.Task):
+        def __call__(self, *args, **kwargs):
+            with app.app_context():
+                return self.run(*args, **kwargs)
+
+    celery.Task = ContextTask
+    return celery
 
 def create_app():
     app = Flask(__name__)
@@ -20,20 +35,25 @@ def create_app():
         level=logging.DEBUG,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
-    
-    logger = logging.getLogger(__name__)
-    logger.info("=== Starting Flask Application ===")
 
-    CORS(app, 
-        supports_credentials=True,  # Important for cookies
-        origins=["http://localhost:3000"])
+    CORS(app,
+        resources={r"/*": {
+                "origins": ["http://localhost:3000"],
+                "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+                "allow_headers": ["Content-Type", "Authorization"],
+                "supports_credentials": True,
+                "expose_headers": ["Content-Range", "X-Content-Range"]
+            }})
     
     app.config.from_object(Config)
+    app.config.update(
+        CELERY_BROKER_URL='redis://redis:6379/0',
+        CELERY_RESULT_BACKEND='redis://redis:6379/0'
+    )
     
     db.init_app(app)
     jwt.init_app(app)
     migrate.init_app(app, db)
-    celery.conf.update(app.config)
     
     from .routes.auth import auth_bp
     from .routes.main import main_bp
@@ -41,19 +61,19 @@ def create_app():
     from .routes.ranking import ranking_bp
     from .routes.metadata import metadata_bp
     from .routes.benchmark import benchmark_bp
+    from .routes.module import module_bp
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
     app.register_blueprint(data_bp)
     app.register_blueprint(ranking_bp)
     app.register_blueprint(metadata_bp)
     app.register_blueprint(benchmark_bp)
-    
-    # Log registered routes
-    logger.info("\n=== Registered Routes ===")
-    for rule in app.url_map.iter_rules():
-        logger.info(f"{rule.endpoint}: {rule.methods} - {rule}")
-    logger.info("======================\n")
+    app.register_blueprint(module_bp)
 
     return app
 
+# Create the Flask app
 app = create_app()
+
+# Create the Celery instance
+celery = make_celery(app)

@@ -285,4 +285,3 @@ def get_submission_detail():
         return jsonify({"message": "Internal server error", "error": str(e)}), 500
 
 
-

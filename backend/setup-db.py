@@ -54,9 +54,11 @@ with app.app_context():
                 module_name = "NERpriv"
                 module_file_name = "ner_priv.py"
                 module_path = os.path.join(MODULE_FOLDER, module_file_name)
+                module_description = "This is a description on how NERpriv works and what it evaluates"
 
                 new_benchmark_module = BenchmarkModule(
                     name=module_name,
+                    description=module_description,
                     version="1.0.0",
                     is_active=True,
                     path=module_path,

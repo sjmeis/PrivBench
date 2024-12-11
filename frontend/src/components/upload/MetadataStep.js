@@ -1,8 +1,19 @@
-import React, { useState } from "react";
-import {Button, Card, FormControl, Input, Textarea, Typography, Select, Option, Checkbox} from "@mui/joy";
+import React, { useState, useEffect } from "react";
+import {
+    Button,
+    Card,
+    FormControl,
+    Input,
+    Textarea,
+    Typography,
+    Select,
+    Option,
+    Checkbox,
+} from "@mui/joy";
 import { Save } from "@mui/icons-material";
+import CustomSnackbar from "../shared/CustomSnackbar";
 
-const MetadataStep = ({ onMetadataSave }) => {
+const MetadataStep = ({ initialMetadata, submissionId, onMetadataSave }) => {
     const [metadata, setMetadata] = useState({
         modelName: "",
         modelDescription: "",
@@ -15,10 +26,20 @@ const MetadataStep = ({ onMetadataSave }) => {
     });
 
     const [shouldDownload, setShouldDownload] = useState(false);
-
-
+    const [snackbar, setSnackbar] = useState({
+        open: false,
+        message: "",
+        severity: "success",
+    });
     // Mock data for dropdowns
     const licenseOptions = ["MIT", "Apache 2.0", "GPLv3", "BSD"];
+
+    // Set initial metadata if provided
+    useEffect(() => {
+        if (initialMetadata) {
+            setMetadata(initialMetadata);
+        }
+    }, [initialMetadata]);
 
     // Handle input changes
     const handleChange = (field, value) => {
@@ -28,64 +49,88 @@ const MetadataStep = ({ onMetadataSave }) => {
         }));
     };
 
+    // Handle saving metadata
     const handleSave = async () => {
         try {
             if (shouldDownload) {
                 handleDownload();
             }
 
-            // Construct the API endpoint
-            const endpoint = "http://localhost:5000/metadata"; 
-    
-            // Send a POST request with metadata
+            const isUpdate = !!submissionId; // Determine whether it's an update or create request
+            const endpoint = `http://localhost:5000/metadata`;
+
+            const method = isUpdate ? "PUT" : "POST";
+
+            const body = isUpdate
+                ? JSON.stringify({
+                    id: submissionId,
+                    metadata: {
+                        modelName: metadata.modelName,
+                        modelDescription: metadata.modelDescription,
+                        license: metadata.license,
+                        tags: metadata.tags,
+                        authors: metadata.authors,
+                        researchPaperUrl: metadata.relatedResearchPaper,
+                        githubUrl: metadata.relatedGithubRepo,
+                        bibtexCitation: metadata.bibtexCitation,
+                    },
+                })
+                : JSON.stringify(metadata);
+
             const response = await fetch(endpoint, {
-                method: "POST",
+                method,
                 headers: {
                     "Content-Type": "application/json",
                 },
-                credentials: 'include',
-                body: JSON.stringify(metadata),
+                credentials: "include",
+                body,
             });
 
             if (response.ok) {
                 const data = await response.json();
-                alert("Metadata saved successfully!");
-                onMetadataSave(data.submission_id);
+                setSnackbar({
+                    open: true,
+                    message: isUpdate
+                        ? "Metadata updated successfully!"
+                        : "Metadata saved successfully!",
+                    severity: "success",
+                });
+                if (!isUpdate) {
+                    onMetadataSave(data.submission_id); // Handle new submission ID after POST
+                } else {
+                    onMetadataSave(data.submission.id); // Handle updated submission ID after PUT
+                }
             } else {
                 const errorData = await response.json();
-                alert(`Failed to save metadata: ${errorData.message || response.statusText}`);
+                setSnackbar({
+                    open: true,
+                    message: `Failed to ${
+                        isUpdate ? "update" : "save"
+                    } metadata: ${errorData.message || response.statusText}`,
+                    severity: "error",
+                });
             }
         } catch (error) {
-            console.error("Error saving metadata:", error);
-            alert("Failed to save metadata. Please try again.");
+            console.error("Error saving/updating metadata:", error);
+            setSnackbar({
+                open: true,
+                message: `Failed to save metadata. Please try again!`,
+                severity: "error",
+            });
         }
     };
-    
+
+
     // Generate Markdown content
-    // Generate Markdown content
-    const generateMarkdown = () => {
-        return `
+    const generateMarkdown = () => `
 ---
 ---
 
 # Model Card for ${metadata.modelName || "Unnamed Model"}
 
-<!-- Provide a quick summary of what the model is/does. [Optional] -->
 ${metadata.modelDescription || "Some cool model..."}
 
-# Table of Contents
-- [Model Details](#model-details)
-  - [License](#license)
-  - [Tags](#tags)
-  - [Authors](#authors)
-  - [Related Research Paper](#related-research-paper)
-  - [Related GitHub Repository](#related-github-repository)
-- [Citation](#citation)
-  - [BibTeX](#bibtex)
-
-
 ## Model Details
-
 ### License
 ${metadata.license || "Unknown"}
 
@@ -102,12 +147,9 @@ ${metadata.relatedResearchPaper || "None"}
 ${metadata.relatedGithubRepo || "None"}
 
 ## Citation
-
 ### BibTeX
 ${metadata.bibtexCitation || "More information needed"}
-
 `;
-    };
 
     // Download Markdown file
     const handleDownload = () => {
@@ -119,8 +161,6 @@ ${metadata.bibtexCitation || "More information needed"}
         link.click();
     };
 
-
-
     return (
         <Card variant="outlined" sx={{ width: 800, padding: 4 }}>
             <Typography level="h2" mb={2} sx={{ textAlign: "center" }}>
@@ -128,7 +168,9 @@ ${metadata.bibtexCitation || "More information needed"}
             </Typography>
 
             <FormControl>
-                <Typography level="h5" sx={{ marginTop: 2 }}>Model Name</Typography>
+                <Typography level="h5" sx={{ marginTop: 2 }}>
+                    Model Name
+                </Typography>
                 <Input
                     placeholder="Enter the model name"
                     value={metadata.modelName}
@@ -136,7 +178,9 @@ ${metadata.bibtexCitation || "More information needed"}
                     sx={{ marginBottom: 2, bgcolor: "grey.200" }}
                 />
 
-                <Typography level="h5" sx={{ marginTop: 2 }}>Model Description</Typography>
+                <Typography level="h5" sx={{ marginTop: 2 }}>
+                    Model Description
+                </Typography>
                 <Textarea
                     placeholder="Provide a detailed description of the model"
                     value={metadata.modelDescription}
@@ -145,7 +189,9 @@ ${metadata.bibtexCitation || "More information needed"}
                     sx={{ marginBottom: 2, bgcolor: "grey.200" }}
                 />
 
-                <Typography level="h5" sx={{ marginTop: 2 }}>License</Typography>
+                <Typography level="h5" sx={{ marginTop: 2 }}>
+                    License
+                </Typography>
                 <Select
                     placeholder="Select a license"
                     value={metadata.license}
@@ -159,7 +205,9 @@ ${metadata.bibtexCitation || "More information needed"}
                     ))}
                 </Select>
 
-                <Typography level="h5" sx={{ marginTop: 2 }}>Tags</Typography>
+                <Typography level="h5" sx={{ marginTop: 2 }}>
+                    Tags
+                </Typography>
                 <Input
                     placeholder="Enter tags (comma-separated)"
                     value={metadata.tags}
@@ -167,7 +215,9 @@ ${metadata.bibtexCitation || "More information needed"}
                     sx={{ marginBottom: 2, bgcolor: "grey.200" }}
                 />
 
-                <Typography level="h5" sx={{ marginTop: 2 }}>Author(s)</Typography>
+                <Typography level="h5" sx={{ marginTop: 2 }}>
+                    Author(s)
+                </Typography>
                 <Input
                     placeholder="Enter authors (comma-separated)"
                     value={metadata.authors}
@@ -175,7 +225,9 @@ ${metadata.bibtexCitation || "More information needed"}
                     sx={{ marginBottom: 2, bgcolor: "grey.200" }}
                 />
 
-                <Typography level="h5" sx={{ marginTop: 2 }}>Related Research Paper</Typography>
+                <Typography level="h5" sx={{ marginTop: 2 }}>
+                    Related Research Paper
+                </Typography>
                 <Input
                     placeholder="Provide the URL to the research paper"
                     value={metadata.relatedResearchPaper}
@@ -183,7 +235,9 @@ ${metadata.bibtexCitation || "More information needed"}
                     sx={{ marginBottom: 2, bgcolor: "grey.200" }}
                 />
 
-                <Typography level="h5" sx={{ marginTop: 2 }}>Related GitHub Repository</Typography>
+                <Typography level="h5" sx={{ marginTop: 2 }}>
+                    Related GitHub Repository
+                </Typography>
                 <Input
                     placeholder="Provide the URL to the GitHub repository"
                     value={metadata.relatedGithubRepo}
@@ -191,7 +245,9 @@ ${metadata.bibtexCitation || "More information needed"}
                     sx={{ marginBottom: 2, bgcolor: "grey.200" }}
                 />
 
-                <Typography level="h5" sx={{ marginTop: 2 }}>Bibtex Citation</Typography>
+                <Typography level="h5" sx={{ marginTop: 2 }}>
+                    Bibtex Citation
+                </Typography>
                 <Textarea
                     placeholder="Provide the Bibtex citation"
                     value={metadata.bibtexCitation}
@@ -206,7 +262,7 @@ ${metadata.bibtexCitation || "More information needed"}
                     label="Download model card as markdown"
                     sx={{ mt: 2 }}
                 />
-            <Button
+                <Button
                     variant="solid"
                     size="lg"
                     color="primary"
@@ -217,9 +273,18 @@ ${metadata.bibtexCitation || "More information needed"}
                     Save Model Data
                 </Button>
             </FormControl>
+
+            {/* Use CustomSnackbar for feedback */}
+            <CustomSnackbar
+                open={snackbar.open}
+                message={snackbar.message}
+                severity={snackbar.severity}
+                onClose={() => setSnackbar({ ...snackbar, open: false })}
+            />
         </Card>
     );
 };
 
 export default MetadataStep;
+
 

@@ -38,8 +38,9 @@ function App() {
                             <Route path="/rankings/detail" element={<RankingDetailView/>}/>
                             <Route path="/information" element={<Information/>}/>
                             <Route path="/register" element={<Register/>}/>
-                            <Route path="/upload" element={<Upload/>}/>
-
+                            <Route element={<ProtectedRoutes/>}>
+                                <Route path="/upload" element={<Upload/>}/>
+                            </Route>
                             <Route element={<ProtectedRoutes/>}>
                                 <Route path="/profile" element={<UserProfile/>}/>
                             </Route>

@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   backend:
     build:
@@ -9,16 +11,38 @@ services:
       - FLASK_ENV=development
       - DATABASE_URL=postgresql://user:password@db:5432/dbname
       - JWT_SECRET_KEY=jwtsecretkey
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
     volumes:
-      - ./data:/data
-      - ./data/privatized_datasets:/data/privatized_datasets
+      - ./data/datasets:/data/datasets
+      - privatized_datasets:/data/privatized_datasets
       - ./modules:/modules
     depends_on:
       db:
         condition: service_healthy
-    command: >
-      sh -c "flask db upgrade &&
-             flask run --host=0.0.0.0"
+      redis:
+        condition: service_started
+    entrypoint: ["/app/entrypoint.sh"]
+
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    hostname: worker1
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/dbname
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - C_FORCE_ROOT=true
+    volumes:
+      - ./data/datasets:/data/datasets
+      - privatized_datasets:/data/privatized_datasets
+      - ./modules:/modules
+    depends_on:
+      - redis
+      - backend
+    entrypoint: ["/app/celery_entrypoint.sh"]
+    tty: true
 
   frontend:
     build:
@@ -38,7 +62,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "5433:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U user -d dbname"]
       interval: 5s
@@ -49,6 +73,15 @@ services:
     image: redis:6.2
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - redis_data:/data
 
 volumes:
   postgres_data:
+  redis_data:
+  privatized_datasets:

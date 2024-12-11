@@ -1,8 +1,30 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 import { Card, Typography, Box } from '@mui/joy';
-import FlipCard from "../components/FlipCard";
+import FlipCard from '../components/FlipCard';
 
 const Information = () => {
+    const [modules, setModules] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        // Fetch modules from the backend
+        const fetchModules = async () => {
+            try {
+                const response = await axios.get('http://localhost:5000/modules'); // Adjust endpoint as needed
+                setModules(response.data);
+            } catch (err) {
+                setError('Failed to load modules');
+                console.error(err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchModules();
+    }, []);
+
     return (
         <Box
             sx={{
@@ -54,38 +76,46 @@ const Information = () => {
             <Box
                 sx={{
                     display: 'flex',
-                    overflowX: 'auto', // Enable horizontal scrolling
-                    width: '80%', // Ensure the box takes full width
-                    padding: 1, // Add some padding
-                    '&::-webkit-scrollbar': {
-                        height: 8, // Height of the horizontal scrollbar
-                    },
-                    '&::-webkit-scrollbar-thumb': {
-                        backgroundColor: '#888', // Color of the scrollbar thumb
-                        borderRadius: 4, // Round corners of the scrollbar thumb
-                    },
-                    '&::-webkit-scrollbar-thumb:hover': {
-                        backgroundColor: '#555', // Hover effect for scrollbar thumb
-                    },
+                    justifyContent: 'center', // Center the content
+                    flexWrap: 'wrap', // Allow wrapping for smaller screens
+                    gap: 2, // Add spacing between cards
+                    width: '80%',
+                    padding: 1,
                 }}
             >
-                {/* Render 5 FlipCards */}
-                {Array.from({ length: 5 }, (_, index) => (
-                    <Box
-                        key={index}
-                        sx={{
-                            flex: '0 0 350px', // Fixed width for each FlipCard
-                        }}
-                    >
-                        <FlipCard
-                            title={`Module ${index + 1}`}
-                            content={`Detailed information about Module ${index + 1}.`}
-                        />
-                    </Box>
-                ))}
+                {loading ? (
+                    <Typography level="body1" sx={{ textAlign: 'center', margin: 'auto' }}>
+                        Loading modules...
+                    </Typography>
+                ) : error ? (
+                    <Typography level="body1" sx={{ textAlign: 'center', color: 'red', margin: 'auto' }}>
+                        {error}
+                    </Typography>
+                ) : modules.length > 0 ? (
+                    modules.map((module) => (
+                        <Box
+                            key={module.id}
+                            sx={{
+                                width: 350, // Fixed width for each FlipCard
+                                textAlign: 'center', // Center the FlipCard within the box
+                            }}
+                        >
+                            <FlipCard
+                                title={module.name}
+                                content={module.description || 'No description available.'}
+                            />
+                        </Box>
+                    ))
+                ) : (
+                    <Typography level="body1" sx={{ textAlign: 'center', margin: 'auto' }}>
+                        No modules found.
+                    </Typography>
+                )}
             </Box>
+
         </Box>
     );
 };
 
 export default Information;
+
