@@ -12,7 +12,7 @@ class Submission(db.Model):
     submission_date = db.Column(db.DateTime, default=datetime.utcnow)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     status = db.Column(db.Enum(SubmissionStatus), nullable=False)
-    score = db.Column(db.Integer, nullable=False)
+    score = db.Column(db.Float, nullable=False)
     is_public = db.Column(db.Boolean, nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
