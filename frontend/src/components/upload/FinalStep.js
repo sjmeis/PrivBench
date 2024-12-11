@@ -178,14 +178,7 @@ const FinalStep = () => {
                             <LinearProgress 
                                 determinate 
                                 value={task.progress} 
-                                sx={{ 
-                                    mb: 1,
-                                    height: 10,
-                                    borderRadius: 5,
-                                    [`& .MuiLinearProgress-bar`]: {
-                                        transition: 'transform 0.3s linear'
-                                    }
-                                }}
+                                sx={{ mb: 1 }}
                                 color={task.error ? "danger" : "success"}
                             />
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
