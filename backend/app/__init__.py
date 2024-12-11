@@ -36,9 +36,14 @@ def create_app():
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
 
-    CORS(app, 
-        supports_credentials=True,
-        origins=["http://localhost:3000"])
+    CORS(app,
+        resources={r"/*": {
+                "origins": ["http://localhost:3000"],
+                "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+                "allow_headers": ["Content-Type", "Authorization"],
+                "supports_credentials": True,
+                "expose_headers": ["Content-Range", "X-Content-Range"]
+            }})
     
     app.config.from_object(Config)
     app.config.update(

@@ -15,43 +15,40 @@ RUN apt-get update && apt-get install -y \
     postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
-RUN pip install --upgrade -r requirements.txt
+# Create a non-root user for security
+RUN useradd -m celeryuser
 
-# Install spacy language model
-RUN python -m spacy download en_core_web_sm
+# Create /data directory as root and set ownership to celeryuser
+RUN mkdir -p /data/privatized_datasets && chown -R celeryuser:celeryuser /data
+
+# Install Python packages globally before switching to non-root user
+COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt && \
+    python3 -m spacy download en_core_web_sm
+
+# Switch to non-root user
+USER celeryuser
 
 # Copy application code
-COPY . .
+COPY --chown=celeryuser:celeryuser . .
 
-# Create celery_entrypoint.sh
-RUN echo '#!/bin/bash\n\
-# Wait for Redis\n\
-echo "Waiting for Redis..."\n\
-while ! nc -z redis 6379; do\n\
-    sleep 1\n\
-done\n\
-echo "Redis is ready!"\n\
-\n\
-# Test Redis connection\n\
-redis-cli -h redis ping\n\
-\n\
-# Start Celery worker with debug logging\n\
-echo "Starting Celery worker..."\n\
-celery -A celery_app.celery worker --loglevel=DEBUG' > /app/celery_entrypoint.sh
+# Copy entrypoint scripts
+COPY --chown=celeryuser:celeryuser entrypoint.sh /app/entrypoint.sh
+COPY --chown=celeryuser:celeryuser celery_entrypoint.sh /app/celery_entrypoint.sh
+
+# Make entrypoint scripts executable
+RUN chmod +x /app/entrypoint.sh /app/celery_entrypoint.sh
 
 # Set environment variables
 ENV FLASK_APP=app
 ENV FLASK_DEBUG=1
 ENV C_FORCE_ROOT=true
 ENV PYTHONPATH=/app
+ENV PATH="/home/celeryuser/.local/bin:${PATH}"
 
-# Create necessary directories
-RUN mkdir -p /data/privatized_datasets
-
-# Make entrypoint scripts executable
-RUN chmod +x /app/entrypoint.sh /app/celery_entrypoint.sh
-
+# Expose port 5000 for Flask
 EXPOSE 5000
 
+# Default entrypoint (can be overridden in docker-compose)
 ENTRYPOINT ["/app/entrypoint.sh"]

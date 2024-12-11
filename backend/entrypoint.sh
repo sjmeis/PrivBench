@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 # Function to wait for Redis
 wait_for_redis() {
@@ -24,7 +25,7 @@ setup_database() {
     # Ensure the migrations directory exists
     if [ ! -d "migrations" ]; then
         echo "Initializing migrations..."
-        flask db init
+        python -m flask db init
     fi
 
     # Ensure the versions subdirectory exists
@@ -35,27 +36,18 @@ setup_database() {
 
     # Generate new migration script (if needed)
     echo "Generating migration script..."
-    flask db migrate -m "Auto migration" || echo "No changes to migrate."
+    python -m flask db migrate -m "Auto migration" || echo "No changes to migrate."
 
     # Apply migrations
     echo "Applying database migrations..."
-    flask db upgrade
+    python -m flask db upgrade
 }
 
-# Main execution logic
-if [ "$1" = "celery" ]; then
-    echo "Starting Celery worker..."
-    wait_for_redis
-    wait_for_postgres
+# Main execution logic for Flask backend
+echo "Starting Flask backend..."
+wait_for_redis
+wait_for_postgres
+setup_database
 
-    echo "Starting Celery worker with debug logging..."
-    exec celery -A app.celery worker --loglevel=info
-else
-    # Setup database for Flask application
-    wait_for_postgres
-    setup_database
-
-    # Start the Flask application
-    echo "Starting the Flask application..."
-    exec flask run --host=0.0.0.0
-fi
+echo "Starting the Flask application..."
+exec python -m flask run --host=0.0.0.0

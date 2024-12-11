@@ -1,48 +1,53 @@
 import pandas as pd
 import spacy
-from collections import Counter
 from tqdm.auto import tqdm
-from base_benchmark import BaseBenchmark
-import time
-import random
 
-spacy.prefer_gpu()
+# Try to use GPU if available, fallback to CPU otherwise
+try:
+    spacy.prefer_gpu()
+    gpu_available = spacy.require_gpu()
+    print("GPU is available and will be used.")
+except Exception as e:
+    gpu_available = False
+    print("GPU is not available. Falling back to CPU.")
 
-class NERpriv(BaseBenchmark):
-
+class NERpriv:
     def __init__(self):
-        self.nlp = spacy.load("en_core_web_sm")
+        # Load SpaCy model with unnecessary components disabled
+        self.nlp = spacy.load("en_core_web_sm", disable=["tagger", "parser", "attribute_ruler", "lemmatizer"])
 
-    def score(self, original, private):
+    def process_row(self, original_row, private_row):
         removed = 0
         total = 0
-        for x, y in tqdm(zip(original, private), total=len(original)):
-            o_doc = self.nlp(x)
-            if pd.isnull(y):
-                total += len([x.text for x in o_doc.ents])
-                # Adding a random sleep time between 0.1 and 1 second
-                time.sleep(random.uniform(1, 5))
+
+        # Convert all texts to strings
+        original_texts = [str(text) if pd.notnull(text) else "" for text in original_row]
+        private_texts = [str(text) if pd.notnull(text) else "" for text in private_row]
+
+        # Process texts in manageable batch sizes
+        o_docs = list(self.nlp.pipe(original_texts, batch_size=16))
+        p_docs = list(self.nlp.pipe(private_texts, batch_size=16))
+
+        for o_doc, p_doc in zip(o_docs, p_docs):
+            if not p_doc.text.strip():  # If private text is empty
+                total += len(o_doc.ents)
                 continue
-            p_doc = self.nlp(y)
 
-            counts = Counter()
-            for ent in o_doc.ents:
-                counts[ent.text] += 1
+            o_ents = {ent.text.lower() for ent in o_doc.ents}
+            p_ents = {ent.text.lower() for ent in p_doc.ents}
 
-            priv_ents = set()
-            for ent in p_doc.ents:
-                priv_ents.add(ent.text)
-                
-            for ent in counts:
-                if ent not in priv_ents and ent.lower() not in priv_ents:
-                    removed += counts[ent]
-                total += counts[ent]
-            
-            # Adding a random sleep time between 0.1 and 1 second after processing each pair
-            time.sleep(random.uniform(1, 5))
+            removed += len(o_ents - p_ents)
+            total += len(o_ents)
 
-        if total == 0:
-            return 0.0  
+        return removed, total
 
-        # Return the score as a percentage, rounded to 2 decimal places
-        return round((removed / total) * 100)
+    def score(self, original_rows, private_rows):
+        removed = 0
+        total = 0
+
+        for original_row, private_row in tqdm(zip(original_rows, private_rows), total=len(original_rows)):
+            r, t = self.process_row(original_row, private_row)
+            removed += r
+            total += t
+
+        return round((removed / total) * 100) if total > 0 else 0.0

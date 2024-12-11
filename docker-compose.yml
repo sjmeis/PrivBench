@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   backend:
     build:
@@ -12,15 +14,15 @@ services:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
     volumes:
-      - ./data:/data
-      - ./data/privatized_datasets:/data/privatized_datasets
+      - ./data/datasets:/data/datasets
+      - privatized_datasets:/data/privatized_datasets
       - ./modules:/modules
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_started
-    command: ["./entrypoint.sh"]
+    entrypoint: ["/app/entrypoint.sh"]
 
   celery_worker:
     build:
@@ -33,14 +35,13 @@ services:
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - C_FORCE_ROOT=true
     volumes:
-      - ./data:/data
-      - ./data/privatized_datasets:/data/privatized_datasets
+      - ./data/datasets:/data/datasets
+      - privatized_datasets:/data/privatized_datasets
       - ./modules:/modules
     depends_on:
       - redis
       - backend
-    entrypoint: []
-    command: ["./entrypoint.sh", "celery"] 
+    entrypoint: ["/app/celery_entrypoint.sh"]
     tty: true
 
   frontend:
@@ -83,3 +84,4 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  privatized_datasets:

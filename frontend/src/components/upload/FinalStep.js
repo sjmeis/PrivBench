@@ -23,11 +23,26 @@ const FinalStep = () => {
                         "Content-Type": "application/json",
                     },
                     credentials: "include",
+                    signal: AbortSignal.timeout(30000) // 30 second timeout
                 });
 
+                if (response.status === 404) {
+                    setSnackbarMessage("No submissions available for benchmarking. Please submit your data first.");
+                    setSnackbarSeverity("warning");
+                    setOpenSnackbar(true);
+                    setLoading(false);
+                    return;
+                }
+
                 if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.message || "Failed to run benchmark!");
+                    let errorMessage;
+                    try {
+                        const errorData = await response.json();
+                        errorMessage = errorData.message;
+                    } catch {
+                        errorMessage = `HTTP error! status: ${response.status}`;
+                    }
+                    throw new Error(errorMessage || "Failed to run benchmark!");
                 }
 
                 const data = await response.json();
@@ -42,6 +57,7 @@ const FinalStep = () => {
                 })));
 
             } catch (err) {
+                console.error("Benchmark error:", err);
                 setSnackbarMessage(err.message);
                 setSnackbarSeverity("error");
                 setOpenSnackbar(true);
