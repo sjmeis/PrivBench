@@ -6,23 +6,7 @@ import pandas as pd
 logger = get_task_logger(__name__)
 
 def run_benchmark(module_path, module_name, dataset_path, priv_dataset_path):
-    """
-    Run a benchmark module with the specified datasets.
-    
-    This is a generic benchmark runner that can work with any benchmark module that:
-    1. Has a class matching module_name
-    2. Implements the score(original_data, privatized_data) method
-    3. Returns a float between 0 and 1 (or 0-100 which will be normalized)
-    
-    Args:
-        module_path (str): Path to the benchmark module file
-        module_name (str): Name of the benchmark class in the module
-        dataset_path (str): Path to the original dataset
-        priv_dataset_path (str): Path to the privatized dataset
-        
-    Returns:
-        float: Normalized score between 0 and 1
-    """
+
     logger.info(f"Starting benchmark execution for module {module_name}")
     try:
         # Load the benchmark class
@@ -62,18 +46,13 @@ def run_benchmark(module_path, module_name, dataset_path, priv_dataset_path):
         # Compute the benchmark score
         logger.info("Computing benchmark score")
         try:
+            logger.info(f"Original dataset shape: {dataset.shape}")
+            logger.info(f"Privatized dataset shape: {privatized_dataset.shape}")
             score = benchmark_instance.score(dataset, privatized_dataset)
             
             if score is None:
                 raise ValueError("Benchmark returned None score")
-                
-            # Handle both 0-1 and 0-100 score ranges
-            if score > 1:
-                score = float(score) / 100.0
-                
-            if not 0 <= score <= 1:
-                raise ValueError(f"Score {score} is outside valid range [0, 1]")
-                
+                             
             logger.info(f"Successfully computed score: {score}")
             return score
 
