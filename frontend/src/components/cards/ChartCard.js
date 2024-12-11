@@ -3,14 +3,21 @@ import {Card, CardContent, Typography} from '@mui/joy';
 import {BarChart} from '@mui/x-charts';
 
 const ChartCard = ({cardStyle, benchmarkScores, overallScore}) => {
-    const [yData, setYData] = useState([])
-    const [xLabels, setXLables] = useState([])
+    const [chartData, setChartData] = useState([]);
 
 
     useEffect(() => {
-        setYData([overallScore].concat(benchmarkScores.map(item => item.score)));
-        setXLables(["Overall Score"].concat(benchmarkScores.map(item => item.benchmarkModule.name)));
-
+        if (benchmarkScores && Array.isArray(benchmarkScores)) {
+            const newChartData = [
+                { x: overallScore, y: "Overall Score" },
+                ...benchmarkScores.map((item, index) => ({
+                    x: item.score,
+                    y: `${item.benchmarkModule.name} (${index + 1})`, //fixme: remove this when labels unique
+                })),
+            ];
+            setChartData(newChartData);
+        }
+        console.log(chartData)
     }, [benchmarkScores, overallScore]);
 
 
@@ -27,19 +34,24 @@ const ChartCard = ({cardStyle, benchmarkScores, overallScore}) => {
                             bottom: 20,
                         }}
                         barLabel="value"
-                        series={[
-                            {data: yData, id: ''},
-                        ]}
                         yAxis={[
                             {
                                 colorMap: {
                                     type: 'ordinal',
-                                    colors: ['#a8c2a5', '#86b2a0', '#5fa6a1', '#3a92a8', '#256b96', '#064474']
+                                    colors: ['#52b202', '#86b2a0', '#5fa6a1', '#3a92a8', '#256b96', '#064474']
 
                                 },
-                                data: xLabels,
-                                scaleType: 'band'
-                            }
+                                id: 'y-axis',
+                                scaleType: 'band',
+                                data: chartData.map(item => item.y),
+                            },
+                        ]}
+                        series={[
+                            {
+                                id: 'benchmark-series',
+                                type: 'bar',
+                                data: chartData.map(item => item.x),
+                            },
                         ]}
                         layout="horizontal"
                         tooltip={{trigger: 'none'}}
