@@ -5,6 +5,8 @@ from ..models import BenchmarkModule, Submission, User, Dataset, PrivatizedDatas
 from ..enums import SubmissionStatus
 from datetime import datetime
 from app.tasks.run_benchmark import run_benchmark
+from app.utils.dataset_loader import load_dataset
+from app.utils.module_loader import load_benchmark_module
 from celery.utils.log import get_task_logger
 from pathlib import Path
 
@@ -16,44 +18,70 @@ def run_benchmark_task(self, module_path, module_name, dataset_path, priv_datase
     logger.info(f"Starting benchmark task for module {module_name}")
     try:
         total_steps = 100
+        total_rows = None
         
         # Stage 1: Initialization (10%)
         logger.info(f"Module {module_name}: Initialization stage")
-        logger.info(f"Paths - module: {Path(module_path).absolute()}, "
-                   f"dataset: {Path(dataset_path).absolute()}, "
-                   f"priv_dataset: {Path(priv_dataset_path).absolute()}")
-        
         self.update_state(state='PROGRESS', 
                          meta={'current': 10, 
                                'total': total_steps, 
-                               'status': 'Initializing benchmark environment...'})
+                               'status': 'Initializing benchmark environment...',
+                               'processedRows': 0,
+                               'totalRows': 0})
         
         # Stage 2: Loading Module (30%)
         logger.info(f"Loading benchmark module from {module_path}")
         self.update_state(state='PROGRESS', 
                          meta={'current': 30, 
                                'total': total_steps, 
-                               'status': 'Loading benchmark module...'})
+                               'status': 'Loading benchmark module...',
+                               'processedRows': 0,
+                               'totalRows': 0})
+        
+        # Load datasets to get total row count
+        dataset = load_dataset(dataset_path)
+        total_rows = len(dataset)
                                
         # Stage 3: Loading Datasets (50%)
         logger.info(f"Loading datasets from {dataset_path} and {priv_dataset_path}")
         self.update_state(state='PROGRESS', 
                          meta={'current': 50, 
                                'total': total_steps, 
-                               'status': 'Loading datasets...'})
+                               'status': f'Loading datasets (0/{total_rows} rows)...',
+                               'processedRows': 0,
+                               'totalRows': total_rows})
         
         # Stage 4: Running Benchmark (80%)
         logger.info(f"Starting benchmark execution")
         self.update_state(state='PROGRESS', 
                          meta={'current': 80, 
                                'total': total_steps, 
-                               'status': 'Running benchmark calculations...'})
+                               'status': f'Processing 0/{total_rows} rows...',
+                               'processedRows': 0,
+                               'totalRows': total_rows})
         
-        # Add sleep to ensure progress is visible
-        import time
-        time.sleep(2)  # Remove this in production
+        # Create a progress callback for the benchmark
+        def progress_callback(processed_rows):
+            self.update_state(
+                state='PROGRESS',
+                meta={
+                    'current': 80 + int((processed_rows / total_rows) * 20),
+                    'total': total_steps,
+                    'status': f'Processing {processed_rows}/{total_rows} rows...',
+                    'processedRows': processed_rows,
+                    'totalRows': total_rows
+                }
+            )
+
+        # Pass the callback to the benchmark instance
+        score = run_benchmark(
+            module_path, 
+            module_name, 
+            dataset_path, 
+            priv_dataset_path,
+            progress_callback
+        )        
         
-        score = run_benchmark(module_path, module_name, dataset_path, priv_dataset_path)
         logger.info(f"Benchmark completed with score: {score}")
         
         if score is None:
@@ -64,7 +92,9 @@ def run_benchmark_task(self, module_path, module_name, dataset_path, priv_datase
             'current': total_steps,
             'total': total_steps,
             'status': 'Benchmark completed successfully!',
-            'score': float(score),  # Ensure score is a float
+            'score': float(score),
+            'processedRows': total_rows,
+            'totalRows': total_rows,
             'state': 'SUCCESS'
         }
         
@@ -77,6 +107,8 @@ def run_benchmark_task(self, module_path, module_name, dataset_path, priv_datase
             'current': 0,
             'total': total_steps,
             'status': f'Task failed: {str(e)}',
+            'processedRows': 0,
+            'totalRows': total_rows if 'total_rows' in locals() else 0,
             'state': 'FAILURE'
         }
         raise Exception(str(e))
@@ -204,33 +236,70 @@ def task_status(task_id):
             'state': task.state,
             'current': 0,
             'total': 100,
-            'status': 'Pending...'
+            'status': 'Pending...',
+            'processedRows': 0,
+            'totalRows': 0
         }
     elif task.state == 'FAILURE':
+        # Handle the failure case properly
+        error_msg = str(task.result) if task.result else "Unknown error occurred"
         response = {
             'state': task.state,
             'current': 0,
             'total': 100,
-            'status': str(task.info)
+            'status': error_msg,
+            'processedRows': 0,
+            'totalRows': 0,
+            'error': error_msg
         }
-        logger.error(f"Task {task_id} failed: {str(task.info)}")
+        logger.error(f"Task {task_id} failed: {error_msg}")
     elif task.state == 'SUCCESS':
+        result = task.result
         response = {
             'state': task.state,
             'current': 100,
             'total': 100,
             'status': 'Task completed!',
-            'score': task.result.get('score')
+            'score': result.get('score') if isinstance(result, dict) else None,
+            'processedRows': result.get('processedRows', 0) if isinstance(result, dict) else 0,
+            'totalRows': result.get('totalRows', 0) if isinstance(result, dict) else 0
         }
-        logger.info(f"Task {task_id} completed with score {task.result.get('score')}")
+        logger.info(f"Task {task_id} completed with score {response['score']}")
     else:
-        response = {
-            'state': task.state,
-            'current': task.info.get('current', 0),
-            'total': task.info.get('total', 100),
-            'status': task.info.get('status', ''),
-            'score': task.info.get('score', None)
-        }
+        # Handle PROGRESS state
+        try:
+            info = task.info
+            if isinstance(info, dict):
+                response = {
+                    'state': task.state,
+                    'current': info.get('current', 0),
+                    'total': info.get('total', 100),
+                    'status': info.get('status', ''),
+                    'score': info.get('score'),
+                    'processedRows': info.get('processedRows', 0),
+                    'totalRows': info.get('totalRows', 0)
+                }
+            else:
+                # Handle unexpected info format
+                response = {
+                    'state': task.state,
+                    'current': 0,
+                    'total': 100,
+                    'status': 'Processing...',
+                    'processedRows': 0,
+                    'totalRows': 0
+                }
+        except Exception as e:
+            logger.error(f"Error getting task status: {str(e)}")
+            response = {
+                'state': 'FAILURE',
+                'current': 0,
+                'total': 100,
+                'status': f'Error getting task status: {str(e)}',
+                'processedRows': 0,
+                'totalRows': 0,
+                'error': str(e)
+            }
         logger.info(f"Task {task_id} in progress: {response}")
     
     return jsonify(response)

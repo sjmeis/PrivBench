@@ -41,47 +41,34 @@ class NERpriv:
 
         return removed, total
 
-    def score(self, original_df, private_df):
-        """
-        Calculate privacy score based on named entity removal.
-        
-        Args:
-            original_df (pd.DataFrame): Original dataset
-            private_df (pd.DataFrame): Privatized dataset
-            
-        Returns:
-            float: Privacy score (0-100)
-        """
+    def score(self, original_df, private_df, progress_callback=None):
+        """Calculate privacy score based on named entity removal."""
         removed = 0
         total = 0
-        
-        print(f"Processing {len(original_df)} rows")
-        print(f"Original DataFrame columns: {original_df.columns}")
-        print(f"Private DataFrame columns: {private_df.columns}")
+        total_rows = len(original_df)
         
         # Convert DataFrames to lists of rows
         original_rows = original_df.values
         private_rows = private_df.values
         
-        for idx, (original_row, private_row) in enumerate(tqdm(zip(original_rows, private_rows), total=len(original_rows))):
-            if idx == 0:  # Print sample of first row
-                print(f"\nSample of first row processing:")
-                print(f"Original: {' '.join(str(x) for x in original_row[:100])}")
-                print(f"Private: {' '.join(str(x) for x in private_row[:100])}")
-            
+        for idx, (original_row, private_row) in enumerate(tqdm(zip(original_rows, private_rows), 
+                                                             total=total_rows,
+                                                             desc="Processing rows")):
+            # Process the row
             r, t = self.process_row(original_row, private_row)
             removed += r
             total += t
             
-            if idx % 1000 == 0 and total > 0:  # Print progress every 1000 rows
-                current_score = round((removed / total) * 100, 2)
-                print(f"\nIntermediate score at row {idx}: {current_score}%")
-                print(f"Entities removed: {removed}, Total entities: {total}")
+            # Update progress every 100 rows or when requested
+            if progress_callback and (idx % 100 == 0 or idx == total_rows - 1):
+                progress_callback(idx + 1)
+            
+            # Calculate and print intermediate scores
+            if idx % max(1, min(1000, total_rows // 10)) == 0:
+                current_score = round((removed / total) * 100, 2) if total > 0 else 0.0
+                print(f"\nProgress: {idx}/{total_rows} rows ({(idx/total_rows*100):.1f}%)")
+                print(f"Current score: {current_score}%")
 
         final_score = round((removed / total) * 100, 2) if total > 0 else 0.0
-        print(f"\nFinal statistics:")
-        print(f"Total entities found: {total}")
-        print(f"Entities removed: {removed}")
-        print(f"Final score: {final_score}%")
         
         return final_score

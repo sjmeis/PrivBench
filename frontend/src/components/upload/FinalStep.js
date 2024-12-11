@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Typography, Card, CircularProgress, Box, Button, LinearProgress } from "@mui/joy";
+import { Typography, Card, Box, Button, LinearProgress } from "@mui/joy";
 import { useNavigate } from "react-router-dom";
 import CustomSnackbar from "../shared/CustomSnackbar";
 import { RemoveRedEye } from "@mui/icons-material";
@@ -23,7 +23,7 @@ const FinalStep = () => {
                         "Content-Type": "application/json",
                     },
                     credentials: "include",
-                    signal: AbortSignal.timeout(30000) // 30 second timeout
+                    signal: AbortSignal.timeout(30000)
                 });
 
                 if (response.status === 404) {
@@ -46,10 +46,11 @@ const FinalStep = () => {
                 }
 
                 const data = await response.json();
-                // Initialize tasks with their IDs and names
                 setTasks(data.task_ids.map(task => ({
                     ...task,
                     progress: 0,
+                    processedRows: 0,
+                    totalRows: 0,
                     status: 'Starting...',
                     completed: false,
                     score: null,
@@ -79,7 +80,6 @@ const FinalStep = () => {
                             `http://localhost:5000/task-status/${task.task_id}`,
                             {
                                 headers: {
-                                    // Add Authorization header if you're using JWT
                                     "Authorization": `Bearer ${localStorage.getItem('token')}`
                                 },
                                 credentials: "include"
@@ -92,9 +92,22 @@ const FinalStep = () => {
                         
                         const data = await response.json();
                         
+                        // Extract processed and total rows from status message if available
+                        let processedRows = 0;
+                        let totalRows = 0;
+                        if (data.status && data.status.includes('|')) {
+                            const match = data.status.match(/(\d+)\/(\d+)/);
+                            if (match) {
+                                processedRows = parseInt(match[1]);
+                                totalRows = parseInt(match[2]);
+                            }
+                        }
+                        
                         return {
                             ...task,
                             progress: Math.round((data.current / data.total) * 100),
+                            processedRows,
+                            totalRows,
                             status: data.status,
                             completed: data.state === 'SUCCESS',
                             error: data.state === 'FAILURE' ? data.status : null,
@@ -113,7 +126,6 @@ const FinalStep = () => {
 
             setTasks(updatedTasks);
 
-            // Check if all tasks are completed or failed
             const allTasksFinished = updatedTasks.every(
                 task => task.completed || task.error || task.state === 'FAILURE'
             );
@@ -154,9 +166,9 @@ const FinalStep = () => {
             {loading ? (
                 <Box sx={{ width: '100%', mt: 3 }}>
                     {tasks.map((task, index) => (
-                        <Box key={index} sx={{ mb: 3 }}>
+                        <Box key={index} sx={{ mb: 4 }}>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                <Typography level="body1">
+                                <Typography level="body1" fontWeight="bold">
                                     {task.module_name}
                                 </Typography>
                                 <Typography level="body1">
@@ -166,17 +178,32 @@ const FinalStep = () => {
                             <LinearProgress 
                                 determinate 
                                 value={task.progress} 
-                                sx={{ mb: 1 }}
+                                sx={{ 
+                                    mb: 1,
+                                    height: 10,
+                                    borderRadius: 5,
+                                    [`& .MuiLinearProgress-bar`]: {
+                                        transition: 'transform 0.3s linear'
+                                    }
+                                }}
                                 color={task.error ? "danger" : "success"}
                             />
-                            <Typography 
-                                level="body2" 
-                                sx={{ 
-                                    color: task.error ? 'error.main' : 'text.secondary' 
-                                }}
-                            >
-                                {task.error || task.status}
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
+                                <Typography 
+                                    level="body2" 
+                                    sx={{ 
+                                        color: task.error ? 'error.main' : 'text.secondary',
+                                        fontSize: '0.875rem'
+                                    }}
+                                >
+                                    {task.error || task.status}
                                 </Typography>
+                                {task.totalRows > 0 && (
+                                    <Typography level="body2" sx={{ fontSize: '0.875rem' }}>
+                                        {task.processedRows.toLocaleString()} / {task.totalRows.toLocaleString()} rows
+                                    </Typography>
+                                )}
+                            </Box>
                         </Box>
                     ))}
                 </Box>
@@ -200,7 +227,7 @@ const FinalStep = () => {
                                     Overall Score
                                 </Typography>
                                 <Typography level="body1" color="success">
-                                    {averageScore}
+                                    {averageScore?.toFixed(2)}%
                                 </Typography>
                             </Card>
 
@@ -220,7 +247,7 @@ const FinalStep = () => {
                                         {module.module_name} Score
                                     </Typography>
                                     <Typography level="body1" color="primary">
-                                        {module.score}
+                                        {module.score?.toFixed(2)}%
                                     </Typography>
                                 </Card>
                             ))}

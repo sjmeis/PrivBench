@@ -5,7 +5,7 @@ import pandas as pd
 
 logger = get_task_logger(__name__)
 
-def run_benchmark(module_path, module_name, dataset_path, priv_dataset_path):
+def run_benchmark(module_path, module_name, dataset_path, priv_dataset_path, progress_callback=None):
 
     logger.info(f"Starting benchmark execution for module {module_name}")
     try:
@@ -48,7 +48,7 @@ def run_benchmark(module_path, module_name, dataset_path, priv_dataset_path):
         try:
             logger.info(f"Original dataset shape: {dataset.shape}")
             logger.info(f"Privatized dataset shape: {privatized_dataset.shape}")
-            score = benchmark_instance.score(dataset, privatized_dataset)
+            score = benchmark_instance.score(dataset, privatized_dataset, progress_callback)
             
             if score is None:
                 raise ValueError("Benchmark returned None score")
