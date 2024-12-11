@@ -9,11 +9,16 @@ from app.utils.dataset_loader import load_dataset
 from app.utils.module_loader import load_benchmark_module
 from celery.utils.log import get_task_logger
 from pathlib import Path
+from datetime import datetime
+from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy import select, func, cast, Numeric
 
 logger = get_task_logger(__name__)
 
+# //fixme: put this in dedicated service
 @celery.task(bind=True)
-def run_benchmark_task(self, module_path, module_name, dataset_path, priv_dataset_path):
+def run_benchmark_task(self, module_path, module_name, dataset_path, priv_dataset_path, privatized_dataset_id,
+                       submission_id, module_id):
     """Run a benchmark module as a Celery task."""
     logger.info(f"Starting benchmark task for module {module_name}")
     try:
@@ -22,18 +27,18 @@ def run_benchmark_task(self, module_path, module_name, dataset_path, priv_datase
         
         # Stage 1: Initialization (10%)
         logger.info(f"Module {module_name}: Initialization stage")
-        self.update_state(state='PROGRESS', 
-                         meta={'current': 10, 
-                               'total': total_steps, 
+        self.update_state(state='PROGRESS',
+                         meta={'current': 10,
+                               'total': total_steps,
                                'status': 'Initializing benchmark environment...',
                                'processedRows': 0,
                                'totalRows': 0})
         
         # Stage 2: Loading Module (30%)
         logger.info(f"Loading benchmark module from {module_path}")
-        self.update_state(state='PROGRESS', 
-                         meta={'current': 30, 
-                               'total': total_steps, 
+        self.update_state(state='PROGRESS',
+                         meta={'current': 15,
+                               'total': total_steps,
                                'status': 'Loading benchmark module...',
                                'processedRows': 0,
                                'totalRows': 0})
@@ -41,31 +46,31 @@ def run_benchmark_task(self, module_path, module_name, dataset_path, priv_datase
         # Load datasets to get total row count
         dataset = load_dataset(dataset_path)
         total_rows = len(dataset)
-                               
+
         # Stage 3: Loading Datasets (50%)
         logger.info(f"Loading datasets from {dataset_path} and {priv_dataset_path}")
-        self.update_state(state='PROGRESS', 
-                         meta={'current': 50, 
-                               'total': total_steps, 
+        self.update_state(state='PROGRESS',
+                         meta={'current': 20,
+                               'total': total_steps,
                                'status': f'Loading datasets (0/{total_rows} rows)...',
                                'processedRows': 0,
                                'totalRows': total_rows})
-        
+
         # Stage 4: Running Benchmark (80%)
         logger.info(f"Starting benchmark execution")
-        self.update_state(state='PROGRESS', 
-                         meta={'current': 80, 
-                               'total': total_steps, 
+        self.update_state(state='PROGRESS',
+                         meta={'current': 30,
+                               'total': total_steps,
                                'status': f'Processing 0/{total_rows} rows...',
                                'processedRows': 0,
                                'totalRows': total_rows})
-        
+
         # Create a progress callback for the benchmark
         def progress_callback(processed_rows):
             self.update_state(
                 state='PROGRESS',
                 meta={
-                    'current': 80 + int((processed_rows / total_rows) * 20),
+                    'current': 30 + int((processed_rows / total_rows) * 70),
                     'total': total_steps,
                     'status': f'Processing {processed_rows}/{total_rows} rows...',
                     'processedRows': processed_rows,
@@ -75,18 +80,56 @@ def run_benchmark_task(self, module_path, module_name, dataset_path, priv_datase
 
         # Pass the callback to the benchmark instance
         score = run_benchmark(
-            module_path, 
-            module_name, 
-            dataset_path, 
+            module_path,
+            module_name,
+            dataset_path,
             priv_dataset_path,
             progress_callback
-        )        
-        
+        )
+
         logger.info(f"Benchmark completed with score: {score}")
         
         if score is None:
             raise ValueError("Benchmark returned None score")
-            
+
+        # Insert or update benchmark score in the database
+        stmt = insert(BenchmarkScore).values(
+            submission_id=submission_id,
+            module_id=module_id,
+            privatized_dataset_id=privatized_dataset_id,
+            score=float(score),
+            created_at=datetime.utcnow()
+        ).on_conflict_do_update(
+            index_elements=['submission_id', 'module_id'],  # Columns that make the row unique
+            set_={
+                'score': float(score),
+                'created_at': datetime.utcnow()
+            }
+        )
+
+        db.session.execute(stmt)
+        db.session.commit()
+        logger.info(f"Benchmark score upserted to the database for submission {submission_id}, module {module_id}")
+
+        # Check if all modules for the submission have completed// fixme: make this more efficient
+        total_modules = db.session.query(BenchmarkModule).filter_by(is_active=True).count()
+        completed_scores = db.session.query(BenchmarkScore).filter_by(submission_id=submission_id).count()
+
+        if total_modules == completed_scores:
+            submission = db.session.query(Submission).filter_by(id=submission_id).one_or_none()
+            if submission:
+                query = select(func.round(cast(func.avg(BenchmarkScore.score), Numeric(10, 2)), 2)).where(
+                    BenchmarkScore.submission_id == submission_id
+                )
+
+                # Execute the query and fetch the overall score
+                overall_score = db.session.execute(query).scalar()
+
+                submission.score = overall_score
+                submission.status = SubmissionStatus.COMPLETED
+                db.session.commit()
+                logger.info(f"Submission {submission_id} marked as Completed")
+
         # Stage 5: Completion (100%)
         result = {
             'current': total_steps,
@@ -97,10 +140,10 @@ def run_benchmark_task(self, module_path, module_name, dataset_path, priv_datase
             'totalRows': total_rows,
             'state': 'SUCCESS'
         }
-        
+
         logger.info(f"Task completed successfully with result: {result}")
         return result
-        
+
     except Exception as e:
         logger.error(f"Benchmark task failed for module {module_name}: {str(e)}", exc_info=True)
         result = {
@@ -197,7 +240,10 @@ def benchmark():
                 str(module.path),
                 module.name,
                 str(dataset.file_path),
-                str(privatized_dataset.file_path)
+                str(privatized_dataset.file_path),
+                privatized_dataset.id,
+                submission.id,
+                module.id
             )
             
             tasks.append({

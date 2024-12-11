@@ -42,8 +42,8 @@ const RankingDetailView = () => {
         minHeight: '35vh',
         '&:hover': {
             borderColor: 'primary.500',
-            transform: 'scale(1.02)',
-            transition: 'transform 0.2s ease-in-out',
+            //transform: 'scale(1.02)', //todo: implement this together with modals
+            //transition: 'transform 0.2s ease-in-out',
         },
         overflow: 'hidden'
     }
