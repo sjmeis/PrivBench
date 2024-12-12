@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Card, Box, Typography } from '@mui/joy';
+import {Card, Box, Typography, Chip} from '@mui/joy';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 
 const FlipCard = ({ title, content }) => {
     const [flipped, setFlipped] = useState(false);
@@ -10,8 +11,11 @@ const FlipCard = ({ title, content }) => {
             sx={{
                 perspective: '1000px',
                 cursor: 'pointer',
-                width: 300,
-                height: 350,
+                width: '100%',
+                height: '100%',
+                minWidth: 150,
+                minHeight: 150,
+                aspectRatio: '1 / 1',
             }}
         >
             <Box
@@ -28,6 +32,8 @@ const FlipCard = ({ title, content }) => {
                 <Card
                     variant="outlined"
                     sx={{
+                        '&:hover': {
+                            borderColor: 'primary.500'},
                         position: 'absolute',
                         width: '100%',
                         height: '100%',
@@ -37,13 +43,18 @@ const FlipCard = ({ title, content }) => {
                         alignItems: 'center',
                     }}
                 >
-                    <Typography level="h5">{title}</Typography>
+                    <Typography level="h4">{title}</Typography>
+                    <Chip startDecorator={<CheckCircleIcon></CheckCircleIcon>} color='success'>Active</Chip>
+
+
                 </Card>
 
                 {/* Back Side */}
                 <Card
-                    variant="outlined"
+                    variant="soft"
                     sx={{
+                        '&:hover': {
+                            borderColor: 'primary.500'},
                         position: 'absolute',
                         width: '100%',
                         height: '100%',

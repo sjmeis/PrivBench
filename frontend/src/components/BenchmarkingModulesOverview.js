@@ -1,6 +1,7 @@
 import Typography from "@mui/joy/Typography";
-import {Card, CardContent, Chip, Grid} from "@mui/joy";
+import {CardContent, Grid} from "@mui/joy";
 import React from "react";
+import BenchmarkCard from "./cards/BenchmarkCard";
 
 const BenchmarkingModulesOverview = ({benchmarkScores}) => {
 
@@ -18,35 +19,7 @@ const BenchmarkingModulesOverview = ({benchmarkScores}) => {
             {benchmarkScores.map((item) => {
                 return (
                     <Grid item xs={3}>
-                        <Card
-                            variant="soft"
-                            orientation="horizontal"
-                            sx={cardStyle}
-                        >
-                            <CardContent>
-
-                                <Typography
-                                    level="title-md"
-                                    sx={{
-                                        fontWeight: 'bold',
-                                        marginBottom: 0.5,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 1,
-                                    }}
-                                >
-                                    {item.benchmarkModule.name}
-                                </Typography>
-                                <Chip
-                                    variant="outlined"
-                                    color="primary"
-                                    size="sm"
-                                    sx={{pointerEvents: 'none'}}
-                                >
-                                    {item.benchmarkModule.version}
-                                </Chip>
-                            </CardContent>
-                        </Card>
+                        <BenchmarkCard description={item.benchmarkModule.description} title={item.benchmarkModule.name}></BenchmarkCard>
                     </Grid>
                 );
 

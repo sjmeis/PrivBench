@@ -34,7 +34,7 @@ const ModelCard = ({cardStyle, submission}) => {
                         sx={{
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
-                            maxHeight: '50px',
+                            maxHeight: '45px',
                             display: 'flex',
                             gap: 1,
                         }}

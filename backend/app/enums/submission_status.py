@@ -6,5 +6,7 @@ class SubmissionStatus(Enum):
     COMPLETED = "completed"
     FAILED = "failed"
 
+    # dont forget to update also frontend enums
+
     def __str__(self):
         return self.value
