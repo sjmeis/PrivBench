@@ -135,7 +135,7 @@ def get_user_submissions():
 def get_all_filtered():
     try:
         data = request.get_json()
-        search_term = data.get('searchTerm', '')
+        search_term = data.get('searchTerm', '').strip()
         page = data.get('page', 1)
         limit = data.get('limit', 8)
         sort_by = data.get('sortBy', 'score')
@@ -202,6 +202,7 @@ def get_all_filtered():
 
         response = {
             "results": results_list,
+            "totalEntries": total,
             "totalPages": (total + limit - 1) // limit,
             "currentPage": page
         }
