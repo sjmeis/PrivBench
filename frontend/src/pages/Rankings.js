@@ -10,7 +10,7 @@ import {
     Link,
     Avatar,
     Button,
-    Chip,
+    Chip, Stack,
 } from "@mui/joy";
 import FormControl from "@mui/joy/FormControl";
 import FormLabel from "@mui/joy/FormLabel";
@@ -24,28 +24,31 @@ import {fetchRankings} from "../services/RankingsService";
 import {useNavigate} from "react-router-dom";
 import {getGravatarUrl} from "../utils/Gravatar";
 import {getDateString, isNewDate} from "../utils/Date";
+import {formatToTwoDecimals} from "../utils/FormatUtils";
+import {useAuth} from "../contexts/AuthContext";
 
 const headCells = [
     {id: "status", numeric: false, label: "", width: "5%"},
     {id: "score", numeric: true, label: "Privacy Score", width: "15%"},
-    {id: "method", numeric: false, label: "Privatization Method", width: "20%"},
+    {id: "name", numeric: false, label: "Privatization Method", width: "20%"},
     {id: "submissionDate", numeric: false, label: "Submission Date", width: "20%"},
     {id: "username", numeric: false, label: "Submitted By", width: "18%"},
-    {id: "badges", numeric: false, label: "User Badges", width: "16%"},
-    {id: "button", numeric: false, label: "", width: "6%"},
+    {id: "badges", numeric: false, label: "User Badges", width: "10%"},
+    {id: "button", numeric: false, label: "", width: "12%"},
 ];
 
 const Rankings = () => {
     const [rankings, setRankings] = useState([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
-    const [order, setOrder] = useState("asc");
+    const [order, setOrder] = useState("desc");
     const [orderBy, setOrderBy] = useState("rank");
     const [rowsPerPage, setRowsPerPage] = useState(15);
     const [searchValue, setSearchValue] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
     const timerRef = useRef(null);
     const navigate = useNavigate();
+    const { user } = useAuth();
 
     const updateRowsPerPage = () => {
         const viewportHeight = window.innerHeight;
@@ -108,6 +111,12 @@ const Rankings = () => {
         setCurrentPage((prevState) => prevState - 1);
     };
 
+    const isCurrentUser = (userId) => {
+       if(!user){
+           return false;
+       }
+       return userId === user.id;
+    }
     return (
         <Box>
             <Box sx={{display: "flex", alignItems: "center"}}>
@@ -199,7 +208,7 @@ const Rankings = () => {
                     </thead>
                     <tbody>
                     {rankings.map((row) => (
-                        <tr key={row.id} onClick={() => onViewClick(row)}>
+                        <tr style={{ backgroundColor: isCurrentUser(row.user.id) ? 'var(--joy-palette-background-level1)': 'inherit'}}  key={row.id}>
                             <td>
                                 {isNewDate(row.submissionDate) && (
                                     <Chip color="success" variant="soft">
@@ -207,7 +216,7 @@ const Rankings = () => {
                                     </Chip>
                                 )}
                             </td>
-                            <td>{row.overallScore}</td>
+                            <td>{formatToTwoDecimals(row.overallScore)}</td>
                             <td>{row.name}</td>
                             <td>{getDateString(row.submissionDate)}</td>
                             <td>
@@ -224,9 +233,14 @@ const Rankings = () => {
                                 ))}
                             </td>
                             <td>
-                                 <Button size="sm" variant="soft" color="primary" onClick={() => onViewClick(row)}>
-                                    View
-                                </Button>
+                                <Stack justifyContent='end' direction='row' spacing={1}>
+                                    {isCurrentUser(row.user.id) &&
+                                        <Button size="sm" variant="outlined" color="neutral" onClick={() => navigate("/profile", { state: 'submissions' })}>Edit </Button>
+                                    }
+                                    <Button size="sm" variant="soft" color="primary" onClick={() => onViewClick(row)}>
+                                        View
+                                    </Button>
+                                </Stack>
                             </td>
                         </tr>
                     ))}

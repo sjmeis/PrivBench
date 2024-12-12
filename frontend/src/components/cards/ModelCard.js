@@ -17,14 +17,13 @@ const ModelCard = ({cardStyle, submission}) => {
             <CardContent>
                 <Stack spacing={1.5}>
                     <Typography level="h2">
-                        Model Card:{' '}
                         <Typography
                             level="h2"
                             color='primary'
                             variant="soft"
                             sx={{fontFamily: 'monospace'}}
                         >
-                            {submission.metadata.modelName}
+                            {submission.name}
                         </Typography>
                     </Typography>
 
