@@ -14,20 +14,12 @@ const Information = () => {
     //fixme: remove this dummy data after some moduels have been added
     const BENCHMARK_DESCRIPTIONS = [
         {
-            name: "Attribute Inference",
-            description: "Tests a text privatization's ability to obfuscate implicit attributes or sensitive identifiers hidden within text, such as authorship cues or gender signals. An effective privatization method should hide these attributes while maintaining the original semantic meaning of the text."
-        },
-        {
-            name: "Membership Inference – Masked Token Prediction",
+            title: "Membership Inference – Masked Token Prediction",
             description: "Tests a privatization method's ability to defend against masked token prediction. Here, an attacker is simulated who attempts to infer tokens from the original text by leveraging the surrounding context. An effective privatization method should not divulge information about the original content given the private context."
         },
         {
-            name: "Membership Inference – Nearest Neighbors",
+            title: "Membership Inference – Nearest Neighbors",
             description: "Evaluates the level of plausible deniability granted by a privatization method. Given the private dataset, we check how semantically distant a private text is to its original counterpart. The further away this distance is on average, the higher degree of deniability that is afforded."
-        },
-        {
-            name: "Coherent Generation",
-            description: "An effective privatization method should not only obfuscate sensitive information, but it should also produce coherent outputs which can be utilized downstream. As a proxy for coherent generation, we measure the perplexity of the private texts, or rather, how 'predictable' these texts are to a pretrained language model."
         }
     ];
 
@@ -142,7 +134,7 @@ const Information = () => {
                                     xs={3}
                                 >
                                     <BenchmarkCard
-                                        title={module.name}
+                                        title={module.title}
                                         description={module.description || 'No description available.'}
                                     />
                                 </Grid>
