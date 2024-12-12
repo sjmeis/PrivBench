@@ -30,9 +30,17 @@ with app.app_context():
     # db.drop_all()
     # db.create_all()
 
+    module_names = ['NERpriv', 'AttInfpriv', 'CohGenpriv']
+    module_file_names = ['ner_priv.py', 'attinf_priv.py', 'cohgen_priv.py']
+    module_titles = ['NER Evaluation', 'Attribute Inference', 'Coherent Generation']
+    module_descriptions = []
+    module_descriptions.append("On the surface, text privatization should pay particular attention to named entities, or words or groups of words that point to some real-world object, person, organization, etc. Ensuring that such entities are not leaked into the privatized text, while also balancing the preservation of semantics, is the mark of an effective privatization method.")
+    module_descriptions.append("In this module, we empirically test for a text privatization's ability to obfuscate implicit attributes or sensitive identifiers hidden within text, such as authorship cues or gender signals. Thus, an effective privatization method should hide these attributes, while also maintaining the original semantic meaning of the text.")
+    module_descriptions.append("An effective privatization method should not only obfuscate sensitive information, but it should also produce coherent outputs which can be utilized downstream. As a proxy for coherent generation, we measure the perplexity of the private texts, or rather, how “predictable” these texts are to a pretrained language model.")
+
     # Iterate over all files in the dataset folder
     if os.path.exists(DATASET_FOLDER):
-        for dataset_name in os.listdir(DATASET_FOLDER):
+        for i, dataset_name in enumerate(os.listdir(DATASET_FOLDER)):
             file_path = os.path.join(DATASET_FOLDER, dataset_name)
             
             # Check if the file exists and is a file (not a directory)
@@ -51,13 +59,18 @@ with app.app_context():
                 db.session.add(new_dataset)
                 db.session.flush()
 
-                module_name = "NERpriv"
-                module_file_name = "ner_priv.py"
+                # Dynamically fetch the module name from the list
+                module_name = module_names[i % len(module_names)]  # Ensure it wraps around if there are more datasets than modules
+                module_title = module_titles[i % len(module_titles)]
+                module_file_name = module_file_names[i % len(module_file_names)]
                 module_path = os.path.join(MODULE_FOLDER, module_file_name)
-                module_description = "This is a description on how NERpriv works and what it evaluates"
+                module_description = module_descriptions[i % len(module_descriptions)]
+
+                logger.info(f"Adding module: {module_name} at path: {module_path}")
 
                 new_benchmark_module = BenchmarkModule(
                     name=module_name,
+                    title=module_title,
                     description=module_description,
                     version="1.0.0",
                     is_active=True,
@@ -65,6 +78,7 @@ with app.app_context():
                     dataset_id=new_dataset.id
                 )
                 db.session.add(new_benchmark_module)
+        
         # Commit all changes
         db.session.commit()
         logger.info("All datasets and modules have been added to the database.")
