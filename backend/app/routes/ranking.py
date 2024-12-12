@@ -111,6 +111,7 @@ def get_user_submissions():
                         "benchmarkModule": {
                             "id": score.benchmark_module.id,
                             "name": score.benchmark_module.name,
+                            "title": score.benchmark_module.title,
                             "version": score.benchmark_module.version,
                             "isActive": score.benchmark_module.is_active,
                             "createdAt": score.benchmark_module.created_at.isoformat(),
@@ -271,6 +272,7 @@ def get_submission_detail():
                     "benchmarkModule": {
                         "id": score.benchmark_module.id,
                         "name": score.benchmark_module.name,
+                        "title": score.benchmark_module.title,
                         "version": score.benchmark_module.version,
                         "description": score.benchmark_module.description,
                         "isActive": score.benchmark_module.is_active,

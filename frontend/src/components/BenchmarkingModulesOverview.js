@@ -19,7 +19,7 @@ const BenchmarkingModulesOverview = ({benchmarkScores}) => {
             {benchmarkScores.map((item) => {
                 return (
                     <Grid item xs={3}>
-                        <BenchmarkCard description={item.benchmarkModule.description} title={item.benchmarkModule.name}></BenchmarkCard>
+                        <BenchmarkCard description={item.benchmarkModule.description} title={item.benchmarkModule.title}></BenchmarkCard>
                     </Grid>
                 );
 
