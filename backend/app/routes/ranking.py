@@ -272,6 +272,7 @@ def get_submission_detail():
                         "id": score.benchmark_module.id,
                         "name": score.benchmark_module.name,
                         "version": score.benchmark_module.version,
+                        "description": score.benchmark_module.description,
                         "isActive": score.benchmark_module.is_active,
                         "createdAt": score.benchmark_module.created_at.isoformat()
                     }
