@@ -224,7 +224,7 @@ const Rankings = () => {
                                 ))}
                             </td>
                             <td>
-                                <Button size="sm" variant="soft" color="primary" onClick={() => onViewClick(row)}>
+                                 <Button size="sm" variant="soft" color="primary" onClick={() => onViewClick(row)}>
                                     View
                                 </Button>
                             </td>
@@ -235,7 +235,7 @@ const Rankings = () => {
                     <tr>
                         <td colSpan={7}>
                             <Box sx={{display: "flex", justifyContent: "space-between", alignItems: "center"}}>
-                                <Typography>{`Rows per page: ${rowsPerPage}`}</Typography>
+                                <Typography>{`Rows per page: ${rankings.length > rowsPerPage ? rowsPerPage: rankings.length}`}</Typography>
                                 <Box sx={{display: "flex", alignItems: "center"}}>
                                     <IconButton
                                         onClick={onPreviousPageClick}

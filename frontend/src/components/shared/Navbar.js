@@ -116,7 +116,7 @@ const Navbar = () => {
                     <Stack direction='row' spacing={2}>
                         <Button
                             onClick={() => navigate("/rankings")}
-                            variant={isAtRankings? 'soft': 'text'}
+                            variant='text'
                             startDecorator={<Timeline />}
                             sx={navButtonStyle}
                         >
@@ -124,7 +124,7 @@ const Navbar = () => {
                         </Button>
                         <Button
                             onClick={handleSubmissionClick} // Trigger submission handling
-                            variant={isAtSubmission? 'soft': 'text'}
+                            variant='text'
                             startDecorator={<UploadFile />}
                             sx={navButtonStyle}
                         >
@@ -132,7 +132,7 @@ const Navbar = () => {
                         </Button>
                         <Button
                             onClick={() => navigate("/information")}
-                            variant={isAtInformation? 'soft': 'text'}
+                            variant='text'
                             startDecorator={<Info />}
                             sx={navButtonStyle}
                         >

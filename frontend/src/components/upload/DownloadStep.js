@@ -74,7 +74,7 @@ const DownloadStep = ({ onDatasetDownloaded, onDatasetsFetched, downloadedDatase
   };
 
   return (
-      <Card variant="outlined" sx={{ width: '100%', padding: 4 }}>
+      <Card variant="outlined" sx={{ width: 800, padding: 4 }}>
         <Typography level="h4" mb={2} sx={{ textAlign: "center" }}>
           Download Datasets
         </Typography>

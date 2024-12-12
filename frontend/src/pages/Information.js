@@ -1,15 +1,35 @@
 import React, {useEffect, useState} from 'react';
 import axios from 'axios';
 import {Typography, Box, Grid, Step, Stepper, Divider, Button} from '@mui/joy';
-import FlipCard from '../components/FlipCard';
 import StepIndicator from "@mui/joy/StepIndicator";
 import {Add} from "@mui/icons-material";
 import {useNavigate} from "react-router-dom";
+import BenchmarkCard from "../components/cards/BenchmarkCard";
 
 const Information = () => {
     const [modules, setModules] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+
+    //fixme: remove this dummy data after some moduels have been added
+    const BENCHMARK_DESCRIPTIONS = [
+        {
+            name: "Attribute Inference",
+            description: "Tests a text privatization's ability to obfuscate implicit attributes or sensitive identifiers hidden within text, such as authorship cues or gender signals. An effective privatization method should hide these attributes while maintaining the original semantic meaning of the text."
+        },
+        {
+            name: "Membership Inference – Masked Token Prediction",
+            description: "Tests a privatization method's ability to defend against masked token prediction. Here, an attacker is simulated who attempts to infer tokens from the original text by leveraging the surrounding context. An effective privatization method should not divulge information about the original content given the private context."
+        },
+        {
+            name: "Membership Inference – Nearest Neighbors",
+            description: "Evaluates the level of plausible deniability granted by a privatization method. Given the private dataset, we check how semantically distant a private text is to its original counterpart. The further away this distance is on average, the higher degree of deniability that is afforded."
+        },
+        {
+            name: "Coherent Generation",
+            description: "An effective privatization method should not only obfuscate sensitive information, but it should also produce coherent outputs which can be utilized downstream. As a proxy for coherent generation, we measure the perplexity of the private texts, or rather, how 'predictable' these texts are to a pretrained language model."
+        }
+    ];
 
     const navigate = useNavigate();
 
@@ -17,7 +37,7 @@ const Information = () => {
         const fetchModules = async () => {
             try {
                 const response = await axios.get('http://localhost:5000/modules'); // Adjust endpoint as needed
-                setModules(response.data);
+                setModules(response.data.concat(BENCHMARK_DESCRIPTIONS));
             } catch (err) {
                 setError('Failed to load modules');
                 console.error(err);
@@ -102,7 +122,7 @@ const Information = () => {
                             </Step>
                         </Stepper>
                         <Box sx={{marginTop: 1, marginBottom: 1, display: 'flex', justifyContent: 'flex-end'}}>
-                            <Button onClick={() => navigate('/upload')} color='success' startDecorator={<Add/>}>Try
+                            <Button variant='soft' onClick={() => navigate('/upload')} color='success' startDecorator={<Add/>}>Try
                                 Out</Button>
                         </Box>
 
@@ -114,16 +134,16 @@ const Information = () => {
                         <Typography level="h3" sx={{marginBottom: 2}}>
                             Privatization benchmarking modules
                         </Typography>
-                        <Grid container spacing={1}>
+                        <Grid container spacing={2}>
                             {modules.map((module) => (
                                 <Grid
                                     key={module.id}
                                     item
-                                    xs={4}
+                                    xs={3}
                                 >
-                                    <FlipCard
+                                    <BenchmarkCard
                                         title={module.name}
-                                        content={module.description || 'No description available.'}
+                                        description={module.description || 'No description available.'}
                                     />
                                 </Grid>
                             ))}

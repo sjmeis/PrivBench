@@ -39,6 +39,7 @@ const RankingDetailView = () => {
 
 
     const cardStyle = {
+        height: '100%',
         minHeight: '35vh',
         '&:hover': {
             borderColor: 'primary.500',
@@ -78,7 +79,7 @@ const RankingDetailView = () => {
                 </Breadcrumbs>
             </Box>
             <Box>
-                <Grid container spacing={3}>
+                <Grid container spacing={3} sx={{height: '75vh'}}>
                     <Grid item xs={6}>
                         <ModelCard cardStyle={cardStyle} submission={submission} />
                     </Grid>
