@@ -15,6 +15,7 @@ def get_all_benchmark_modules():
             {
                 "id": module.id,
                 "name": module.name,
+                "title": module.title,
                 "version": module.version,
                 "is_active": module.is_active,
                 "created_at": module.created_at.isoformat() if module.created_at else None,
