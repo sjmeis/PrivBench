@@ -64,7 +64,7 @@ const Navbar = () => {
         try {
             // Fetch user submissions
             const data = await getUserSubmissions();
-            const pendingSubmission = data.submissions.find(sub => sub.status === "Pending");
+            const pendingSubmission = data.submissions.find(sub => sub.status === "pending");
 
             if (pendingSubmission) {
                 navigate("/upload", {

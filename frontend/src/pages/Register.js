@@ -127,7 +127,7 @@ const Register = () => {
                         />
                     </FormControl>
                     <FormControl>
-                        <FormLabel>Mail Address</FormLabel>
+                        <FormLabel>Research Institute</FormLabel>
                         <Input
                             name="researchInstitute"
                             type="text"
