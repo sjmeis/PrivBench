@@ -50,7 +50,7 @@ const Upload = () => {
 
     const handleNext = () => {
         if (currentStep === 1 && !submissionId) {
-            setErrorMessage("Please save metadata before proceeding!");
+            setErrorMessage("Please save metadata!");
             setSeverity("error");
             setOpenSnackbar(true);
             return;
@@ -58,7 +58,7 @@ const Upload = () => {
 
         if (currentStep === 2) {
             if (datasets.length > 0 && Object.keys(uploadedFiles).length < datasets.length) {
-                setErrorMessage("Please upload files for each of the downloaded datasets before proceeding!");
+                setErrorMessage("Please upload the privatized datasets!");
                 setSeverity("error");
                 setOpenSnackbar(true);
                 return;

@@ -80,31 +80,31 @@ const DownloadStep = ({ onDatasetDownloaded, onDatasetsFetched, downloadedDatase
         </Typography>
         <Box sx={{ textAlign: "center", mb: 2 }}>
           <Typography level="body1">
-            In this step, you need to download the original dataset provided. The dataset contains sensitive
+            In this step, you need to download the original datasets provided. The datasets contain sensitive
             information, and your goal is to apply a data privatization method of your choice to ensure the privacy
-            and security of the dataset.
+            and security of the data.
           </Typography>
         </Box>
 
         <Box sx={{ textAlign: "center", mb: 2 }}>
           <Typography level="body1">
             You can use any suitable technique, such as data masking, encryption, anonymization, or synthetic data
-            generation. The objective is to protect sensitive information while retaining the dataset's utility for
+            generation. The objective is to protect sensitive information while retaining the datasets' utility for
             analysis.
           </Typography>
         </Box>
 
         <Box sx={{ textAlign: "center", mb: 2 }}>
           <Typography level="body1">
-            Once the privatization process is complete, save the resulting privatized dataset. You will need to
-            upload it in the final step of this workflow. Ensure that the privatized dataset aligns with the
-            required format and adheres to the constraints specified for upload compatibility.
+            Once the privatization process is complete, save the resulting privatized datasets. You will need to
+            upload them in the final step of this workflow. Ensure that the privatized datasets align with the
+            required format and adhere to the constraints specified for upload compatibility.
           </Typography>
         </Box>
 
         <Box sx={{ textAlign: "center", mb: 2 }}>
           <Typography level="body1" sx={{ fontWeight: "bold" }}>
-            Please make sure you have downloaded the dataset before going to the next step!
+            Please make sure you have downloaded the datasets!
           </Typography>
         </Box>
 

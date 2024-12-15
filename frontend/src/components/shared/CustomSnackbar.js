@@ -25,10 +25,10 @@ const CustomSnackbar = ({ open, message, severity = "info", onClose }) => {
                 variant="soft"
                 sx={{
                     bgcolor: severity === 'success' ? 'success.600' : 'danger.600',
-                    color: 'primary.textPrimary',
+                    color: 'primary.50',
                     textAlign: 'center',
                     width: '100%',
-                    height: '5%'
+                    height: '100%'
                 }}
                 endDecorator={
                     <Fragment>
@@ -38,7 +38,7 @@ const CustomSnackbar = ({ open, message, severity = "info", onClose }) => {
                             onClick={onClose}
                             style={{ background: "none", border: "none", cursor: "pointer" }}
                         >
-                            <Close fontSize="small" />
+                            <Close fontSize="small" sx={{color: 'primary.50'}}/>
                         </Button>
                     </Fragment>
                 }
