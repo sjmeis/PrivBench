@@ -20,8 +20,8 @@ const MetadataStep = ({ initialMetadata, submissionId, onMetadataSave }) => {
         license: "",
         tags: "",
         authors: "",
-        relatedResearchPaper: "",
-        relatedGithubRepo: "",
+        researchPaperUrl: "",
+        githubUrl: "",
         bibtexCitation: "",
     });
 
@@ -70,8 +70,8 @@ const MetadataStep = ({ initialMetadata, submissionId, onMetadataSave }) => {
                         license: metadata.license,
                         tags: metadata.tags,
                         authors: metadata.authors,
-                        researchPaperUrl: metadata.relatedResearchPaper,
-                        githubUrl: metadata.relatedGithubRepo,
+                        researchPaperUrl: metadata.researchPaperUrl,
+                        githubUrl: metadata.githubUrl,
                         bibtexCitation: metadata.bibtexCitation,
                     },
                 })
@@ -141,10 +141,10 @@ ${metadata.tags || "None"}
 ${metadata.authors || "None"}
 
 ### Related Research Paper
-${metadata.relatedResearchPaper || "None"}
+${metadata.researchPaperUrl || "None"}
 
 ### Related GitHub Repository
-${metadata.relatedGithubRepo || "None"}
+${metadata.githubUrl || "None"}
 
 ## Citation
 ### BibTeX
@@ -230,8 +230,8 @@ ${metadata.bibtexCitation || "More information needed"}
                 </Typography>
                 <Input
                     placeholder="Provide the URL to the research paper"
-                    value={metadata.relatedResearchPaper}
-                    onChange={(e) => handleChange("relatedResearchPaper", e.target.value)}
+                    value={metadata.researchPaperUrl}
+                    onChange={(e) => handleChange("researchPaperUrl", e.target.value)}
                     sx={{ marginBottom: 2, bgcolor: "grey.200" }}
                 />
 
@@ -240,8 +240,8 @@ ${metadata.bibtexCitation || "More information needed"}
                 </Typography>
                 <Input
                     placeholder="Provide the URL to the GitHub repository"
-                    value={metadata.relatedGithubRepo}
-                    onChange={(e) => handleChange("relatedGithubRepo", e.target.value)}
+                    value={metadata.githubUrl}
+                    onChange={(e) => handleChange("githubUrl", e.target.value)}
                     sx={{ marginBottom: 2, bgcolor: "grey.200" }}
                 />
 
