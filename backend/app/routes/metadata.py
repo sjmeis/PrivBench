@@ -87,7 +87,7 @@ def update_submission_detail():
             submission_metadata.model_name = metadata_data.get('modelName', submission_metadata.model_name)
             submission_metadata.model_description = metadata_data.get('modelDescription', submission_metadata.model_description)
             submission_metadata.license = metadata_data.get('license', submission_metadata.license)
-            submission_metadata.tags = ",".join(metadata_data.get('tags', [])) if metadata_data.get('tags') else submission_metadata.tags
+            submission_metadata.tags = metadata_data.get('tags', submission_metadata.tags)
             submission_metadata.authors = metadata_data.get('authors', submission_metadata.authors)
             submission_metadata.research_paper_url = metadata_data.get('researchPaperUrl', submission_metadata.research_paper_url)
             submission_metadata.github_url = metadata_data.get('githubUrl', submission_metadata.github_url)
