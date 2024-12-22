@@ -7,7 +7,6 @@ from flask_jwt_extended import (
     unset_jwt_cookies
 )
 from werkzeug.security import check_password_hash
-from datetime import timedelta
 from ..models.user import User
 from .. import db
 
@@ -118,6 +117,7 @@ def get_user():
                 "mailAddress": user.mail_address,
                 "username": user.username,
                 "researchInstitute": user.research_institute,
+                "admin": user.admin,
                 "id": user.id
             }
         }), 200

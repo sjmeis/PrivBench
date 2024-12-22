@@ -18,6 +18,7 @@ import RankingDetailView from "./pages/RankingDetailView";
 import ProtectedRoutes from "./routes/ProtectedRoutes";
 import UserProfile from "./pages/UserProfile";
 import AdminView from "./pages/AdminView";
+import ProtectedRoutesAdmin from "./routes/ProtectedRoutesAdmin";
 
 function App() {
     return (
@@ -39,7 +40,10 @@ function App() {
                             <Route path="/rankings/detail" element={<RankingDetailView/>}/>
                             <Route path="/information" element={<Information/>}/>
                             <Route path="/register" element={<Register/>}/>
-                            <Route path="/admin" element={<AdminView/>}/>
+
+                            <Route element={<ProtectedRoutesAdmin/>}>
+                                <Route path="/admin" element={<AdminView/>}/>
+                            </Route>
                             <Route element={<ProtectedRoutes/>}>
                                 <Route path="/upload" element={<Upload/>}/>
                             </Route>

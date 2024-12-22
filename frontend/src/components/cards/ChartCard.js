@@ -10,14 +10,13 @@ const ChartCard = ({cardStyle, benchmarkScores, overallScore}) => {
         if (benchmarkScores && Array.isArray(benchmarkScores)) {
             const newChartData = [
                 { x: overallScore, y: "Overall Score" },
-                ...benchmarkScores.map((item, index) => ({
+                ...benchmarkScores.map((item) => ({
                     x: item.score,
-                    y: `${item.benchmarkModule.name}`, //fixme: remove this when labels unique
+                    y: `${item.benchmarkModule.name}`,
                 })),
             ];
             setChartData(newChartData);
         }
-        console.log(chartData)
     }, [benchmarkScores, overallScore]);
 
 

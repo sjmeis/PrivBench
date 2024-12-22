@@ -15,8 +15,6 @@ import AddModuleModal from "./AddModuleModal";
 
 const ModuleManagement = () => {
     const [modules, setModules] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
     const [selectedModule, setSelectedModule] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -29,10 +27,10 @@ const ModuleManagement = () => {
                 const response = await axios.get('http://localhost:5000/modules'); // Adjust endpoint as needed
                 setModules(response.data);
             } catch (err) {
-                setError('Failed to load modules');
+                //setError('Failed to load modules');
                 console.error(err);
             } finally {
-                setLoading(false);
+                //setLoading(false);
             }
         };
 
@@ -40,7 +38,6 @@ const ModuleManagement = () => {
     }, []);
 
     const handleAddModuleClick = () => {
-        console.log('open')
         setIsModalOpen(true);
     };
 

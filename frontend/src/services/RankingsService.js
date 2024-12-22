@@ -20,9 +20,7 @@ const fetchRankings = async (searchTerm = '', page = 1, limit = 8, sortOrder = '
                 'Content-Type': 'application/json',
             },
         });
-
         if (response.status === 200) {
-            console.log('Ranking data:', response.data);
             return response.data;
         } else {
             throw new Error('Failed to fetch rankings');

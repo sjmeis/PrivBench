@@ -5,14 +5,9 @@ import Table from '@mui/joy/Table';
 import InsertDriveFileRoundedIcon from '@mui/icons-material/InsertDriveFileRounded';
 import ArrowDropDownRoundedIcon from '@mui/icons-material/ArrowDropDownRounded';
 import {Chip, Sheet} from "@mui/joy";
-import {useEffect} from "react";
 import {getDateString} from "../utils/Date";
 
 const TableDatasets = ({datasets}) => {
-    useEffect(() => {
-        console.log(datasets)
-    }, []);
-
     return (
         <Sheet
             variant="outlined"
