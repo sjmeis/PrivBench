@@ -2,7 +2,7 @@ import Box from "@mui/joy/Box";
 import * as React from "react";
 import {useLocation} from "react-router-dom";
 import {useEffect, useState} from "react";
-import {SideNavAdmin} from "../components/SideNavAdmin";
+import {SideNavAdmin} from "../components/admin/SideNavAdmin";
 import DatasetManagement from "../components/admin/DatasetManagement";
 import ModuleManagement from "../components/admin/ModuleManagement";
 

@@ -12,7 +12,15 @@ import {
     useColorScheme
 } from "@mui/joy";
 import {Box, Button, Typography} from "@mui/joy";
-import {DarkMode, Info, Timeline, UploadFile, Login} from "@mui/icons-material";
+import {
+    DarkMode,
+    Info,
+    Timeline,
+    UploadFile,
+    Login,
+    FileCopyOutlined,
+    DriveFileRenameOutline
+} from "@mui/icons-material";
 import {useAuth} from '../../contexts/AuthContext';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import OpenInNewRoundedIcon from '@mui/icons-material/OpenInNewRounded';
@@ -21,6 +29,7 @@ import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import {getGravatarUrl} from "../../utils/Gravatar";
 import {getUserSubmissions} from '../../services/RankingsService';
 import ViewModuleIcon from "@mui/icons-material/ViewModule";
+import InsertDriveFileIcon from "@mui/icons-material/InsertDriveFile";
 
 
 const Navbar = () => {
@@ -118,13 +127,13 @@ const Navbar = () => {
                         >
                             Rankings
                         </Button>
-                        {user.admin ? <Button
+                        {user && user.admin ? <Button
                             onClick={() => navigate("/admin")}
                             variant='text'
                             startDecorator={<ViewModuleIcon/>}
                             sx={navButtonStyle}
                         >
-                            Modules Management
+                            Admin Panel
                         </Button>:  <Button
                             onClick={handleSubmissionClick}
                             variant='text'
@@ -201,14 +210,14 @@ const Navbar = () => {
                                     </MenuItem>
                                     <ListDivider/>
                                     {
-                                        user.admin ? (
+                                        user && user.admin ? (
                                             <>
                                                 <MenuItem onClick={() => navigate("/admin", { state: 'modules' })}>
-                                                    <EmojiEventsIcon />
+                                                    <ViewModuleIcon />
                                                     Modules
                                                 </MenuItem>
                                                 <MenuItem onClick={() => navigate("/admin", { state: 'datasets' })}>
-                                                    <SettingsRoundedIcon />
+                                                    <InsertDriveFileIcon/>
                                                     Datasets
                                                 </MenuItem>
                                             </>

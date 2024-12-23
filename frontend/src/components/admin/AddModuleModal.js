@@ -1,4 +1,4 @@
-import React, {useState} from "react";
+import React, {useEffect, useState} from "react";
 import {
     Box,
     Modal,
@@ -8,220 +8,213 @@ import {
     Button,
     Textarea,
     FormControl,
-    Table,
     FormLabel,
-    IconButton,
-    Sheet,
     ModalClose,
     ModalDialog,
     DialogActions,
-    DialogTitle, DialogContent,
+    DialogTitle,
+    DialogContent,
+    Divider,
 } from "@mui/joy";
-import InsertDriveFileRoundedIcon from "@mui/icons-material/InsertDriveFileRounded";
-import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
-import ArrowDropDownRoundedIcon from "@mui/icons-material/ArrowDropDownRounded";
-import CloudUploadIcon from '@mui/icons-material/CloudUpload';
-import {getDateString} from "../../utils/Date";
+import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import AddDatasetsModal from "./AddDatasetsModal";
-import {HiddenInput} from "../shared/HiddenInput";
+import ModuleConfirmationDialog from "./ModuleConfirmationDialog";
+import {createBenchmarkingModule} from "../../services/ModuleService";
+import AddModuleDatasetTable from "./AddModuleDatasetTable";
 
-const x = [
-    {
-        "createdAt": "2024-12-21T15:44:21.829939",
-        "filePath": "/data/datasets/demo_original_3.csv",
-        "id": 1,
-        "isActive": true,
-        "name": "demo_original_3.csv"
-    },
-    {
-        "createdAt": "2024-12-21T15:44:21.861331",
-        "filePath": "/data/datasets/demo_original_2.csv",
-        "id": 2,
-        "isActive": true,
-        "name": "demo_original_2.csv"
-    },
-    {
-        "createdAt": "2024-12-21T15:44:21.864924",
-        "filePath": "/data/datasets/demo_original_1.csv",
-        "id": 3,
-        "isActive": true,
-        "name": "demo_original_1.csv"
-    }
-]
-
-const AddModuleModal = ({ isOpen, onClose, onSubmit }) => {
+const AddModuleModal = ({isOpen, onClose, onSubmit, onError}) => {
     const [isDSModalOpen, setIsDSModalOpen] = useState(false);
+    const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
     const [formData, setFormData] = useState({
         name: "",
         description: "",
         algorithmFile: null,
-        selectedDatasets: x, // Initial datasets
-        newDataset: "",
+        selectedDatasets: [],
+        uploadedDatasets: [],
     });
 
+    useEffect(() => {
+        setFormData({
+            name: "",
+            description: "",
+            algorithmFile: null,
+            selectedDatasets: [],
+            uploadedDatasets: [],
+        })
+    }, [isOpen]);
+
+    const isFormValid = () => {
+        return formData.name.trim() &&
+            formData.description.trim() &&
+            formData.algorithmFile &&
+            (formData.selectedDatasets.length > 0 || formData.uploadedDatasets.length > 0);
+    }
+
     const handleInputChange = (e) => {
-        const { name, value } = e.target;
-        setFormData({ ...formData, [name]: value });
+        const {name, value} = e.target;
+        setFormData({...formData, [name]: value});
     };
 
     const handleFileChange = (e) => {
-        setFormData({ ...formData, algorithmFile: e.target.files[0] });
+        setFormData({...formData, algorithmFile: e.target.files[0]});
     };
 
-    const handleDatasetSubmit = (selectedDatasets) => {
-        setFormData({ ...formData, selectedDatasets });
+    const handleDatasetSubmit = (selectedDataset, uploadedDataset) => {
+        if (selectedDataset) {
+            setFormData((prevFormData) => ({
+                ...prevFormData,
+                selectedDatasets: prevFormData.selectedDatasets.concat(selectedDataset),
+            }));
+        } else if (uploadedDataset) {
+            setFormData((prevFormData) => ({
+                ...prevFormData,
+                uploadedDatasets: prevFormData.uploadedDatasets.concat(uploadedDataset),
+            }));
+        }
         setIsDSModalOpen(false);
     };
 
-    const handleFormSubmit = (e) => {
-        e.preventDefault();
-        onSubmit(formData);
-        onClose();
+    const handleSubmit = async () => {
+        try {
+            const response = await createBenchmarkingModule(formData);
+            console.log(response)
+            onSubmit()
+        } catch (err) {
+            onError(err.message)
+        } finally {
+            onClose()
+        }
+
     };
 
+    const handleFormSubmit = (e) => {
+        setIsConfirmationOpen(false)
+        e.preventDefault();
+        handleSubmit()
+        console.log(formData)
+
+    };
+
+    const removeDataset = (id) => {
+        setFormData({
+            ...formData,
+            selectedDatasets: formData.selectedDatasets.filter(
+                (dataset) => dataset.id !== id
+            ),
+        })
+    };
+
+    const removeUploadedDataset = (id) => {
+        setFormData({
+            ...formData,
+            uploadedDatasets: formData.uploadedDatasets.filter(
+                (dataset) => dataset.id !== id
+            ),
+        })
+    };
+
+    const handleOpenConfirmation = () => {
+        setIsConfirmationOpen(true);
+    };
+
+    const handleCloseConfirmation = () => {
+        //todo: implement cleanup logic
+        setIsConfirmationOpen(false);
+    };
+
+
     return (
-        <Modal open={isOpen} onClose={onClose} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <ModalDialog sx={{ width: 700 }}>
+        <Modal
+            open={isOpen}
+            onClose={onClose}
+            sx={{display: "flex", alignItems: "center", justifyContent: "center"}}
+        >
+            <ModalDialog sx={{width: "90%", maxWidth: 1200}}>
                 <DialogTitle>Add New Benchmarking Module</DialogTitle>
+                <Divider sx={{marginBottom: "10px"}}/>
+
                 <DialogContent>
-                    <Box>
-                        <Stack spacing={2}>
-                            <FormControl required>
-                                <FormLabel>Name</FormLabel>
-                                <Input
-                                    name="name"
-                                    type="text"
-                                    value={formData.name}
-                                    onChange={handleInputChange}
-                                />
-                            </FormControl>
-                            <FormControl>
-                                <FormLabel>Description</FormLabel>
-                                <Textarea
-                                    minRows={5}
-                                    name="description"
-                                    type="text"
-                                    value={formData.description}
-                                    onChange={handleInputChange}
-                                />
-                            </FormControl>
-                            <FormControl>
-                                <FormLabel>Upload Algorithm</FormLabel>
-                                <Button
-                                    variant="outlined"
-                                    color="neutral"
-                                    startDecorator={<CloudUploadIcon />}
-                                >
-                                    Upload a python file
-                                    <HiddenInput
-                                        type="file"
-                                        accept=".py"
-                                        onChange={handleFileChange}
+                    <Box sx={{display: "flex", gap: 2, height: "100%"}}>
+                        {/* General Information */}
+                        <Box sx={{flex: 1, display: "flex", flexDirection: "column", gap: 2}}>
+                            <Typography level="h5" fontWeight="bold">
+                                Step 1: General Module Information
+                            </Typography>
+                            <Stack spacing={2}>
+                                <FormControl required>
+                                    <FormLabel>Name</FormLabel>
+                                    <Input
+                                        name="name"
+                                        type="text"
+                                        value={formData.name}
+                                        onChange={handleInputChange}
                                     />
-                                </Button>
-                            </FormControl>
-                        </Stack>
-                        <Sheet
-                            variant="outlined"
-                            sx={{
-                                marginTop: '25px',
-                                borderRadius: 'sm',
-                                gridColumn: '1/-1',
-                                display: { xs: 'none', md: 'flex' },
-                            }}
-                        >
-                            <Table
-                                size="sm"
-                                borderAxis="none"
+                                </FormControl>
+                                <FormControl>
+                                    <FormLabel required>Description</FormLabel>
+                                    <Textarea
+                                        minRows={5}
+                                        name="description"
+                                        value={formData.description}
+                                        onChange={handleInputChange}
+                                    />
+                                </FormControl>
+                                <FormControl>
+                                    <FormLabel required>Upload Algorithm</FormLabel>
+                                    <Button
+                                        variant="outlined"
+                                        startDecorator={<CloudUploadIcon/>}
+                                        component="label"
+                                    >
+                                        {formData.algorithmFile
+                                            ? `Uploaded: ${formData.algorithmFile.name}`
+                                            : 'Upload a python file'}
+
+                                        <input
+                                            type="file"
+                                            accept=".py"
+                                            hidden
+                                            onChange={handleFileChange}
+                                        />
+                                    </Button>
+                                </FormControl>
+                            </Stack>
+                        </Box>
+
+                        <Divider orientation="vertical"/>
+
+                        <Box sx={{flex: 1, display: "flex", flexDirection: "column", gap: 2}}>
+                            <Typography level="h5" fontWeight="bold">
+                                Step 2: Dataset Configuration
+                            </Typography>
+                            {formData && <AddModuleDatasetTable formData={formData}
+                                                                removeDataset={removeDataset}
+                                                                removeUploadedDataset={removeUploadedDataset}/>}
+                            <Button
                                 variant="soft"
-                                sx={{
-                                    '--TableCell-paddingX': '0.5rem',
-                                    '--TableCell-paddingY': '0.5rem',
-                                    '--TableRow-height': '1.5rem',
-                                }}
+                                onClick={() => setIsDSModalOpen(true)}
+                                fullWidth
                             >
-                                <thead>
-                                <tr>
-                                    <th style={{ width: '50%' }}>
-                                        <Typography level="title-sm">Selected Dataset</Typography>
-                                    </th>
-                                    <th style={{ width: '40%' }}>
-                                        <Typography level="title-sm" endDecorator={<ArrowDropDownRoundedIcon />}>
-                                            Created At
-                                        </Typography>
-                                    </th>
-                                    <th style={{ width: '10%' }}>
-                                        <Button
-                                            color="neutral"
-                                            size="sm"
-                                            onClick={() => setIsDSModalOpen(true)}
-                                        >
-                                            Add
-                                        </Button>
-                                    </th>
-                                </tr>
-                                </thead>
-                                <tbody>
-                                {formData.selectedDatasets.length > 0 ? (
-                                    formData.selectedDatasets.map((item) => (
-                                        <tr key={item.id}>
-                                            <td>
-                                                <Typography
-                                                    level="title-sm"
-                                                    startDecorator={<InsertDriveFileRoundedIcon color="primary" />}
-                                                    sx={{ alignItems: 'flex-start' }}
-                                                >
-                                                    {item.name}
-                                                </Typography>
-                                            </td>
-                                            <td>
-                                                <Typography level="body-sm">{getDateString(item.createdAt)}</Typography>
-                                            </td>
-                                            <td>
-                                                <IconButton
-                                                    variant="soft"
-                                                    sx={{ color: 'error.main' }}
-                                                    onClick={() =>
-                                                        setFormData({
-                                                            ...formData,
-                                                            selectedDatasets: formData.selectedDatasets.filter(
-                                                                (dataset) => dataset.id !== item.id
-                                                            ),
-                                                        })
-                                                    }
-                                                >
-                                                    <DeleteForeverIcon />
-                                                </IconButton>
-                                            </td>
-                                        </tr>
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td colSpan={3} style={{ textAlign: 'center' }}>
-                                            <Typography level="body-sm" sx={{ color: 'text.secondary' }}>
-                                                No Dataset selected yet
-                                            </Typography>
-                                        </td>
-                                    </tr>
-                                )}
-                                </tbody>
-                            </Table>
-                        </Sheet>
+                                Add Datasets
+                            </Button>
+                        </Box>
                     </Box>
                 </DialogContent>
                 <DialogActions>
-                    <Button color="success" onClick={handleFormSubmit}>
-                        Save New Benchmarking Module
+                    <Button disabled={!isFormValid()} color="success" onClick={handleOpenConfirmation}>
+                        Save Module
                     </Button>
                 </DialogActions>
-                <ModalClose />
+                <ModalClose/>
                 <AddDatasetsModal
                     isOpen={isDSModalOpen}
                     onClose={() => setIsDSModalOpen(false)}
                     onSubmit={handleDatasetSubmit}
                 />
+                <ModuleConfirmationDialog handleSaveConfirmation={handleFormSubmit}
+                                          handleCloseConfirmation={handleCloseConfirmation}
+                                          isConfirmationOpen={isConfirmationOpen} module={formData}/>
             </ModalDialog>
-
         </Modal>
     );
 };

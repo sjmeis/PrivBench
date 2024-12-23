@@ -2,10 +2,10 @@ import React, { useState, useEffect } from "react";
 import { Box, Button, Stepper, Step, Typography, stepClasses } from "@mui/joy";
 import { East, West, BarChart } from "@mui/icons-material";
 import CustomSnackbar from "../components/shared/CustomSnackbar";
-import DownloadStep from "../components/upload/DownloadStep";
-import UploadStep from "../components/upload/UploadStep";
-import MetadataStep from "../components/upload/MetadataStep";
-import FinalStep from "../components/upload/FinalStep";
+import DownloadStep from "../components/submission/DownloadStep";
+import UploadStep from "../components/submission/UploadStep";
+import MetadataStep from "../components/submission/MetadataStep";
+import FinalStep from "../components/submission/FinalStep";
 import StepIndicator, { stepIndicatorClasses } from "@mui/joy/StepIndicator";
 import GetAppRoundedIcon from "@mui/icons-material/GetAppRounded";
 import CloudUploadRoundedIcon from "@mui/icons-material/CloudUploadRounded";
@@ -225,11 +225,10 @@ const Upload = () => {
 
             {currentStep === 3 && <FinalStep />}
 
-            {/* Custom Snackbar for error message */}
             <CustomSnackbar
                 open={openSnackbar}
                 message={errorMessage}
-                severity={severity} // Use the severity prop for dynamic icon and color
+                severity={severity}
                 onClose={() => setOpenSnackbar(false)}
             />
         </Box>

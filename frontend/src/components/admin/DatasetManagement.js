@@ -1,5 +1,5 @@
 import {Box} from "@mui/joy";
-import TableDatasets from "../TableDatasets";
+import DatasetTable from "./DatasetTable";
 import {useEffect, useState} from "react";
 import {fetchAllDatasets} from "../../services/DatasetService";
 
@@ -13,7 +13,7 @@ const DatasetManagement = () => {
     }, []);
 
     return (<Box>
-        <TableDatasets datasets={datasets}></TableDatasets>
+        <DatasetTable datasets={datasets}></DatasetTable>
     </Box>)
 }
 

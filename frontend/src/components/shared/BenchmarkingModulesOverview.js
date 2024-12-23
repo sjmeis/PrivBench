@@ -1,7 +1,7 @@
 import Typography from "@mui/joy/Typography";
 import {CardContent, Grid} from "@mui/joy";
 import React from "react";
-import BenchmarkCard from "./cards/BenchmarkCard";
+import BenchmarkCard from "../ranking/BenchmarkCard";
 
 const BenchmarkingModulesOverview = ({benchmarkScores}) => {
 

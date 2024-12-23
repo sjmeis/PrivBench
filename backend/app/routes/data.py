@@ -100,17 +100,17 @@ def get_dataset_list():
         return jsonify({'error': str(e)}), 500
 
 
-"""@data_bp.route('/datasets/<filename>', methods=['GET'])
-def get_dataset(filename):
-    try:
-        # Ensure the file exists in the dataset folder
-        if not os.path.exists(os.path.join(DATASET_FOLDER, filename)):
-            return jsonify({'error': 'File not found'}), 404
-
-        # Serve the file
-        return send_from_directory(DATASET_FOLDER, filename, as_attachment=True)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500"""
+# """@data_bp.route('/datasets/<filename>', methods=['GET'])
+# def get_dataset(filename):
+#     try:
+#         # Ensure the file exists in the dataset folder
+#         if not os.path.exists(os.path.join(DATASET_FOLDER, filename)):
+#             return jsonify({'error': 'File not found'}), 404
+#
+#         # Serve the file
+#         return send_from_directory(DATASET_FOLDER, filename, as_attachment=True)
+#     except Exception as e:
+#         return jsonify({'error': str(e)}), 500"""
     
 
 @data_bp.route('/datasets/<path:filename>', methods=['GET'])

@@ -4,7 +4,7 @@ import {Typography, Box, Grid, Step, Stepper, Divider, Button} from '@mui/joy';
 import StepIndicator from "@mui/joy/StepIndicator";
 import {Add} from "@mui/icons-material";
 import {useNavigate} from "react-router-dom";
-import BenchmarkCard from "../components/cards/BenchmarkCard";
+import BenchmarkCard from "../components/ranking/BenchmarkCard";
 
 const Information = () => {
     const [modules, setModules] = useState([]);

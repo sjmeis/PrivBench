@@ -7,11 +7,11 @@ import React, {useEffect, useState} from "react";
 import {useLocation} from "react-router-dom";
 import {fetchSubmissionDetails} from "../services/RankingsService"
 import LoadingSpinner from "../components/shared/LoadingSpinner";
-import ModelCard from "../components/cards/ModelCard";
-import ChartCard from "../components/cards/ChartCard";
-import CircularProgressCountUp from "../components/CircularProgressCountUp";
-import UserCard from "../components/cards/UserCard";
-import BenchmarkingModulesOverview from "../components/BenchmarkingModulesOverview";
+import ModelCard from "../components/ranking/ModelCard";
+import ChartCard from "../components/ranking/ChartCard";
+import CircularProgressCountUp from "../components/ranking/CircularProgressCountUp";
+import UserCard from "../components/ranking/UserCard";
+import BenchmarkingModulesOverview from "../components/shared/BenchmarkingModulesOverview";
 
 const RankingDetailView = () => {
     const {state} = useLocation();

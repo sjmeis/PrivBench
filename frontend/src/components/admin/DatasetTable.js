@@ -5,9 +5,9 @@ import Table from '@mui/joy/Table';
 import InsertDriveFileRoundedIcon from '@mui/icons-material/InsertDriveFileRounded';
 import ArrowDropDownRoundedIcon from '@mui/icons-material/ArrowDropDownRounded';
 import {Chip, Sheet} from "@mui/joy";
-import {getDateString} from "../utils/Date";
+import {getDateString} from "../../utils/Date";
 
-const TableDatasets = ({datasets}) => {
+const DatasetTable = ({datasets}) => {
     return (
         <Sheet
             variant="outlined"
@@ -77,4 +77,4 @@ const TableDatasets = ({datasets}) => {
     );
 }
 
-export default TableDatasets;
+export default DatasetTable;

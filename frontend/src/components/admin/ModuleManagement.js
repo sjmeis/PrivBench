@@ -7,16 +7,20 @@ import {
 import FormControl from "@mui/joy/FormControl";
 import SearchIcon from "@mui/icons-material/Search";
 import React, {useEffect, useState} from "react";
-import BenchmarkCardAdmin from "../cards/BenchmarkCardAdmin";
+import BenchmarkCardAdmin from "../ranking/BenchmarkCardAdmin";
 import axios from "axios";
 import AddIcon from "@mui/icons-material/Add";
 import ModuleDetailView from "./ModuleDetailView";
 import AddModuleModal from "./AddModuleModal";
+import CustomSnackbar from "../shared/CustomSnackbar";
 
 const ModuleManagement = () => {
     const [modules, setModules] = useState([]);
     const [selectedModule, setSelectedModule] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [errorMessage, setErrorMessage] = useState("");
+    const [openSnackbar, setOpenSnackbar] = useState(false);
+    const [severity, setSeverity] = useState("");
 
     //TODO: add search functionality
     //TODO: finalize detailview including update
@@ -41,9 +45,17 @@ const ModuleManagement = () => {
         setIsModalOpen(true);
     };
 
-    const handleAddModuleSubmit = (formData) => {
-        console.log("New Module Data:", formData);
-        //todo: implement this
+    const handleAddModuleSubmit = () => {
+        setErrorMessage("Benchmarking Module Created Successfully");
+        setSeverity("success");
+        setOpenSnackbar(true);
+        //todo: go to created module
+    };
+
+    const handleAddModuleError = (errorMsg) => {
+        setErrorMessage(`An error occurred: ${errorMsg}`);
+        setSeverity("error");
+        setOpenSnackbar(true);
     };
 
     const handleModuleClick = (module) => {
@@ -104,6 +116,14 @@ const ModuleManagement = () => {
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 onSubmit={handleAddModuleSubmit}
+                onError={handleAddModuleError}
+            />
+
+            <CustomSnackbar
+                open={openSnackbar}
+                message={errorMessage}
+                severity={severity}
+                onClose={() => setOpenSnackbar(false)}
             />
         </Box>
 
