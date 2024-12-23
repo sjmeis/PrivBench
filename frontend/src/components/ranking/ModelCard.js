@@ -8,6 +8,7 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import {getDateString} from "../../utils/Date";
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import * as React from "react";
+import ModelCardTextPairs from "../shared/ModelCardTextPairs";
 
 const ModelCard = ({cardStyle, submission}) => {
 
@@ -45,45 +46,8 @@ const ModelCard = ({cardStyle, submission}) => {
 
 
                     <Stack direction='row' spacing={2}>
-                        <Box sx={{display: 'flex', flexDirection: 'row', gap: 1}}>
-                            <Typography
-                                level="body-sm"
-                                sx={{
-                                    fontWeight: 'bold',
-                                    marginBottom: 0.5,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 1,
-                                }}
-                            >
-                                <LockOpenIcon/>
-                                License
-                            </Typography>
-                            <Typography level="body-sm" sx={{p: '1px', fontWeight: 'bold'}}>
-
-
-                            </Typography>
-                            <Typography sx={{fontWeight: 'bold'}} level="body-sm"
-                                        variant="soft">{submission.metadata.license}</Typography>
-                        </Box>
-                        <Box sx={{display: 'flex', flexDirection: 'row', gap: 1}}>
-                            <Typography
-                                level="body-sm"
-                                sx={{
-                                    fontWeight: 'bold',
-                                    marginBottom: 0.5,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 1,
-                                }}
-                            >
-                                <CalendarMonthIcon/>
-                                Submission Date
-                            </Typography>
-                            <Typography sx={{fontWeight: 'bold'}} level="body-sm"
-                                        variant="soft">{getDateString(submission.submissionDate)}</Typography>
-                        </Box>
-
+                        <ModelCardTextPairs icon={<LockOpenIcon />} content={submission.metadata.license} title={'License'}/>
+                        <ModelCardTextPairs icon={<CalendarMonthIcon />} content={getDateString(submission.submissionDate)} title={'Submission Date'}/>
                     </Stack>
                     <Divider sx={{m: 1}} orientation="horizontal"/>
 

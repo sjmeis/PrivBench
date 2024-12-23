@@ -37,26 +37,27 @@ const headCells = [
     {id: "button", numeric: false, label: "", width: "12%"},
 ];
 
+const getDynamicRowPerPageCount = () => {
+    const viewportHeight = window.innerHeight;
+    const availableHeight = viewportHeight - 350;
+    const rowHeight = 45;
+    return  Math.floor(availableHeight / rowHeight);
+};
+
 const Rankings = () => {
     const [rankings, setRankings] = useState([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [order, setOrder] = useState("desc");
     const [orderBy, setOrderBy] = useState("rank");
-    const [rowsPerPage, setRowsPerPage] = useState(15);
+    const [rowsPerPage, setRowsPerPage] = useState(getDynamicRowPerPageCount);
     const [searchValue, setSearchValue] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
     const timerRef = useRef(null);
     const navigate = useNavigate();
     const { user } = useAuth();
 
-    const updateRowsPerPage = () => {
-        const viewportHeight = window.innerHeight;
-        const availableHeight = viewportHeight - 350;
-        const rowHeight = 45;
-        const rowsCount = Math.floor(availableHeight / rowHeight);
-        setRowsPerPage(rowsCount);
-    };
+
 
     const handleSearchInputChange = (event) => {
         const newInputValue = event.target.value;
@@ -68,11 +69,11 @@ const Rankings = () => {
     };
 
     useLayoutEffect(() => {
-        updateRowsPerPage();
-        window.addEventListener("resize", updateRowsPerPage); // Update on resize
+        setRowsPerPage(getDynamicRowPerPageCount);
+        window.addEventListener("resize", getDynamicRowPerPageCount);
 
         return () => {
-            window.removeEventListener("resize", updateRowsPerPage);
+            window.removeEventListener("resize", getDynamicRowPerPageCount);
         };
     }, []);
 
@@ -92,12 +93,12 @@ const Rankings = () => {
                 setCurrentPage(data.currentPage);
             } catch (error) {
                 console.error("Failed to load rankings:", error);
-            } finally {
             }
         };
 
         loadRankings();
     }, [rowsPerPage, currentPage, searchTerm, order, orderBy]);
+
 
     const onViewClick = (row) => {
         navigate("/rankings/detail", {state: row});

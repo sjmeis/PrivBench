@@ -100,17 +100,17 @@ def get_dataset_list():
         return jsonify({'error': str(e)}), 500
 
 
-"""@data_bp.route('/datasets/<filename>', methods=['GET'])
-def get_dataset(filename):
-    try:
-        # Ensure the file exists in the dataset folder
-        if not os.path.exists(os.path.join(DATASET_FOLDER, filename)):
-            return jsonify({'error': 'File not found'}), 404
-
-        # Serve the file
-        return send_from_directory(DATASET_FOLDER, filename, as_attachment=True)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500"""
+# """@data_bp.route('/datasets/<filename>', methods=['GET'])
+# def get_dataset(filename):
+#     try:
+#         # Ensure the file exists in the dataset folder
+#         if not os.path.exists(os.path.join(DATASET_FOLDER, filename)):
+#             return jsonify({'error': 'File not found'}), 404
+#
+#         # Serve the file
+#         return send_from_directory(DATASET_FOLDER, filename, as_attachment=True)
+#     except Exception as e:
+#         return jsonify({'error': str(e)}), 500"""
     
 
 @data_bp.route('/datasets/<path:filename>', methods=['GET'])
@@ -128,35 +128,36 @@ def get_dataset(filename):
         logger.error(f"Error fetching dataset {filename}: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-@data_bp.route('/datasets', methods=['GET'])
-def get_all_datasets():
-    try:
-        # Ensure the dataset folder exists
-        if not os.path.exists(DATASET_FOLDER):
-            return jsonify({'error': 'Dataset folder not found'}), 404
-
-        # Get a list of all files in the dataset folder
-        files = [os.path.join(DATASET_FOLDER, f) for f in os.listdir(DATASET_FOLDER) if os.path.isfile(os.path.join(DATASET_FOLDER, f))]
-        if not files:
-            return jsonify({'error': 'No files found in the dataset folder'}), 404
-
-        # Create a ZIP file in memory
-        zip_buffer = BytesIO()
-        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-            for file_path in files:
-                arcname = os.path.basename(file_path)  # Preserve the file name in the archive
-                zip_file.write(file_path, arcname=arcname)
-        zip_buffer.seek(0)
-
-        # Serve the ZIP file
-        return send_file(
-            zip_buffer,
-            mimetype='application/zip',
-            as_attachment=True,
-            download_name='datasets.zip'
-        )
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+# //todo: delete this if really not needed
+# @data_bp.route('/datasets', methods=['GET'])
+# def get_all_datasets():
+#     try:
+#         # Ensure the dataset folder exists
+#         if not os.path.exists(DATASET_FOLDER):
+#             return jsonify({'error': 'Dataset folder not found'}), 404
+#
+#         # Get a list of all files in the dataset folder
+#         files = [os.path.join(DATASET_FOLDER, f) for f in os.listdir(DATASET_FOLDER) if os.path.isfile(os.path.join(DATASET_FOLDER, f))]
+#         if not files:
+#             return jsonify({'error': 'No files found in the dataset folder'}), 404
+#
+#         # Create a ZIP file in memory
+#         zip_buffer = BytesIO()
+#         with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+#             for file_path in files:
+#                 arcname = os.path.basename(file_path)  # Preserve the file name in the archive
+#                 zip_file.write(file_path, arcname=arcname)
+#         zip_buffer.seek(0)
+#
+#         # Serve the ZIP file
+#         return send_file(
+#             zip_buffer,
+#             mimetype='application/zip',
+#             as_attachment=True,
+#             download_name='datasets.zip'
+#         )
+#     except Exception as e:
+#         return jsonify({'error': str(e)}), 500
 
 PRIVATIZED_DATASETS_FOLDER = os.path.join(PROJECT_ROOT, "data", "privatized_datasets")
 
@@ -176,7 +177,7 @@ def upload_privatized_dataset():
         
         if not all([file, submission_id, original_dataset_id]):
             return jsonify({'error': 'Missing required fields'}), 400
-        
+
         # Validate file
         if file.filename == '':
             return jsonify({'error': 'No selected file'}), 400
@@ -234,3 +235,24 @@ def get_submission_datasets(submission_id):
     except Exception as e:
         logger.error(f"Error fetching submission datasets: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+
+@data_bp.route('/datasets', methods=['GET'])
+def get_all_datasets():
+    try:
+        datasets = Dataset.query.all()
+
+        dataset_list = [
+            {
+                "id": dataset.id,
+                "name": dataset.name,
+                "filePath": dataset.file_path,
+                "createdAt": dataset.created_at.isoformat() if dataset.created_at else None,
+                "isActive": dataset.is_active
+            }
+            for dataset in datasets
+        ]
+
+        return jsonify(dataset_list), 200
+    except Exception as e:
+        return jsonify({"error": "Failed to fetch datasets", "details": str(e)}), 500

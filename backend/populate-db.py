@@ -47,6 +47,14 @@ with app.app_context():
         db.session.add(user)
 
     db.session.commit()
+    admin = User(
+        username='admin',
+        mail_address='admin@privbench.com',
+        password="test123",
+        research_institute='test',
+        admin=True,
+    )
+    db.session.add(admin)
 
     privatization_models = [
         "Privacy Transformer",
