@@ -1,11 +1,11 @@
 import * as React from 'react';
 import Box from '@mui/joy/Box';
 import {useAuth} from "../contexts/AuthContext";
-import {SideNav} from "../components/userProfile/SideNav";
-import AccountSettings from "../components/userProfile/AccountSettings";
+import {SideNav} from "../components/user/SideNav";
+import AccountSettings from "../components/user/AccountSettings";
 import {useEffect, useState} from "react";
-import UserSubmissions from "../components/userProfile/UserSubmissions";
-import PublicProfileEdit from "../components/userProfile/PublicProfileEdit";
+import UserSubmissions from "../components/user/UserSubmissions";
+import PublicProfileEdit from "../components/user/PublicProfileEdit";
 import {useLocation} from "react-router-dom";
 
 

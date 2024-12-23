@@ -1,5 +1,5 @@
 import React from "react";
-import {useLocation, useNavigate} from "react-router-dom";
+import {useNavigate} from "react-router-dom";
 import {
     Avatar,
     Dropdown,
@@ -11,26 +11,31 @@ import {
     Stack,
     useColorScheme
 } from "@mui/joy";
-import { Box, Button, Typography } from "@mui/joy";
-import { DarkMode, Info, Timeline, UploadFile, Login } from "@mui/icons-material";
-import { useAuth } from '../../contexts/AuthContext';
+import {Box, Button, Typography} from "@mui/joy";
+import {
+    DarkMode,
+    Info,
+    Timeline,
+    UploadFile,
+    Login,
+    FileCopyOutlined,
+    DriveFileRenameOutline
+} from "@mui/icons-material";
+import {useAuth} from '../../contexts/AuthContext';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import OpenInNewRoundedIcon from '@mui/icons-material/OpenInNewRounded';
 import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
-import { getGravatarUrl } from "../../utils/Gravatar";
-import { getUserSubmissions } from '../../services/RankingsService';
+import {getGravatarUrl} from "../../utils/Gravatar";
+import {getUserSubmissions} from '../../services/RankingsService';
+import ViewModuleIcon from "@mui/icons-material/ViewModule";
+import InsertDriveFileIcon from "@mui/icons-material/InsertDriveFile";
 
 
 const Navbar = () => {
     const navigate = useNavigate();
-    const location = useLocation();
-    const { mode, setMode } = useColorScheme();
-    const { user, logout } = useAuth();
-
-    const isAtRankings = location.pathname === '/rankings'
-    const isAtSubmission = location.pathname === '/upload'
-    const isAtInformation = location.pathname === '/information'
+    const {mode, setMode} = useColorScheme();
+    const {user, logout} = useAuth();
 
     const navButtonStyle = {
         textTransform: "none",
@@ -107,7 +112,7 @@ const Navbar = () => {
                     <Typography
                         onClick={() => navigate("/")}
                         level="h2"
-                        sx={{ cursor: 'pointer' }}
+                        sx={{cursor: 'pointer'}}
                     >
                         PrivBench
                     </Typography>
@@ -117,23 +122,30 @@ const Navbar = () => {
                         <Button
                             onClick={() => navigate("/rankings")}
                             variant='text'
-                            startDecorator={<Timeline />}
+                            startDecorator={<Timeline/>}
                             sx={navButtonStyle}
                         >
                             Rankings
                         </Button>
-                        <Button
-                            onClick={handleSubmissionClick} // Trigger submission handling
+                        {user && user.admin ? <Button
+                            onClick={() => navigate("/admin")}
                             variant='text'
-                            startDecorator={<UploadFile />}
+                            startDecorator={<ViewModuleIcon/>}
+                            sx={navButtonStyle}
+                        >
+                            Admin Panel
+                        </Button>:  <Button
+                            onClick={handleSubmissionClick}
+                            variant='text'
+                            startDecorator={<UploadFile/>}
                             sx={navButtonStyle}
                         >
                             Submission
-                        </Button>
+                        </Button> }
                         <Button
                             onClick={() => navigate("/information")}
                             variant='text'
-                            startDecorator={<Info />}
+                            startDecorator={<Info/>}
                             sx={navButtonStyle}
                         >
                             How does it work?
@@ -159,12 +171,13 @@ const Navbar = () => {
                                 alignItems: 'center',
                             }}
                         >
-                            <DarkMode />
+                            <DarkMode/>
                         </Button>
 
                         {user ? (
                             <Dropdown>
-                                <MenuButton endDecorator={<Avatar sx={{ maxWidth: 28, maxHeight: 28 }} size="sm" src={getGravatarUrl(user.mailAddress)} />}
+                                <MenuButton endDecorator={<Avatar sx={{maxWidth: 28, maxHeight: 28}} size="sm"
+                                                                  src={getGravatarUrl(user.mailAddress)}/>}
                                             variant="soft"
                                             color="primary">
                                     {user.username}
@@ -179,13 +192,13 @@ const Navbar = () => {
                                         '--ListItem-radius': 'var(--joy-radius-sm)',
                                     }}
                                 >
-                                    <MenuItem onClick={() => navigate("/profile", { state: 'account' })}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                    <MenuItem onClick={() => navigate("/profile", {state: 'account'})}>
+                                        <Box sx={{display: 'flex', alignItems: 'center'}}>
                                             <Avatar
                                                 src={getGravatarUrl(user.mailAddress)}
-                                                sx={{ borderRadius: '50%' }}
+                                                sx={{borderRadius: '50%'}}
                                             />
-                                            <Box sx={{ ml: 1.5 }}>
+                                            <Box sx={{ml: 1.5}}>
                                                 <Typography level="title-sm" textColor="text.primary">
                                                     {user.username}
                                                 </Typography>
@@ -195,48 +208,67 @@ const Navbar = () => {
                                             </Box>
                                         </Box>
                                     </MenuItem>
-                                    <ListDivider />
-                                    <MenuItem onClick={() => navigate("/profile", { state: 'submissions' })}>
-                                        <EmojiEventsIcon />
-                                        My Submissions
-                                    </MenuItem>
-                                    <MenuItem onClick={() => navigate("/profile", { state: 'account' })}>
-                                        <SettingsRoundedIcon />
-                                        Settings
-                                    </MenuItem>
-                                    <ListDivider />
-                                    <MenuItem component="a">
-                                        First look at tbd
-                                        <OpenInNewRoundedIcon />
-                                    </MenuItem>
-                                    <MenuItem
-                                        component="a"
-                                    >
-                                        Sourcecode
-                                        <OpenInNewRoundedIcon />
-                                    </MenuItem>
-                                    <ListDivider />
-                                    <MenuItem onClick={handleLogout}>
-                                        <LogoutRoundedIcon />
-                                        Log out
-                                    </MenuItem>
-                                </Menu>
+                                    <ListDivider/>
+                                    {
+                                        user && user.admin ? (
+                                            <>
+                                                <MenuItem onClick={() => navigate("/admin", { state: 'modules' })}>
+                                                    <ViewModuleIcon />
+                                                    Modules
+                                                </MenuItem>
+                                                <MenuItem onClick={() => navigate("/admin", { state: 'datasets' })}>
+                                                    <InsertDriveFileIcon/>
+                                                    Datasets
+                                                </MenuItem>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <MenuItem onClick={() => navigate("/profile", { state: 'submissions' })}>
+                                                    <EmojiEventsIcon />
+                                                    My Submissions
+                                                </MenuItem>
+                                                <MenuItem onClick={() => navigate("/profile", { state: 'account' })}>
+                                                    <SettingsRoundedIcon />
+                                                    Settings
+                                                </MenuItem>
+                                            </>
+                                        )
+                                    }
+
+                                    <ListDivider/>
+                                <MenuItem component="a">
+                                    First look at tbd
+                                    <OpenInNewRoundedIcon/>
+                                </MenuItem>
+                                <MenuItem
+                                    component="a"
+                                >
+                                    Sourcecode
+                                    <OpenInNewRoundedIcon/>
+                                </MenuItem>
+                                <ListDivider/>
+                                <MenuItem onClick={handleLogout}>
+                                    <LogoutRoundedIcon/>
+                                    Log out
+                                </MenuItem>
+                            </Menu>
                             </Dropdown>
-                        ) : (
+                            ) : (
                             <Button
-                                variant="soft"
-                                color="primary"
-                                startDecorator={<Login />}
-                                onClick={() => navigate('/login')}
-                            >
-                                Login
-                            </Button>
-                        )}
-                    </Stack>
-                </Grid>
+                            variant="soft"
+                            color="primary"
+                            startDecorator={<Login />}
+                           onClick={() => navigate('/login')}
+                    >
+                        Login
+                    </Button>
+                    )}
+                </Stack>
             </Grid>
-        </Box>
-    );
+        </Grid>
+</Box>
+)
+    ;
 }
 
 export default Navbar;
