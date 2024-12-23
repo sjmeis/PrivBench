@@ -9,9 +9,55 @@ import CardOverflow from "@mui/joy/CardOverflow";
 import CardActions from "@mui/joy/CardActions";
 import Button from "@mui/joy/Button";
 import Card from "@mui/joy/Card";
+import {useState} from "react";
+import {useSnackbar} from "../../contexts/SnackbarProvider";
+import {useAuth} from "../../contexts/AuthContext";
+import {updateUser} from "../../services/UserService";
 
-const PublicProfileEdit = () => {
+const PublicProfileEdit = ({user}) => {
+    const [formData, setFormData] = useState({
+        bio: user.bio,
+    });
 
+    const { showSnackbar } = useSnackbar();
+    const { checkAuth } = useAuth()
+
+    const updateUserInfo = async () => {
+        try {
+            await updateUser({...formData, researchInstitute: user.researchInstitute, mailAddress: user.mailAddress});
+            showSnackbar("User updated successfully", 'success')
+            checkAuth()
+        } catch (error) {
+            showSnackbar("An error occurred, try again", 'error')
+        }
+    };
+
+    const isFormUntouched = () => {
+        return formData.bio === user.bio;
+    }
+
+    const isFormValid = () => {
+        return formData.bio && !isFormUntouched();
+    }
+
+    const resetForm = () => {
+        setFormData({
+            bio: user.bio
+        })
+    }
+
+
+    const handleChange = (e) => {
+        const {name, value} = e.target;
+        setFormData((prevData) => ({
+            ...prevData,
+            [name]: value,
+        }));
+    };
+
+    const handleSaveClick = () => {
+        updateUserInfo()
+    }
 
     return (<Stack spacing={4} sx={{maxWidth: '800px', mx: 'auto'}}>
         <Typography level="h4">Edit Public Profile</Typography>
@@ -36,21 +82,26 @@ const PublicProfileEdit = () => {
                     <Divider />
                     <Stack spacing={2} sx={{ my: 1 }}>
                         <Textarea
-                            size="sm"
+                            size='sm'
                             minRows={4}
+                            maxRows={10}
                             sx={{ mt: 1.5 }}
-                            defaultValue="I'm a software developer based in Bangkok, Thailand. My goal is to solve UI problems with neat CSS without using too much JavaScript."
+                            onChange={handleChange}
+                            name='bio'
+                            value={formData.bio}
+                            maxLength={400}
+                            placeholder="Write your bio here..."
                         />
                         <FormHelperText sx={{ mt: 0.75, fontSize: 'xs' }}>
-                            275 characters left
+                            {400 - formData.bio.length} characters remaining
                         </FormHelperText>
                     </Stack>
                     <CardOverflow sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
-                        <CardActions sx={{ alignSelf: 'flex-end', pt: 2 }}>
-                            <Button size="sm" variant="outlined" color="neutral" disabled>
+                        <CardActions sx={{alignSelf: "flex-end", pt: 2}}>
+                            <Button onClick={resetForm} disabled={isFormUntouched()} size="sm" variant="outlined" color="neutral">
                                 Cancel
                             </Button>
-                            <Button size="sm" variant="solid" disabled>
+                            <Button disabled={!isFormValid()} size="sm" variant="solid" onClick={handleSaveClick}>
                                 Save
                             </Button>
                         </CardActions>

@@ -62,6 +62,7 @@ def create_app():
     from .routes.metadata import metadata_bp
     from .routes.benchmark import benchmark_bp
     from .routes.module import module_bp
+    from .routes.user import user_bp
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
     app.register_blueprint(data_bp)
@@ -69,6 +70,7 @@ def create_app():
     app.register_blueprint(metadata_bp)
     app.register_blueprint(benchmark_bp)
     app.register_blueprint(module_bp)
+    app.register_blueprint(user_bp)
 
     return app
 

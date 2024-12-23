@@ -26,7 +26,7 @@ export default function UserProfile() {
             case 'account':
                 return <AccountSettings user={user} />;
             case 'profile':
-                return <PublicProfileEdit />;
+                return <PublicProfileEdit user={user} />;
             case 'submissions':
                 return <UserSubmissions user={user} />;
             default:

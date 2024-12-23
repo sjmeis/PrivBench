@@ -74,7 +74,8 @@ export const AuthProvider = ({ children }) => {
         loading,
         register,
         login,
-        logout
+        logout,
+        checkAuth,
     };
 
     return (

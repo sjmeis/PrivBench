@@ -12,15 +12,13 @@ import axios from "axios";
 import AddIcon from "@mui/icons-material/Add";
 import ModuleDetailView from "./ModuleDetailView";
 import AddModuleModal from "./AddModuleModal";
-import CustomSnackbar from "../shared/CustomSnackbar";
+import {useSnackbar} from "../../contexts/SnackbarProvider";
 
 const ModuleManagement = () => {
     const [modules, setModules] = useState([]);
     const [selectedModule, setSelectedModule] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [errorMessage, setErrorMessage] = useState("");
-    const [openSnackbar, setOpenSnackbar] = useState(false);
-    const [severity, setSeverity] = useState("");
+    const { showSnackbar } = useSnackbar();
 
     //TODO: add search functionality
     //TODO: finalize detailview including update
@@ -46,16 +44,12 @@ const ModuleManagement = () => {
     };
 
     const handleAddModuleSubmit = () => {
-        setErrorMessage("Benchmarking Module Created Successfully");
-        setSeverity("success");
-        setOpenSnackbar(true);
+        showSnackbar("Benchmarking Module Created Successfully", 'success')
         //todo: go to created module
     };
 
     const handleAddModuleError = (errorMsg) => {
-        setErrorMessage(`An error occurred: ${errorMsg}`);
-        setSeverity("error");
-        setOpenSnackbar(true);
+        showSnackbar(`An error occurred: ${errorMsg}`, 'error')
     };
 
     const handleModuleClick = (module) => {
@@ -117,13 +111,6 @@ const ModuleManagement = () => {
                 onClose={() => setIsModalOpen(false)}
                 onSubmit={handleAddModuleSubmit}
                 onError={handleAddModuleError}
-            />
-
-            <CustomSnackbar
-                open={openSnackbar}
-                message={errorMessage}
-                severity={severity}
-                onClose={() => setOpenSnackbar(false)}
             />
         </Box>
 
