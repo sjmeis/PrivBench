@@ -19,42 +19,50 @@ import ProtectedRoutes from "./routes/ProtectedRoutes";
 import UserProfile from "./pages/UserProfile";
 import AdminView from "./pages/AdminView";
 import ProtectedRoutesAdmin from "./routes/ProtectedRoutesAdmin";
+import {SnackbarProvider} from "./contexts/SnackbarProvider";
 
 function App() {
     return (
-        <AuthProvider>
-            <CssVarsProvider defaultMode="dark" theme={customTheme}>
-                <CssBaseline/>
-                <Navbar/>
-                <Box
-                    display="flex"
-                    flexDirection="column"
-                    minHeight="calc(100vh - 65.5px)"
-                    backgroundColor="primary.background"
-                >
-                    <Box flex="1" sx={{paddingLeft: '40px', paddingRight: '40px', paddingTop: '10px', paddingBottom: '40px'}}>
-                        <Routes>
-                            <Route path="/" element={<Home/>}/>
-                            <Route path="/login" element={<Login/>}/>
-                            <Route path="/rankings" element={<Rankings/>}/>
-                            <Route path="/rankings/detail" element={<RankingDetailView/>}/>
-                            <Route path="/information" element={<Information/>}/>
-                            <Route path="/register" element={<Register/>}/>
+        <SnackbarProvider>
+            <AuthProvider>
+                <CssVarsProvider defaultMode="dark" theme={customTheme}>
+                    <CssBaseline/>
+                    <Navbar/>
+                    <Box
+                        display="flex"
+                        flexDirection="column"
+                        minHeight="calc(100vh - 65.5px)"
+                        backgroundColor="primary.background"
+                    >
+                        <Box flex="1" sx={{
+                            paddingLeft: '40px',
+                            paddingRight: '40px',
+                            paddingTop: '10px',
+                            paddingBottom: '40px'
+                        }}>
+                            <Routes>
+                                <Route path="/" element={<Home/>}/>
+                                <Route path="/login" element={<Login/>}/>
+                                <Route path="/rankings" element={<Rankings/>}/>
+                                <Route path="/rankings/detail" element={<RankingDetailView/>}/>
+                                <Route path="/information" element={<Information/>}/>
+                                <Route path="/register" element={<Register/>}/>
 
-                            <Route element={<ProtectedRoutesAdmin/>}>
-                                <Route path="/admin" element={<AdminView/>}/>
-                            </Route>
-                            <Route element={<ProtectedRoutes/>}>
-                                <Route path="/upload" element={<Upload/>}/>
-                            </Route>
-                            <Route element={<ProtectedRoutes/>}>
-                                <Route path="/profile" element={<UserProfile/>}/>
-                            </Route>
-                        </Routes>
+                                <Route element={<ProtectedRoutesAdmin/>}>
+                                    <Route path="/admin" element={<AdminView/>}/>
+                                </Route>
+                                <Route element={<ProtectedRoutes/>}>
+                                    <Route path="/upload" element={<Upload/>}/>
+                                </Route>
+                                <Route element={<ProtectedRoutes/>}>
+                                    <Route path="/profile" element={<UserProfile/>}/>
+                                </Route>
+                            </Routes>
+                        </Box>
                     </Box>
-                </Box>
-            </CssVarsProvider>
-        </AuthProvider>
+                </CssVarsProvider>
+            </AuthProvider>
+        </SnackbarProvider>
     );
 }
 

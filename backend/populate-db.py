@@ -40,6 +40,7 @@ with app.app_context():
         user = User(
             username=fake.user_name(),
             mail_address=fake.email(),
+            bio=fake.text(max_nb_chars=400),
             research_institute=fake.company(),
             password="test123",
         )

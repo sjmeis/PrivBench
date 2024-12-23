@@ -118,6 +118,7 @@ def get_user():
                 "username": user.username,
                 "researchInstitute": user.research_institute,
                 "admin": user.admin,
+                "bio": user.bio,
                 "id": user.id
             }
         }), 200
