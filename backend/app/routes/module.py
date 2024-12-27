@@ -5,6 +5,17 @@ from flask_jwt_extended import (
 )
 from ..models import BenchmarkModule
 from ..models.user import User
+import os
+from werkzeug.utils import secure_filename
+import logging
+import json
+
+logger = logging.getLogger(__name__)
+
+# Dataset and modules folder location
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
+DATASET_FOLDER = os.path.join(PROJECT_ROOT, "data/datasets")
+MODULES_FOLDER = os.path.join(PROJECT_ROOT, "modules")
 
 module_bp = Blueprint('benchmark_module', __name__)
 
@@ -43,44 +54,87 @@ def get_all_benchmark_modules():
     except Exception as e:
         return jsonify({"error": "Failed to fetch benchmark modules", "details": str(e)}), 500
 
+
 @module_bp.route('/modules/create', methods=['POST'])
 @jwt_required()
 def create_benchmark_module():
     try:
+        # Authentication check
         user_id = get_jwt_identity()
         user = User.query.get(int(user_id))
-
         if not user:
             return jsonify({"message": "User not found"}), 404
-
         if not user.admin:
             return jsonify({"message": "User doesn't possess the necessary permissions."}), 403
 
-        data = request.get_json()
+        # Handle text fields
+        name = request.form.get('name')
+        description = request.form.get('description')
+        
+        # Handle selected datasets
+        selected_datasets_json = request.form.get('selectedDatasets')
+        selected_datasets = json.loads(selected_datasets_json) if selected_datasets_json else []
 
-        required_fields = ['name', 'description', 'algorithmFile', 'selectedDatasets', 'uploadedDatasets']
-        missing_fields = [field for field in required_fields if field not in data]
+        if not all([name, description]):
+            logger.error("Missing required fields")
+            return jsonify({"error": "Missing required fields"}), 400
 
-        if missing_fields:
-            return jsonify({
-                "error": "Missing required fields",
-                "missingFields": missing_fields
-            }), 400
+        # Handle algorithm file
+        algorithm_file = request.files.get('algorithmFile')
+        if algorithm_file:
+            algo_filename = secure_filename(algorithm_file.filename)
+            algo_path = os.path.join(MODULES_FOLDER, algo_filename)
+            algorithm_file.save(algo_path)
+        else:
+            logger.error("Invalid or missing algorithm file")
+            return jsonify({"error": "Invalid or missing algorithm file"}), 400
+
+        # Handle uploaded datasets
+        uploaded_files = request.files.getlist('uploadedDatasets')
+        uploaded_file_paths = []
+        
+        if uploaded_files:
+            for file in uploaded_files:
+                if file and file.filename:
+                    filename = secure_filename(file.filename)
+                    file_path = os.path.join(DATASET_FOLDER, filename)
+                    file.save(file_path)
+                    uploaded_file_paths.append(file_path)
+                else:
+                    logger.warning(f"Skipping invalid dataset file")
+                    continue
+
+        # Debugging: Print received data
+        logger.debug("Name: %s", name)
+        logger.debug("Description: %s", description)
+        logger.debug("Selected Datasets: %s", selected_datasets)
+        logger.debug("Algorithm File Path: %s", algo_path)
+        logger.debug("Uploaded Dataset File Paths: %s", uploaded_file_paths)
 
         # //todo: place business logic call to create new benchmarking module here
         # //todo: Step 1: Create new benchmarking module with respective file
-        # //todo: Step 2: Save and create new datasets (if new) and create association to new benchmarking  module
+        # //todo: Step 2: Save and create new datasets (if new) and create association to new benchmarking module
         # //todo: Step 3: Set all previous submission to oudated
 
-        print("Received Data:", data)
-
-        # Return a success response
         return jsonify({
-            "message": "Benchmark module data received successfully",
-            "data": data
+            "message": "Benchmark module created successfully",
+            "data": {
+                "name": name,
+                "description": description,
+                "selectedDatasets": selected_datasets,
+                "algorithmFilePath": algo_path,
+                "uploadedDatasetPaths": uploaded_file_paths,
+            }
         }), 201
 
+    except json.JSONDecodeError as e:
+        logger.error(f"Error decoding selected datasets JSON: {str(e)}")
+        return jsonify({
+            "error": "Invalid format for selected datasets",
+            "details": str(e)
+        }), 400
     except Exception as e:
+        logger.error(f"Unexpected error: {str(e)}")
         return jsonify({
             "error": "An error occurred while processing the request",
             "details": str(e)
