@@ -71,7 +71,7 @@ def create_benchmark_module():
         name = request.form.get('name')
         description = request.form.get('description')
         
-        # Handle selected datasets
+        # Handle selected datasets - comes as JSON string
         selected_datasets_json = request.form.get('selectedDatasets')
         selected_datasets = json.loads(selected_datasets_json) if selected_datasets_json else []
 
@@ -88,6 +88,28 @@ def create_benchmark_module():
         else:
             logger.error("Invalid or missing algorithm file")
             return jsonify({"error": "Invalid or missing algorithm file"}), 400
+
+        # Handle requirements file
+        requirements_path = None
+        requirements_file = request.files.get('requirementsFile')
+        if requirements_file:
+            req_filename = secure_filename(requirements_file.filename)
+            if not req_filename.endswith('.txt'):
+                return jsonify({"error": "Requirements file must be a .txt file"}), 400
+            requirements_path = os.path.join(MODULES_FOLDER, req_filename)
+            requirements_file.save(requirements_path)
+
+            # TODO: handle requirements file
+            
+            # Optional: Validate requirements file content
+            try:
+                with open(requirements_path, 'r') as f:
+                    requirements_content = f.read()
+                if not requirements_content.strip():
+                    logger.warning("Empty requirements file uploaded")
+            except Exception as e:
+                logger.error(f"Error reading requirements file: {str(e)}")
+                return jsonify({"error": "Invalid requirements file"}), 400
 
         # Handle uploaded datasets
         uploaded_files = request.files.getlist('uploadedDatasets')
@@ -109,12 +131,8 @@ def create_benchmark_module():
         logger.debug("Description: %s", description)
         logger.debug("Selected Datasets: %s", selected_datasets)
         logger.debug("Algorithm File Path: %s", algo_path)
+        logger.debug("Requirements File Path: %s", requirements_path)
         logger.debug("Uploaded Dataset File Paths: %s", uploaded_file_paths)
-
-        # //todo: place business logic call to create new benchmarking module here
-        # //todo: Step 1: Create new benchmarking module with respective file
-        # //todo: Step 2: Save and create new datasets (if new) and create association to new benchmarking module
-        # //todo: Step 3: Set all previous submission to oudated
 
         return jsonify({
             "message": "Benchmark module created successfully",
@@ -123,6 +141,7 @@ def create_benchmark_module():
                 "description": description,
                 "selectedDatasets": selected_datasets,
                 "algorithmFilePath": algo_path,
+                "requirementsFilePath": requirements_path,
                 "uploadedDatasetPaths": uploaded_file_paths,
             }
         }), 201

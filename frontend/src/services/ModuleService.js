@@ -15,6 +15,11 @@ export const createBenchmarkingModule = async (formData) => {
         if (formData.algorithmFile) {
             form.append('algorithmFile', formData.algorithmFile);
         }
+
+        // Add the requirements file
+        if (formData.requirementsFile) {
+            form.append('requirementsFile', formData.requirementsFile);
+        }
         
         // Add selected datasets (convert to JSON string since it's an array)
         if (formData.selectedDatasets && formData.selectedDatasets.length > 0) {
