@@ -24,9 +24,5 @@ minio==7.1.1
 # Development and testing
 Faker==33.0.0
 
-# Benchmark module requirements
-numpy==1.24.3
-pandas==1.5.3
-tqdm==4.65.0
-spacy==3.5.3
-torch==1.13.1
+# Dataset
+pandas

@@ -49,5 +49,9 @@ wait_for_redis
 wait_for_postgres
 setup_database
 
+# Create necessary directories with correct permissions
+mkdir -p /modules/venvs
+chmod -R 755 /modules/venvs
+
 echo "Starting the Flask application..."
 exec python -m flask run --host=0.0.0.0

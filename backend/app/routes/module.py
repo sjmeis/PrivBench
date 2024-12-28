@@ -3,18 +3,21 @@ from flask_jwt_extended import (
     get_jwt_identity,
     jwt_required
 )
-from ..models import BenchmarkModule
+from ..models import BenchmarkModule, Dataset
 from ..models.user import User
 import os
 from werkzeug.utils import secure_filename
 import logging
 import json
+from app.tasks.add_module import install_requirements_and_load_module
+from ..extensions import db
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
 # Dataset and modules folder location
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
-DATASET_FOLDER = os.path.join(PROJECT_ROOT, "data/datasets")
+DATASET_FOLDER = os.path.join(PROJECT_ROOT, "data", "datasets")
 MODULES_FOLDER = os.path.join(PROJECT_ROOT, "modules")
 
 module_bp = Blueprint('benchmark_module', __name__)
@@ -75,6 +78,8 @@ def create_benchmark_module():
         selected_datasets_json = request.form.get('selectedDatasets')
         selected_datasets = json.loads(selected_datasets_json) if selected_datasets_json else []
 
+        dataset_ids = [dataset.get('id') for dataset in selected_datasets]
+
         if not all([name, description]):
             logger.error("Missing required fields")
             return jsonify({"error": "Missing required fields"}), 400
@@ -100,7 +105,7 @@ def create_benchmark_module():
             requirements_file.save(requirements_path)
 
             # TODO: handle requirements file
-            
+
             # Optional: Validate requirements file content
             try:
                 with open(requirements_path, 'r') as f:
@@ -122,9 +127,35 @@ def create_benchmark_module():
                     file_path = os.path.join(DATASET_FOLDER, filename)
                     file.save(file_path)
                     uploaded_file_paths.append(file_path)
+                    # Create a new Dataset entry
+                    new_dataset = Dataset(
+                        name=filename,
+                        file_path=file_path,
+                        created_at=datetime.utcnow(),
+                        is_active=True
+                    )
+
+                    # Add and commit the new entry to the database
+                    db.session.add(new_dataset)
+                    db.session.flush()
+
+                    dataset_ids.append(new_dataset.id)
                 else:
                     logger.warning(f"Skipping invalid dataset file")
                     continue
+
+        new_benchmark_module = BenchmarkModule(
+            name=name,
+            title=name,
+            description=description,
+            version="1.0.0",
+            is_active=True,
+            path=algo_path,
+            dataset_id=dataset_ids[0] #TODO: add support for multiple datasets
+        )
+
+        db.session.add(new_benchmark_module)
+        db.session.flush()
 
         # Debugging: Print received data
         logger.debug("Name: %s", name)
@@ -133,6 +164,16 @@ def create_benchmark_module():
         logger.debug("Algorithm File Path: %s", algo_path)
         logger.debug("Requirements File Path: %s", requirements_path)
         logger.debug("Uploaded Dataset File Paths: %s", uploaded_file_paths)
+
+
+        # After saving files, start async task
+        task = install_requirements_and_load_module.delay(
+            module_id=new_benchmark_module.id,
+            module_name=name,
+            module_path=algo_path,
+            requirements_path=requirements_path if requirements_path else None
+        )
+
 
         return jsonify({
             "message": "Benchmark module created successfully",
@@ -158,3 +199,16 @@ def create_benchmark_module():
             "error": "An error occurred while processing the request",
             "details": str(e)
         }), 500
+    
+
+@module_bp.route('/modules/<task_id>/status', methods=['GET'])
+@jwt_required()
+def get_module_status(task_id):
+    task = install_requirements_and_load_module.AsyncResult(task_id)
+    if task.ready():
+        result = task.get()
+        return jsonify(result)
+    return jsonify({
+        "status": "pending",
+        "message": "Installation in progress"
+    })

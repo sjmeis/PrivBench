@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y \
     netcat-traditional \
     redis-tools \
     postgresql-client \
+    python3-venv \
     && rm -rf /var/lib/apt/lists/*
 
 # Create a non-root user for security
@@ -24,8 +25,13 @@ RUN mkdir -p /data/privatized_datasets && chown -R celeryuser:celeryuser /data
 # Install Python packages globally before switching to non-root user
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt && \
-    python3 -m spacy download en_core_web_sm
+    pip install --no-cache-dir -r requirements.txt
+
+# Create directory for virtual environments
+#RUN mkdir -p /modules/venvs && \
+#    chmod 777 /modules/venvs
+RUN mkdir -p /modules/venvs && chown celeryuser:celeryuser /modules/venvs
+
 
 # Switch to non-root user
 USER celeryuser
