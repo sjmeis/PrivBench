@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Box, Button, Stepper, Step, Typography, stepClasses } from "@mui/joy";
 import { East, West, BarChart } from "@mui/icons-material";
-import CustomSnackbar from "../components/shared/CustomSnackbar";
 import DownloadStep from "../components/submission/DownloadStep";
 import UploadStep from "../components/submission/UploadStep";
 import MetadataStep from "../components/submission/MetadataStep";
@@ -11,20 +10,20 @@ import GetAppRoundedIcon from "@mui/icons-material/GetAppRounded";
 import CloudUploadRoundedIcon from "@mui/icons-material/CloudUploadRounded";
 import InfoRoundedIcon from "@mui/icons-material/InfoRounded";
 import { useLocation } from "react-router-dom";
+import { useSnackbar } from "../contexts/SnackbarProvider";
 
 const Upload = () => {
     const location = useLocation();
     const { state } = location;
 
-    const [errorMessage, setErrorMessage] = useState("");
-    const [openSnackbar, setOpenSnackbar] = useState(false);
-    const [severity, setSeverity] = useState("");
-    const [currentStep, setCurrentStep] = useState(state?.currentStep || 0); // Use state passed through navigation, default to 0
+    const [currentStep, setCurrentStep] = useState(state?.currentStep || 0);
     const [submissionId, setSubmissionId] = useState(state?.submissionId || null);
     const [downloadedDatasets, setDownloadedDatasets] = useState([]);
     const [datasets, setDatasets] = useState([]);
     const [uploadedFiles, setUploadedFiles] = useState({});
     const [metadata, setMetadata] = useState(state?.metadata || null);
+
+    const { showSnackbar } = useSnackbar();
 
     useEffect(() => {
         const fetchDatasets = async () => {
@@ -50,17 +49,13 @@ const Upload = () => {
 
     const handleNext = () => {
         if (currentStep === 1 && !submissionId) {
-            setErrorMessage("Please save metadata!");
-            setSeverity("error");
-            setOpenSnackbar(true);
+            showSnackbar("Please save metadata!", "error");
             return;
         }
 
         if (currentStep === 2) {
             if (datasets.length > 0 && Object.keys(uploadedFiles).length < datasets.length) {
-                setErrorMessage("Please upload the privatized datasets!");
-                setSeverity("error");
-                setOpenSnackbar(true);
+                showSnackbar("Please upload the privatized datasets!", "error");
                 return;
             }
         }
@@ -151,10 +146,7 @@ const Upload = () => {
                     completed={currentStep > 3}
                     active={currentStep === 3}
                     indicator={
-                        <StepIndicator
-                            variant="soft"
-                            color={currentStep === 3 ? "primary" : "neutral"}
-                        >
+                        <StepIndicator variant="soft" color={currentStep === 3 ? "primary" : "neutral"}>
                             <BarChart />
                         </StepIndicator>
                     }
@@ -224,16 +216,8 @@ const Upload = () => {
             )}
 
             {currentStep === 3 && <FinalStep />}
-
-            <CustomSnackbar
-                open={openSnackbar}
-                message={errorMessage}
-                severity={severity}
-                onClose={() => setOpenSnackbar(false)}
-            />
         </Box>
     );
 };
 
 export default Upload;
-
