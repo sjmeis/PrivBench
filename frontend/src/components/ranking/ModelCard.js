@@ -9,8 +9,27 @@ import {getDateString} from "../../utils/Date";
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import * as React from "react";
 import ModelCardTextPairs from "../shared/ModelCardTextPairs";
+import {useSnackbar} from "../../contexts/SnackbarProvider";
 
 const ModelCard = ({cardStyle, submission}) => {
+
+    const { showSnackbar } = useSnackbar();
+
+    const handleRedirect = (url) => {
+        window.open(url, "_blank");
+    };
+
+    const handleCopy = () => {
+        const bibtexCitation = submission.metadata.bibtexCitation;
+        if (bibtexCitation) {
+            navigator.clipboard.writeText(bibtexCitation).then(() => {
+                showSnackbar("Bibtex Citation copied to clipboard!", "success");
+            }).catch(err => {
+                console.error("Error copying text to clipboard: ", err);
+                showSnackbar("Failed to copy Bibtex Citation", "error");
+            });
+        }
+    };
 
     return (
         <Card sx={cardStyle}>
@@ -53,8 +72,7 @@ const ModelCard = ({cardStyle, submission}) => {
 
                     <Stack spacing={1} direction='row'>
                         <Button
-                            href={submission.metadata.githubUrl}
-                            target="_blank"
+                            onClick={() => handleRedirect(submission.metadata.githubUrl)}
                             variant="outlined"
                             size="small"
                             color="primary"
@@ -66,28 +84,26 @@ const ModelCard = ({cardStyle, submission}) => {
                             GitHub Repository
                         </Button>
                         <Button
-                            href={submission.metadata.researchPaperUrl}
-                            target="_blank"
+                            onClick={() => handleRedirect(submission.metadata.researchPaperUrl)}
                             variant="outlined"
                             size="small"
                             color="primary"
                             sx={{
                                 gap: 1,
                             }}
-                            startDecorator={<AutoStoriesIcon/>}
+                            startDecorator={<AutoStoriesIcon />}
                         >
                             Research Paper
                         </Button>
                         <Button
-                            href={submission.metadata.bibtexCitation}
-                            target="_blank"
+                            onClick={handleCopy}
                             variant="outlined"
                             size="small"
                             color="primary"
                             sx={{
                                 gap: 1,
                             }}
-                            startDecorator={<ContentCopyIcon/>}
+                            startDecorator={<ContentCopyIcon />}
                         >
                             Bibtex Citation
                         </Button>

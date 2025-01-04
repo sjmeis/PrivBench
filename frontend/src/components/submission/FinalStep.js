@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Typography, Card, Box, Button, LinearProgress } from "@mui/joy";
 import { useNavigate } from "react-router-dom";
-import CustomSnackbar from "../shared/CustomSnackbar";
+import { useSnackbar } from "../../contexts/SnackbarProvider"; // Adjust the import path
 import { RemoveRedEye } from "@mui/icons-material";
 
 const FinalStep = () => {
@@ -9,9 +9,8 @@ const FinalStep = () => {
     const [averageScore, setAverageScore] = useState(null);
     const [moduleScores, setModuleScores] = useState([]);
     const [tasks, setTasks] = useState([]);
-    const [openSnackbar, setOpenSnackbar] = useState(false);
-    const [snackbarMessage, setSnackbarMessage] = useState("");
-    const [snackbarSeverity, setSnackbarSeverity] = useState("info");
+    const { showSnackbar } = useSnackbar(); // Use showSnackbar
+
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -27,9 +26,7 @@ const FinalStep = () => {
                 });
 
                 if (response.status === 404) {
-                    setSnackbarMessage("No submissions available for benchmarking. Please submit your data first.");
-                    setSnackbarSeverity("warning");
-                    setOpenSnackbar(true);
+                    showSnackbar("No submissions available for benchmarking. Please submit your data first.", "error");
                     setLoading(false);
                     return;
                 }
@@ -59,15 +56,13 @@ const FinalStep = () => {
 
             } catch (err) {
                 console.error("Benchmark error:", err);
-                setSnackbarMessage(err.message);
-                setSnackbarSeverity("error");
-                setOpenSnackbar(true);
+                showSnackbar(err.message, "error");
                 setLoading(false);
             }
         };
 
         startBenchmark();
-    }, []);
+    }, [showSnackbar]);
 
     useEffect(() => {
         if (tasks.length === 0) return;
@@ -85,13 +80,13 @@ const FinalStep = () => {
                                 credentials: "include"
                             }
                         );
-                        
+
                         if (!response.ok) {
                             throw new Error("Failed to fetch task status");
                         }
-                        
+
                         const data = await response.json();
-                        
+
                         // Extract processed and total rows from status message if available
                         let processedRows = 0;
                         let totalRows = 0;
@@ -102,7 +97,7 @@ const FinalStep = () => {
                                 totalRows = parseInt(match[2]);
                             }
                         }
-                        
+
                         return {
                             ...task,
                             progress: Math.round((data.current / data.total) * 100),
@@ -135,7 +130,7 @@ const FinalStep = () => {
                 const successfulTasks = updatedTasks.filter(
                     task => task.completed && task.score !== null
                 );
-                
+
                 if (successfulTasks.length > 0) {
                     const scores = successfulTasks.map(t => ({
                         module_name: t.module_name,
@@ -151,7 +146,7 @@ const FinalStep = () => {
 
         const intervalId = setInterval(pollTasks, 1000);
         return () => clearInterval(intervalId);
-    }, [tasks.length]);
+    }, [tasks]);
 
     const handleViewSubmissions = () => {
         navigate("/profile", { state: "submissions" });
@@ -175,16 +170,16 @@ const FinalStep = () => {
                                     {task.progress}%
                                 </Typography>
                             </Box>
-                            <LinearProgress 
-                                determinate 
-                                value={task.progress} 
+                            <LinearProgress
+                                determinate
+                                value={task.progress}
                                 sx={{ mb: 1 }}
                                 color={task.error ? "danger" : "success"}
                             />
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
-                                <Typography 
-                                    level="body2" 
-                                    sx={{ 
+                                <Typography
+                                    level="body2"
+                                    sx={{
                                         color: task.error ? 'error.main' : 'text.secondary',
                                         fontSize: '0.875rem'
                                     }}
@@ -260,18 +255,8 @@ const FinalStep = () => {
             ) : (
                 <Typography level="h2" mb={2} color="error">
                     Evaluation Failed
-                    <Typography level="body1" color="error">
-                        {snackbarMessage}
-                    </Typography>
                 </Typography>
             )}
-
-            <CustomSnackbar
-                open={openSnackbar}
-                message={snackbarMessage}
-                severity={snackbarSeverity}
-                onClose={() => setOpenSnackbar(false)}
-            />
         </Card>
     );
 };
