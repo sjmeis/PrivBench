@@ -95,7 +95,7 @@ def get_user_submissions():
                     "modelName": submission.submission_metadata.model_name,
                     "modelDescription": submission.submission_metadata.model_description,
                     "license": submission.submission_metadata.license,
-                    "tags": submission.submission_metadata.tags.split(",") if submission.submission_metadata.tags else [],
+                    "tags": submission.submission_metadata.tags,
                     "authors": submission.submission_metadata.authors,
                     "researchPaperUrl": submission.submission_metadata.research_paper_url,
                     "githubUrl": submission.submission_metadata.github_url,
