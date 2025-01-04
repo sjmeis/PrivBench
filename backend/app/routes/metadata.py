@@ -38,8 +38,8 @@ def save_metadata():
             license=data["license"],
             tags=data.get("tags"),
             authors=data.get("authors"),
-            research_paper_url=data.get("researchPaperUrl"),
-            github_url=data.get("githubUrl"),
+            research_paper_url=data.get("relatedResearchPaper"),
+            github_url=data.get("relatedGithubRepo"),
             bibtex_citation=data.get("bibtexCitation"),
         )
         db.session.add(metadata)

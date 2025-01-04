@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { Box, Button, Card, Typography } from "@mui/joy";
 import { CloudDownload } from "@mui/icons-material";
-import { useSnackbar } from "../../contexts/SnackbarProvider";
+import CustomSnackbar from "../shared/CustomSnackbar";  // Import CustomSnackbar
 
 const DownloadStep = ({ onDatasetDownloaded, onDatasetsFetched, downloadedDatasets }) => {
   const [datasets, setDatasets] = useState([]);
-  const { showSnackbar } = useSnackbar();
-
+  const [openSnackbar, setOpenSnackbar] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [snackbarSeverity, setSnackbarSeverity] = useState("info");
 
   useEffect(() => {
     const fetchDatasets = async () => {
@@ -23,7 +24,7 @@ const DownloadStep = ({ onDatasetDownloaded, onDatasetsFetched, downloadedDatase
         setDatasets(data.datasets);
         onDatasetsFetched(data.datasets);
       } catch (error) {
-        showSnackbar("Failed to fetch datasets", "error");
+        console.error("An error occurred:", error);
       }
     };
     fetchDatasets();
@@ -39,7 +40,9 @@ const DownloadStep = ({ onDatasetDownloaded, onDatasetsFetched, downloadedDatase
       if (!response.ok) {
         const errorData = await response.json();
         console.error("Failed to load dataset:", errorData.error);
-        showSnackbar(`Failed to download ${datasetName}`, "error");
+        setSnackbarMessage(`Failed to download ${datasetName}`);
+        setSnackbarSeverity("error");
+        setOpenSnackbar(true);
         return;
       }
 
@@ -59,10 +62,14 @@ const DownloadStep = ({ onDatasetDownloaded, onDatasetsFetched, downloadedDatase
       onDatasetDownloaded(datasetName);
 
       // Show success snackbar
-      showSnackbar(`${datasetName} downloaded successfully`, "success");
+      setSnackbarMessage(`${datasetName} downloaded successfully`);
+      setSnackbarSeverity("success");
+      setOpenSnackbar(true);
     } catch (error) {
       console.error("An error occurred:", error);
-      showSnackbar(`Error downloading ${datasetName}`, "error");
+      setSnackbarMessage(`Error downloading ${datasetName}`);
+      setSnackbarSeverity("error");
+      setOpenSnackbar(true);
     }
   };
 
@@ -118,6 +125,14 @@ const DownloadStep = ({ onDatasetDownloaded, onDatasetsFetched, downloadedDatase
               </Button>
             </Box>
         ))}
+
+        {/* Snackbar for error or success message */}
+        <CustomSnackbar
+            open={openSnackbar}
+            message={snackbarMessage}
+            severity={snackbarSeverity}
+            onClose={() => setOpenSnackbar(false)}
+        />
       </Card>
   );
 };
