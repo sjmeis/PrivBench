@@ -2,13 +2,11 @@ import React, { useState } from "react";
 import { Box, Button, Card, Typography, CircularProgress } from "@mui/joy";
 import { CloudUpload } from "@mui/icons-material";
 import axios from "axios";
-import CustomSnackbar from "../shared/CustomSnackbar";
+import { useSnackbar } from "../../contexts/SnackbarProvider";
 
 const UploadStep = ({ submissionId, datasets, uploadedFiles, onFileUploaded }) => {
   const [uploadingDatasetId, setUploadingDatasetId] = useState(null);
-  const [openSnackbar, setOpenSnackbar] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState("");
-  const [snackbarSeverity, setSnackbarSeverity] = useState("info");
+  const { showSnackbar } = useSnackbar();
 
   const handleFileSelect = async (event, originalDatasetId) => {
     const file = event.target.files[0];
@@ -33,15 +31,9 @@ const UploadStep = ({ submissionId, datasets, uploadedFiles, onFileUploaded }) =
       );
 
       onFileUploaded(originalDatasetId, file.name);
-
-      // Show success snackbar
-      setSnackbarMessage(`Successfully uploaded ${file.name}`);
-      setSnackbarSeverity("success");
-      setOpenSnackbar(true);
+      showSnackbar(`Successfully uploaded ${file.name}`, "success");
     } catch (error) {
-      setSnackbarMessage(error.response?.data?.error || "Failed to upload file");
-      setSnackbarSeverity("error");
-      setOpenSnackbar(true);
+        showSnackbar(error.response?.data?.error || "Failed to upload file", "error");
     } finally {
       setUploadingDatasetId(null);
       event.target.value = '';
@@ -87,14 +79,6 @@ const UploadStep = ({ submissionId, datasets, uploadedFiles, onFileUploaded }) =
               )}
             </Box>
         ))}
-
-        {/* Snackbar for success or error message */}
-        <CustomSnackbar
-            open={openSnackbar}
-            message={snackbarMessage}
-            severity={snackbarSeverity}
-            onClose={() => setOpenSnackbar(false)}
-        />
       </Card>
   );
 };

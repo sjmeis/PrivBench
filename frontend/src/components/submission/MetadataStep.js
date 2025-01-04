@@ -11,7 +11,7 @@ import {
     Checkbox,
 } from "@mui/joy";
 import { Save } from "@mui/icons-material";
-import CustomSnackbar from "../shared/CustomSnackbar";
+import { useSnackbar } from "../../contexts/SnackbarProvider";
 
 const MetadataStep = ({ initialMetadata, submissionId, onMetadataSave }) => {
     const [metadata, setMetadata] = useState({
@@ -26,11 +26,7 @@ const MetadataStep = ({ initialMetadata, submissionId, onMetadataSave }) => {
     });
 
     const [shouldDownload, setShouldDownload] = useState(false);
-    const [snackbar, setSnackbar] = useState({
-        open: false,
-        message: "",
-        severity: "success",
-    });
+    const { showSnackbar } = useSnackbar();
     // Mock data for dropdowns
     const licenseOptions = ["MIT", "Apache 2.0", "GPLv3", "BSD"];
 
@@ -88,13 +84,12 @@ const MetadataStep = ({ initialMetadata, submissionId, onMetadataSave }) => {
 
             if (response.ok) {
                 const data = await response.json();
-                setSnackbar({
-                    open: true,
-                    message: isUpdate
+                showSnackbar(
+                    isUpdate
                         ? "Metadata updated successfully!"
                         : "Metadata saved successfully!",
-                    severity: "success",
-                });
+                    "success"
+        );
                 if (!isUpdate) {
                     onMetadataSave(data.submission_id); // Handle new submission ID after POST
                 } else {
@@ -102,21 +97,18 @@ const MetadataStep = ({ initialMetadata, submissionId, onMetadataSave }) => {
                 }
             } else {
                 const errorData = await response.json();
-                setSnackbar({
-                    open: true,
-                    message: `Failed to ${
+                showSnackbar(
+                    `Failed to ${
                         isUpdate ? "update" : "save"
-                    } metadata: ${errorData.message || response.statusText}`,
-                    severity: "error",
-                });
+                    } metadata: ${errorData.message || response.statusText}`, "error"
+        );
             }
         } catch (error) {
             console.error("Error saving/updating metadata:", error);
-            setSnackbar({
-                open: true,
-                message: `Failed to save metadata. Please try again!`,
-                severity: "error",
-            });
+            showSnackbar(
+                "Failed to save metadata. Please try again!",
+                "error"
+            );
         }
     };
 
@@ -273,14 +265,6 @@ ${metadata.bibtexCitation || "More information needed"}
                     Save Model Data
                 </Button>
             </FormControl>
-
-            {/* Use CustomSnackbar for feedback */}
-            <CustomSnackbar
-                open={snackbar.open}
-                message={snackbar.message}
-                severity={snackbar.severity}
-                onClose={() => setSnackbar({ ...snackbar, open: false })}
-            />
         </Card>
     );
 };
