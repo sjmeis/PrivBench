@@ -18,7 +18,7 @@ const MetadataStep = ({ initialMetadata, submissionId, onMetadataSave }) => {
         modelName: "",
         modelDescription: "",
         license: "",
-        tags: "",
+        tags: [],
         authors: "",
         researchPaperUrl: "",
         githubUrl: "",
