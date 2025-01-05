@@ -1,16 +1,15 @@
 import React, { useState, useEffect } from "react";
-import { Box, Button, Stepper, Step, Typography, stepClasses } from "@mui/joy";
-import { East, West, BarChart } from "@mui/icons-material";
-import DownloadStep from "../components/submission/DownloadStep";
-import UploadStep from "../components/submission/UploadStep";
-import MetadataStep from "../components/submission/MetadataStep";
-import FinalStep from "../components/submission/FinalStep";
-import StepIndicator, { stepIndicatorClasses } from "@mui/joy/StepIndicator";
-import GetAppRoundedIcon from "@mui/icons-material/GetAppRounded";
-import CloudUploadRoundedIcon from "@mui/icons-material/CloudUploadRounded";
-import InfoRoundedIcon from "@mui/icons-material/InfoRounded";
+import { Box, Button } from "@mui/joy";
+import {East, Publish, West} from "@mui/icons-material";
 import { useLocation } from "react-router-dom";
 import { useSnackbar } from "../contexts/SnackbarProvider";
+import SubmissionStepper from "../components/submission/SubmissionStepper";
+import DownloadStep from "../components/submission/DownloadStep";
+import MetadataStep from "../components/submission/MetadataStep";
+import UploadStep from "../components/submission/UploadStep";
+import FinalStep from "../components/submission/FinalStep";
+import {getUserSubmissions} from '../services/RankingsService';
+
 
 const Upload = () => {
     const location = useLocation();
@@ -24,6 +23,36 @@ const Upload = () => {
     const [metadata, setMetadata] = useState(state?.metadata || null);
 
     const { showSnackbar } = useSnackbar();
+
+    const fetchUserSubmission = async () => {
+        try {
+            const data = await getUserSubmissions();
+            const pendingSubmission = data.submissions.find(
+                (sub) => sub.status === "pending"
+            );
+
+            if (pendingSubmission) {
+                setCurrentStep(1);
+                setMetadata(pendingSubmission.metadata);
+                setSubmissionId(pendingSubmission.id);
+            } else {
+                setMetadata({});
+            }
+        } catch (error) {
+            console.error("An error occurred while fetching user submission:", error);
+        }
+    };
+
+    useEffect(() => {
+        fetchUserSubmission();
+    }, []);
+
+    useEffect(() => {
+        if (currentStep === 1) {
+            fetchUserSubmission();
+        }
+    }, [currentStep]);
+
 
     useEffect(() => {
         const fetchDatasets = async () => {
@@ -63,159 +92,104 @@ const Upload = () => {
         setCurrentStep((prev) => prev + 1);
     };
 
+    const handleMetadataSave = (id, shouldIncreaseStep) => {
+        setSubmissionId(id);
+        if (shouldIncreaseStep) {
+            setCurrentStep((prev) => prev + 1);
+        }
+    };
+
     return (
-        <Box display="flex" flexDirection="column" alignItems="center" padding={2}>
-            {/* Horizontal Stepper */}
-            <Stepper
-                size="lg"
+        <Box display="flex" height="100vh">
+            {/* Stepper Component */}
+            <SubmissionStepper currentStep={currentStep} handleStepClick={handleStepClick} />
+
+            {/* Step Content */}
+            <Box
+                flex={1}
+                display="flex"
+                flexDirection="column"
+                alignItems="center"
+                justifyContent="center"
                 sx={{
-                    width: "60%",
-                    maxWidth: "1000px",
-                    marginBottom: "30px",
-                    "--StepIndicator-size": "3rem",
-                    "--Step-connectorInset": "0px",
-                    [`& .${stepIndicatorClasses.root}`]: {
-                        borderWidth: 4,
-                    },
-                    [`& .${stepClasses.completed}`]: {
-                        [`& .${stepIndicatorClasses.root}`]: {
-                            borderColor: "success.600",
-                            color: "common.white",
-                            backgroundColor: "success.600",
-                        },
-                        "&::after": {
-                            bgcolor: "success.600",
-                        },
-                    },
-                    [`& .${stepClasses.active}`]: {
-                        [`& .${stepIndicatorClasses.root}`]: {
-                            borderColor: "currentColor",
-                        },
-                    },
-                    [`& .${stepClasses.disabled} *`]: {
-                        color: "neutral.outlinedDisabledColor",
-                    },
+                    overflowY: "auto",
+                    maxHeight: "100vh",
                 }}
             >
-                <Step
-                    completed={currentStep > 0}
-                    active={currentStep === 0}
-                    indicator={
-                        <StepIndicator
-                            variant="soft"
-                            color={currentStep === 0 ? "primary" : "neutral"}
-                            onClick={() => handleStepClick(0)}
-                        >
-                            <GetAppRoundedIcon />
-                        </StepIndicator>
-                    }
-                >
-                    <Typography>Download</Typography>
-                </Step>
-                <Step
-                    completed={currentStep > 1}
-                    active={currentStep === 1}
-                    indicator={
-                        <StepIndicator
-                            variant="soft"
-                            color={currentStep === 1 ? "primary" : "neutral"}
-                            onClick={() => handleStepClick(1)}
-                        >
-                            <InfoRoundedIcon />
-                        </StepIndicator>
-                    }
-                >
-                    <Typography>Metadata</Typography>
-                </Step>
-                <Step
-                    completed={currentStep > 2}
-                    active={currentStep === 2}
-                    indicator={
-                        <StepIndicator
-                            variant="soft"
-                            color={currentStep === 2 ? "primary" : "neutral"}
-                            onClick={() => handleStepClick(2)}
-                        >
-                            <CloudUploadRoundedIcon />
-                        </StepIndicator>
-                    }
-                >
-                    <Typography>Upload</Typography>
-                </Step>
-                <Step
-                    completed={currentStep > 3}
-                    active={currentStep === 3}
-                    indicator={
-                        <StepIndicator variant="soft" color={currentStep === 3 ? "primary" : "neutral"}>
-                            <BarChart />
-                        </StepIndicator>
-                    }
-                >
-                    <Typography>Evaluation</Typography>
-                </Step>
-            </Stepper>
-
-            {/* Navigation Buttons */}
-            <Box mt={2} sx={{ marginBottom: "30px" }} display="flex" gap={2}>
-                {currentStep > 0 && currentStep < 3 && (
+                {/* Navigation Buttons */}
+                <Box display="flex" justifyContent="center" gap={5} mb={2}>
                     <Button
                         variant="soft"
                         onClick={() => setCurrentStep((prev) => prev - 1)}
                         startDecorator={<West />}
+                        disabled={currentStep === 0}
+                        sx={{ fontSize: "1.2rem" }}
                     >
                         Back
                     </Button>
-                )}
-                {currentStep < 3 && (
                     <Button
                         variant="soft"
-                        color="primary"
                         onClick={handleNext}
-                        endDecorator={<East />}
+                        endDecorator={currentStep === 2 ? <Publish /> : <East />}
+                        disabled={currentStep === 3}
+                        sx={{ fontSize: "1.2rem" }}
                     >
                         {currentStep === 2 ? "Submit" : "Next"}
                     </Button>
-                )}
+                </Box>
+
+
+                {/* Step Components */}
+                <Box
+                    flex={1}
+                    width="100%"
+                    maxWidth="850px"
+                    overflow="auto"
+                    padding={2}
+                    boxShadow="sm"
+                    bgcolor="background.surface"
+                    borderRadius="sm"
+                    sx={{
+                        maxHeight: "calc(100vh - 80px)",
+                    }}
+                >
+                    {currentStep === 0 && (
+                        <DownloadStep
+                            onDatasetDownloaded={(datasetName) => {
+                                setDownloadedDatasets((prev) => [...prev, datasetName]);
+                            }}
+                            onDatasetsFetched={(fetchedDatasets) => {
+                                setDatasets(fetchedDatasets);
+                            }}
+                            downloadedDatasets={downloadedDatasets}
+                        />
+                    )}
+
+                    {currentStep === 1 && (
+                        <MetadataStep
+                            initialMetadata={metadata}
+                            onMetadataSave={handleMetadataSave}
+                            submissionId={submissionId}
+                        />
+                    )}
+
+                    {currentStep === 2 && (
+                        <UploadStep
+                            submissionId={submissionId}
+                            datasets={datasets}
+                            uploadedFiles={uploadedFiles}
+                            onFileUploaded={(datasetId, fileName) => {
+                                setUploadedFiles((prev) => ({
+                                    ...prev,
+                                    [datasetId]: fileName,
+                                }));
+                            }}
+                        />
+                    )}
+
+                    {currentStep === 3 && <FinalStep />}
+                </Box>
             </Box>
-
-            {/* Conditionally render components with props */}
-            {currentStep === 0 && (
-                <DownloadStep
-                    onDatasetDownloaded={(datasetName) => {
-                        setDownloadedDatasets((prev) => [...prev, datasetName]);
-                    }}
-                    onDatasetsFetched={(fetchedDatasets) => {
-                        setDatasets(fetchedDatasets);
-                    }}
-                    downloadedDatasets={downloadedDatasets}
-                />
-            )}
-
-            {currentStep === 1 && (
-                <MetadataStep
-                    initialMetadata={metadata}
-                    onMetadataSave={(id) => {
-                        setSubmissionId(id);
-                    }}
-                    submissionId={submissionId}
-                />
-            )}
-
-            {currentStep === 2 && (
-                <UploadStep
-                    submissionId={submissionId}
-                    datasets={datasets}
-                    uploadedFiles={uploadedFiles}
-                    onFileUploaded={(datasetId, fileName) => {
-                        setUploadedFiles((prev) => ({
-                            ...prev,
-                            [datasetId]: fileName,
-                        }));
-                    }}
-                />
-            )}
-
-            {currentStep === 3 && <FinalStep />}
         </Box>
     );
 };
