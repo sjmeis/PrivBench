@@ -67,7 +67,7 @@ const DownloadStep = ({ onDatasetDownloaded, onDatasetsFetched, downloadedDatase
 
   return (
       <Card variant="outlined" sx={{ width: 800, padding: 4 }}>
-        <Typography level="h4" mb={2} sx={{ textAlign: "center" }}>
+        <Typography level="h2" mb={2} sx={{ textAlign: "center" }}>
           Download Datasets
         </Typography>
         <Box sx={{ textAlign: "center", mb: 2 }}>
@@ -96,7 +96,7 @@ const DownloadStep = ({ onDatasetDownloaded, onDatasetsFetched, downloadedDatase
 
         <Box sx={{ textAlign: "center", mb: 2 }}>
           <Typography level="body1" sx={{ fontWeight: "bold" }}>
-            Please make sure you have downloaded the datasets!
+            Please make sure you have downloaded the datasets before proceeding to the next step!
           </Typography>
         </Box>
 
@@ -113,7 +113,7 @@ const DownloadStep = ({ onDatasetDownloaded, onDatasetsFetched, downloadedDatase
                   onClick={() => handleDownloadDataset(dataset.name)}
                   disabled={downloadedDatasets.includes(dataset.name)} // Disable if already downloaded
               >
-                {downloadedDatasets.includes(dataset.name) ? "Downloaded" : `Download ${dataset.name}`}
+                {downloadedDatasets.includes(dataset.name) ? "Downloaded" : `Download`}
               </Button>
             </Box>
         ))}

@@ -89,19 +89,20 @@ const MetadataStep = ({ initialMetadata, submissionId, onMetadataSave }) => {
                         ? "Metadata updated successfully!"
                         : "Metadata saved successfully!",
                     "success"
-        );
+                );
                 if (!isUpdate) {
-                    onMetadataSave(data.submission_id); // Handle new submission ID after POST
+                    onMetadataSave(data.submission_id, true);
                 } else {
-                    onMetadataSave(data.submission.id); // Handle updated submission ID after PUT
+                    onMetadataSave(data.submission.id, true);
                 }
             } else {
                 const errorData = await response.json();
                 showSnackbar(
                     `Failed to ${
                         isUpdate ? "update" : "save"
-                    } metadata: ${errorData.message || response.statusText}`, "error"
-        );
+                    } metadata: ${errorData.message || response.statusText}`,
+                    "error"
+                );
             }
         } catch (error) {
             console.error("Error saving/updating metadata:", error);
@@ -160,17 +161,17 @@ ${metadata.bibtexCitation || "More information needed"}
             </Typography>
 
             <FormControl>
-                <Typography level="h5" sx={{ marginTop: 2 }}>
+                <Typography level="body1" sx={{ marginTop: 1 }}>
                     Model Name
                 </Typography>
                 <Input
                     placeholder="Enter the model name"
                     value={metadata.modelName}
                     onChange={(e) => handleChange("modelName", e.target.value)}
-                    sx={{ marginBottom: 2, bgcolor: "grey.200" }}
+                    sx={{ marginBottom: 1, bgcolor: "grey.200" }}
                 />
 
-                <Typography level="h5" sx={{ marginTop: 2 }}>
+                <Typography level="body1" sx={{ marginTop: 1 }}>
                     Model Description
                 </Typography>
                 <Textarea
@@ -178,17 +179,17 @@ ${metadata.bibtexCitation || "More information needed"}
                     value={metadata.modelDescription}
                     onChange={(e) => handleChange("modelDescription", e.target.value)}
                     minRows={4}
-                    sx={{ marginBottom: 2, bgcolor: "grey.200" }}
+                    sx={{ marginBottom: 1, bgcolor: "grey.200" }}
                 />
 
-                <Typography level="h5" sx={{ marginTop: 2 }}>
+                <Typography level="body1" sx={{ marginTop: 1 }}>
                     License
                 </Typography>
                 <Select
                     placeholder="Select a license"
                     value={metadata.license}
                     onChange={(e, value) => handleChange("license", value)}
-                    sx={{ marginBottom: 2, bgcolor: "grey.200" }}
+                    sx={{ marginBottom: 1, bgcolor: "grey.200" }}
                 >
                     {licenseOptions.map((license) => (
                         <Option key={license} value={license}>
@@ -197,47 +198,47 @@ ${metadata.bibtexCitation || "More information needed"}
                     ))}
                 </Select>
 
-                <Typography level="h5" sx={{ marginTop: 2 }}>
+                <Typography level="body1" sx={{ marginTop: 2 }}>
                     Tags
                 </Typography>
                 <Input
                     placeholder="Enter tags (comma-separated)"
                     value={metadata.tags}
                     onChange={(e) => handleChange("tags", e.target.value)}
-                    sx={{ marginBottom: 2, bgcolor: "grey.200" }}
+                    sx={{ marginBottom: 1, bgcolor: "grey.200" }}
                 />
 
-                <Typography level="h5" sx={{ marginTop: 2 }}>
+                <Typography level="body1" sx={{ marginTop: 2 }}>
                     Author(s)
                 </Typography>
                 <Input
                     placeholder="Enter authors (comma-separated)"
                     value={metadata.authors}
                     onChange={(e) => handleChange("authors", e.target.value)}
-                    sx={{ marginBottom: 2, bgcolor: "grey.200" }}
+                    sx={{ marginBottom: 1, bgcolor: "grey.200" }}
                 />
 
-                <Typography level="h5" sx={{ marginTop: 2 }}>
+                <Typography level="body1" sx={{ marginTop: 1 }}>
                     Related Research Paper
                 </Typography>
                 <Input
                     placeholder="Provide the URL to the research paper"
                     value={metadata.researchPaperUrl}
                     onChange={(e) => handleChange("researchPaperUrl", e.target.value)}
-                    sx={{ marginBottom: 2, bgcolor: "grey.200" }}
+                    sx={{ marginBottom: 1, bgcolor: "grey.200" }}
                 />
 
-                <Typography level="h5" sx={{ marginTop: 2 }}>
+                <Typography level="body1" sx={{ marginTop: 1 }}>
                     Related GitHub Repository
                 </Typography>
                 <Input
                     placeholder="Provide the URL to the GitHub repository"
                     value={metadata.githubUrl}
                     onChange={(e) => handleChange("githubUrl", e.target.value)}
-                    sx={{ marginBottom: 2, bgcolor: "grey.200" }}
+                    sx={{ marginBottom: 1, bgcolor: "grey.200" }}
                 />
 
-                <Typography level="h5" sx={{ marginTop: 2 }}>
+                <Typography level="body1" sx={{ marginTop: 1 }}>
                     Bibtex Citation
                 </Typography>
                 <Textarea
@@ -245,14 +246,14 @@ ${metadata.bibtexCitation || "More information needed"}
                     value={metadata.bibtexCitation}
                     onChange={(e) => handleChange("bibtexCitation", e.target.value)}
                     minRows={4}
-                    sx={{ marginBottom: 2, bgcolor: "grey.200" }}
+                    sx={{ marginBottom: 1, bgcolor: "grey.200" }}
                 />
 
                 <Checkbox
                     checked={shouldDownload}
                     onChange={(e) => setShouldDownload(e.target.checked)}
                     label="Download model card as markdown"
-                    sx={{ mt: 2 }}
+                    sx={{ mt: 1 }}
                 />
                 <Button
                     variant="solid"
@@ -262,7 +263,7 @@ ${metadata.bibtexCitation || "More information needed"}
                     sx={{ mt: 2 }}
                     startDecorator={<Save />}
                 >
-                    Save Model Data
+                    Save Metadata
                 </Button>
             </FormControl>
         </Card>
