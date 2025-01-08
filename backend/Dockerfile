@@ -27,11 +27,6 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Create directory for virtual environments
-#RUN mkdir -p /modules/venvs && \
-#    chmod 777 /modules/venvs
-RUN mkdir -p /modules/venvs && chown celeryuser:celeryuser /modules/venvs
-
 
 # Switch to non-root user
 USER celeryuser

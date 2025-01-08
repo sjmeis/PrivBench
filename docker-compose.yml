@@ -11,18 +11,14 @@ services:
       - ./data/datasets:/data/datasets
       - privatized_datasets:/data/privatized_datasets
       - ./modules:/modules
-      - module_venvs:/modules/venvs
-    user: "${UID:-1000}:${GID:-1000}"  # Add this line
+      - /var/run/docker.sock:/var/run/docker.sock
+    user: root
     environment:
       - FLASK_ENV=development
       - DATABASE_URL=postgresql://user:password@db:5432/dbname
       - JWT_SECRET_KEY=jwtsecretkey
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      # Add these environment variables
-      - MODULE_VENVS_PATH=/modules/venvs
-      - MODULE_USER_ID=${UID:-1000}
-      - MODULE_GROUP_ID=${GID:-1000}
     depends_on:
       db:
         condition: service_healthy
@@ -39,17 +35,13 @@ services:
       - ./data/datasets:/data/datasets
       - privatized_datasets:/data/privatized_datasets
       - ./modules:/modules
-      - module_venvs:/modules/venvs
-    user: "${UID:-1000}:${GID:-1000}"  # Add this line
+      - /var/run/docker.sock:/var/run/docker.sock
+    user: root
     environment:
       - DATABASE_URL=postgresql://user:password@db:5432/dbname
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - C_FORCE_ROOT=true
-      # Add these environment variables
-      - MODULE_VENVS_PATH=/modules/venvs
-      - MODULE_USER_ID=${UID:-1000}
-      - MODULE_GROUP_ID=${GID:-1000}
     depends_on:
       - redis
       - backend
@@ -97,4 +89,3 @@ volumes:
   postgres_data:
   redis_data:
   privatized_datasets:
-  module_venvs:

@@ -9,7 +9,7 @@ import os
 from werkzeug.utils import secure_filename
 import logging
 import json
-from app.tasks.add_module import install_requirements_and_load_module
+from app.tasks.add_module import install_and_load_module
 from ..extensions import db
 from datetime import datetime
 
@@ -156,6 +156,7 @@ def create_benchmark_module():
 
         db.session.add(new_benchmark_module)
         db.session.flush()
+        db.session.commit()
 
         # Debugging: Print received data
         logger.debug("Name: %s", name)
@@ -167,7 +168,7 @@ def create_benchmark_module():
 
 
         # After saving files, start async task
-        task = install_requirements_and_load_module.delay(
+        task = install_and_load_module.delay(
             module_id=new_benchmark_module.id,
             module_name=name,
             module_path=algo_path,
@@ -204,7 +205,7 @@ def create_benchmark_module():
 @module_bp.route('/modules/<task_id>/status', methods=['GET'])
 @jwt_required()
 def get_module_status(task_id):
-    task = install_requirements_and_load_module.AsyncResult(task_id)
+    task = install_and_load_module.AsyncResult(task_id)
     if task.ready():
         result = task.get()
         return jsonify(result)

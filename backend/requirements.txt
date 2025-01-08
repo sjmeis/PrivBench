@@ -26,3 +26,6 @@ Faker==33.0.0
 
 # Dataset
 pandas
+
+#Module Management
+docker
