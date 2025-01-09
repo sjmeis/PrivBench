@@ -2,13 +2,11 @@ import React, { useState } from "react";
 import { Box, Button, Card, Typography, CircularProgress } from "@mui/joy";
 import { CloudUpload } from "@mui/icons-material";
 import axios from "axios";
-import CustomSnackbar from "../shared/CustomSnackbar";
+import { useSnackbar } from "../../contexts/SnackbarProvider";
 
 const UploadStep = ({ submissionId, datasets, uploadedFiles, onFileUploaded }) => {
   const [uploadingDatasetId, setUploadingDatasetId] = useState(null);
-  const [openSnackbar, setOpenSnackbar] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState("");
-  const [snackbarSeverity, setSnackbarSeverity] = useState("info");
+  const { showSnackbar } = useSnackbar();
 
   const handleFileSelect = async (event, originalDatasetId) => {
     const file = event.target.files[0];
@@ -33,15 +31,9 @@ const UploadStep = ({ submissionId, datasets, uploadedFiles, onFileUploaded }) =
       );
 
       onFileUploaded(originalDatasetId, file.name);
-
-      // Show success snackbar
-      setSnackbarMessage(`Successfully uploaded ${file.name}`);
-      setSnackbarSeverity("success");
-      setOpenSnackbar(true);
+      showSnackbar(`Successfully uploaded ${file.name}`, "success");
     } catch (error) {
-      setSnackbarMessage(error.response?.data?.error || "Failed to upload file");
-      setSnackbarSeverity("error");
-      setOpenSnackbar(true);
+        showSnackbar(error.response?.data?.error || "Failed to upload file", "error");
     } finally {
       setUploadingDatasetId(null);
       event.target.value = '';
@@ -51,50 +43,45 @@ const UploadStep = ({ submissionId, datasets, uploadedFiles, onFileUploaded }) =
   return (
       <Card variant="outlined" sx={{ width: 800, padding: 4 }}>
         <Typography level="h2" mb={2} sx={{ textAlign: "center" }}>
-          Upload the Privatized Datasets
+          Upload the privatized datasets
         </Typography>
         {/* ... Existing instructional content ... */}
 
         {datasets.map((dataset) => (
             <Box key={dataset.id} sx={{ mt: 4 }}>
-              <Typography level="h5" mb={2}>
-                Upload Privatized Dataset for {dataset.name}
+              <Typography level="body1" mb={2} sx={{ textAlign: "center" }}>
+                Upload the privatized dataset corresponding to {dataset.name}
               </Typography>
 
-              <Button
-                  component="label"
-                  size="lg"
-                  variant="soft"
-                  startDecorator={
-                    uploadingDatasetId === dataset.id ? <CircularProgress size="sm" /> : <CloudUpload />
-                  }
-                  sx={{ mt: 2 }}
-                  disabled={uploadingDatasetId !== null}
-              >
-                {uploadedFiles[dataset.id] ? "Replace File" : "Upload File"}
-                <input
-                    type="file"
-                    accept=".csv"
-                    onChange={(e) => handleFileSelect(e, dataset.id)}
-                    style={{ display: "none" }}
-                />
-              </Button>
+                <Box display="flex" justifyContent="center" alignItems="center" width="100%">
+                    <Button
+                        component="label"
+                        size="lg"
+                        variant="soft"
+                        startDecorator={
+                            uploadingDatasetId === dataset.id ? <CircularProgress size="sm" /> : <CloudUpload />
+                        }
+                        sx={{ mt: 2 }}
+                        disabled={uploadingDatasetId !== null}
+                    >
+                        {uploadedFiles[dataset.id] ? "Replace File" : "Upload File"}
+                        <input
+                            type="file"
+                            accept=".csv"
+                            onChange={(e) => handleFileSelect(e, dataset.id)}
+                            style={{ display: "none" }}
+                        />
+                    </Button>
+                </Box>
 
               {uploadedFiles[dataset.id] && (
-                  <Typography variant="body2" sx={{ mt: 1 }}>
+                  <Typography variant="body2" sx={{ mt: 1,
+                  textAlign: "center"}}>
                     Uploaded File: {uploadedFiles[dataset.id]}
                   </Typography>
               )}
             </Box>
         ))}
-
-        {/* Snackbar for success or error message */}
-        <CustomSnackbar
-            open={openSnackbar}
-            message={snackbarMessage}
-            severity={snackbarSeverity}
-            onClose={() => setOpenSnackbar(false)}
-        />
       </Card>
   );
 };

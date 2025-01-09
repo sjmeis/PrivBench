@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { Box, Button, Card, Typography } from "@mui/joy";
 import { CloudDownload } from "@mui/icons-material";
-import CustomSnackbar from "../shared/CustomSnackbar";  // Import CustomSnackbar
+import { useSnackbar } from "../../contexts/SnackbarProvider";
+
 
 const DownloadStep = ({ onDatasetDownloaded, onDatasetsFetched, downloadedDatasets }) => {
   const [datasets, setDatasets] = useState([]);
-  const [openSnackbar, setOpenSnackbar] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState("");
-  const [snackbarSeverity, setSnackbarSeverity] = useState("info");
+  const { showSnackbar } = useSnackbar();
 
   useEffect(() => {
     const fetchDatasets = async () => {
@@ -24,7 +23,7 @@ const DownloadStep = ({ onDatasetDownloaded, onDatasetsFetched, downloadedDatase
         setDatasets(data.datasets);
         onDatasetsFetched(data.datasets);
       } catch (error) {
-        console.error("An error occurred:", error);
+        showSnackbar("Failed to fetch datasets", "error");
       }
     };
     fetchDatasets();
@@ -40,9 +39,7 @@ const DownloadStep = ({ onDatasetDownloaded, onDatasetsFetched, downloadedDatase
       if (!response.ok) {
         const errorData = await response.json();
         console.error("Failed to load dataset:", errorData.error);
-        setSnackbarMessage(`Failed to download ${datasetName}`);
-        setSnackbarSeverity("error");
-        setOpenSnackbar(true);
+        showSnackbar(`Failed to download ${datasetName}`, "error");
         return;
       }
 
@@ -61,21 +58,16 @@ const DownloadStep = ({ onDatasetDownloaded, onDatasetsFetched, downloadedDatase
       // Inform parent that dataset has been downloaded
       onDatasetDownloaded(datasetName);
 
-      // Show success snackbar
-      setSnackbarMessage(`${datasetName} downloaded successfully`);
-      setSnackbarSeverity("success");
-      setOpenSnackbar(true);
+      showSnackbar(`${datasetName} downloaded successfully`, "success");
     } catch (error) {
       console.error("An error occurred:", error);
-      setSnackbarMessage(`Error downloading ${datasetName}`);
-      setSnackbarSeverity("error");
-      setOpenSnackbar(true);
+      showSnackbar(`Error downloading ${datasetName}`, "error");
     }
   };
 
   return (
       <Card variant="outlined" sx={{ width: 800, padding: 4 }}>
-        <Typography level="h4" mb={2} sx={{ textAlign: "center" }}>
+        <Typography level="h2" mb={2} sx={{ textAlign: "center" }}>
           Download Datasets
         </Typography>
         <Box sx={{ textAlign: "center", mb: 2 }}>
@@ -104,7 +96,7 @@ const DownloadStep = ({ onDatasetDownloaded, onDatasetsFetched, downloadedDatase
 
         <Box sx={{ textAlign: "center", mb: 2 }}>
           <Typography level="body1" sx={{ fontWeight: "bold" }}>
-            Please make sure you have downloaded the datasets!
+            Please make sure you have downloaded the datasets before proceeding to the next step!
           </Typography>
         </Box>
 
@@ -121,18 +113,10 @@ const DownloadStep = ({ onDatasetDownloaded, onDatasetsFetched, downloadedDatase
                   onClick={() => handleDownloadDataset(dataset.name)}
                   disabled={downloadedDatasets.includes(dataset.name)} // Disable if already downloaded
               >
-                {downloadedDatasets.includes(dataset.name) ? "Downloaded" : `Download ${dataset.name}`}
+                {downloadedDatasets.includes(dataset.name) ? "Downloaded" : `Download`}
               </Button>
             </Box>
         ))}
-
-        {/* Snackbar for error or success message */}
-        <CustomSnackbar
-            open={openSnackbar}
-            message={snackbarMessage}
-            severity={snackbarSeverity}
-            onClose={() => setOpenSnackbar(false)}
-        />
       </Card>
   );
 };
