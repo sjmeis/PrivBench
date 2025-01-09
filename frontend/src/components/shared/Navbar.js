@@ -17,9 +17,7 @@ import {
     Info,
     Timeline,
     UploadFile,
-    Login,
-    FileCopyOutlined,
-    DriveFileRenameOutline
+    Login
 } from "@mui/icons-material";
 import {useAuth} from '../../contexts/AuthContext';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
@@ -27,9 +25,10 @@ import OpenInNewRoundedIcon from '@mui/icons-material/OpenInNewRounded';
 import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import {getGravatarUrl} from "../../utils/Gravatar";
-import {getUserSubmissions} from '../../services/RankingsService';
 import ViewModuleIcon from "@mui/icons-material/ViewModule";
 import InsertDriveFileIcon from "@mui/icons-material/InsertDriveFile";
+
+
 
 
 const Navbar = () => {
@@ -64,32 +63,8 @@ const Navbar = () => {
         // If the user is not logged in, redirect to /login
         if (!user) {
             navigate("/login");
-            return;
-        }
-        try {
-            // Fetch user submissions
-            const data = await getUserSubmissions();
-            const pendingSubmission = data.submissions.find(sub => sub.status === "pending");
-
-            if (pendingSubmission) {
-                navigate("/upload", {
-                    state: {
-                        currentStep: 1,
-                        metadata: pendingSubmission.metadata,
-                        submissionId: pendingSubmission.id
-                    }
-                });
-            } else {
-                // No pending submission, navigate with initial state
-                navigate("/upload", {
-                    state: {
-                        currentStep: 0,
-                        metadata: {}
-                    }
-                });
-            }
-        } catch (error) {
-            console.error("An error occurred while fetching user submission:", error);
+        } else {
+            navigate("/upload")
         }
     };
 

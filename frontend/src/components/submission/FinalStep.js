@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Typography, Card, Box, Button, LinearProgress } from "@mui/joy";
 import { useNavigate } from "react-router-dom";
-import CustomSnackbar from "../shared/CustomSnackbar";
+import { useSnackbar } from "../../contexts/SnackbarProvider";
 import { RemoveRedEye } from "@mui/icons-material";
 
 const FinalStep = () => {
@@ -9,9 +9,7 @@ const FinalStep = () => {
     const [averageScore, setAverageScore] = useState(null);
     const [moduleScores, setModuleScores] = useState([]);
     const [tasks, setTasks] = useState([]);
-    const [openSnackbar, setOpenSnackbar] = useState(false);
-    const [snackbarMessage, setSnackbarMessage] = useState("");
-    const [snackbarSeverity, setSnackbarSeverity] = useState("info");
+    const { showSnackbar } = useSnackbar();
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -27,9 +25,7 @@ const FinalStep = () => {
                 });
 
                 if (response.status === 404) {
-                    setSnackbarMessage("No submissions available for benchmarking. Please submit your data first.");
-                    setSnackbarSeverity("warning");
-                    setOpenSnackbar(true);
+                    showSnackbar("No submissions available for benchmarking. Please submit your data first.", "error");
                     setLoading(false);
                     return;
                 }
@@ -59,15 +55,13 @@ const FinalStep = () => {
 
             } catch (err) {
                 console.error("Benchmark error:", err);
-                setSnackbarMessage(err.message);
-                setSnackbarSeverity("error");
-                setOpenSnackbar(true);
+                showSnackbar(err.message, "error");
                 setLoading(false);
             }
         };
 
         startBenchmark();
-    }, []);
+    }, [showSnackbar]);
 
     useEffect(() => {
         if (tasks.length === 0) return;
@@ -260,18 +254,8 @@ const FinalStep = () => {
             ) : (
                 <Typography level="h2" mb={2} color="error">
                     Evaluation Failed
-                    <Typography level="body1" color="error">
-                        {snackbarMessage}
-                    </Typography>
                 </Typography>
             )}
-
-            <CustomSnackbar
-                open={openSnackbar}
-                message={snackbarMessage}
-                severity={snackbarSeverity}
-                onClose={() => setOpenSnackbar(false)}
-            />
         </Card>
     );
 };
