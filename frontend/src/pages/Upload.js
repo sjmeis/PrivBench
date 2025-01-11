@@ -143,7 +143,7 @@ const Upload = () => {
                 <Box
                     flex={1}
                     width="100%"
-                    maxWidth="850px"
+                    maxWidth="1050px"
                     overflow="auto"
                     padding={2}
                     boxShadow="sm"
