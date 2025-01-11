@@ -152,7 +152,7 @@ const FinalStep = () => {
     };
 
     return (
-        <Card variant="outlined" sx={{ width: "100%", maxWidth: 800, mx: "auto", textAlign: "center", p: 3 }}>
+        <Card variant="outlined" sx={{ width: "100%", maxWidth: 1000, mx: "auto", textAlign: "center", p: 3 }}>
             <Typography level="h2" mb={2}>
                 {loading ? "Evaluation in Progress" : "Evaluation Completed"}
             </Typography>
