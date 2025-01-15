@@ -1,18 +1,17 @@
 import React from "react";
 import {
     Button,
-    Card,
     FormControl,
     Input,
     Textarea,
     Typography,
     Select,
     Option,
-    Checkbox, Box,
+    Box,
 } from "@mui/joy";
-import { Save } from "@mui/icons-material";
+import {Save} from "@mui/icons-material";
 
-const MetadataCard = ({ metadata, setMetadata, licenseOptions, handleSave, shouldDownload, setShouldDownload }) => {
+const MetadataCard = ({ metadata, setMetadata, licenseOptions, handleSave }) => {
     const handleChange = (field, value) => {
         setMetadata((prevState) => ({
             ...prevState,
@@ -21,11 +20,10 @@ const MetadataCard = ({ metadata, setMetadata, licenseOptions, handleSave, shoul
     };
 
     return (
-        <Card variant="outlined" sx={{ width: 1000, padding: 4 }}>
-            <Typography level="h2" mb={2} sx={{ textAlign: "center" }}>
-                Model Metadata
+        <Box>
+            <Typography level="h2" mb={2}>
+                Privatization Method
             </Typography>
-
             <FormControl>
                 <Box
                     sx={{
@@ -44,7 +42,7 @@ const MetadataCard = ({ metadata, setMetadata, licenseOptions, handleSave, shoul
                             placeholder="Enter the model name"
                             value={metadata.modelName}
                             onChange={(e) => handleChange("modelName", e.target.value)}
-                            sx={{ width: "100%", bgcolor: "grey.200" }}
+                            sx={{ width: "100%" }}
                         />
                     </Box>
 
@@ -56,7 +54,7 @@ const MetadataCard = ({ metadata, setMetadata, licenseOptions, handleSave, shoul
                             placeholder="Select a license"
                             value={metadata.license}
                             onChange={(e, value) => handleChange("license", value)}
-                            sx={{ width: "100%", bgcolor: "grey.200" }}
+                            sx={{ width: "100%"}}
                         >
                             {licenseOptions.map((license) => (
                                 <Option key={license} value={license}>
@@ -74,7 +72,7 @@ const MetadataCard = ({ metadata, setMetadata, licenseOptions, handleSave, shoul
                             placeholder="Provide the URL to the research paper"
                             value={metadata.researchPaperUrl}
                             onChange={(e) => handleChange("researchPaperUrl", e.target.value)}
-                            sx={{ width: "100%", bgcolor: "grey.200" }}
+                            sx={{ width: "100%"}}
                         />
                     </Box>
                 </Box>
@@ -97,12 +95,7 @@ const MetadataCard = ({ metadata, setMetadata, licenseOptions, handleSave, shoul
                             value={metadata.modelDescription}
                             onChange={(e) => handleChange("modelDescription", e.target.value)}
                             minRows={4}
-                            sx={{
-                                bgcolor: "grey.200",
-                                height: 150,
-                                maxHeight: 150,
-                                overflow: "auto",
-                            }}
+                            maxRows={4}
                         />
                     </Box>
 
@@ -115,12 +108,7 @@ const MetadataCard = ({ metadata, setMetadata, licenseOptions, handleSave, shoul
                             value={metadata.bibtexCitation}
                             onChange={(e) => handleChange("bibtexCitation", e.target.value)}
                             minRows={4}
-                            sx={{
-                                bgcolor: "grey.200",
-                                height: 150,
-                                maxHeight: 150,
-                                overflow: "auto",
-                            }}
+                            maxRows={4}
                         />
                     </Box>
                 </Box>
@@ -142,7 +130,7 @@ const MetadataCard = ({ metadata, setMetadata, licenseOptions, handleSave, shoul
                             placeholder="Enter tags (comma-separated)"
                             value={metadata.tags}
                             onChange={(e) => handleChange("tags", e.target.value)}
-                            sx={{ width: "100%", bgcolor: "grey.200" }}
+                            sx={{ width: "100%" }}
                         />
                     </Box>
                 </Box>
@@ -164,7 +152,7 @@ const MetadataCard = ({ metadata, setMetadata, licenseOptions, handleSave, shoul
                             placeholder="Enter authors (comma-separated)"
                             value={metadata.authors}
                             onChange={(e) => handleChange("authors", e.target.value)}
-                            sx={{ width: "100%", bgcolor: "grey.200" }}
+                            sx={{ width: "100%"}}
                         />
                     </Box>
 
@@ -176,20 +164,19 @@ const MetadataCard = ({ metadata, setMetadata, licenseOptions, handleSave, shoul
                             placeholder="Provide the URL to the GitHub repository"
                             value={metadata.githubUrl}
                             onChange={(e) => handleChange("githubUrl", e.target.value)}
-                            sx={{ width: "100%", bgcolor: "grey.200" }}
+                            sx={{ width: "100%" }}
                         />
                     </Box>
                 </Box>
 
-                <Checkbox
-                    checked={shouldDownload}
-                    onChange={(e) => setShouldDownload(e.target.checked)}
-                    label="Download model card as markdown"
-                    sx={{ mt: 1 }}
-                />
+                {/*<Checkbox*/}
+                {/*    checked={shouldDownload}*/}
+                {/*    onChange={(e) => setShouldDownload(e.target.checked)}*/}
+                {/*    label="Download model card as markdown"*/}
+                {/*    sx={{ mt: 1 }}*/}
+                {/*/>*/}
                 <Button
                     variant="solid"
-                    size="lg"
                     color="primary"
                     onClick={handleSave}
                     sx={{ mt: 2 }}
@@ -198,7 +185,7 @@ const MetadataCard = ({ metadata, setMetadata, licenseOptions, handleSave, shoul
                     Save Metadata
                 </Button>
             </FormControl>
-        </Card>
+        </Box>
 
     );
 };

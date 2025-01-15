@@ -10,6 +10,7 @@ import {
 import { useTheme } from "@mui/joy";
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import {useNavigate} from "react-router-dom";
+import Footer from "../components/shared/Footer";
 
 const Home = () => {
     const [scrolled, setScrolled] = useState(false);
@@ -283,6 +284,7 @@ const Home = () => {
             >
                 <KeyboardArrowUpIcon />
             </IconButton>
+            <Footer></Footer>
         </Sheet>
     );
 };

@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { Card, Typography } from "@mui/joy";
+import {Box, Typography} from "@mui/joy";
 import axios from "axios";
 import { useSnackbar } from "../../contexts/SnackbarProvider";
-import UploadTable from "./UploadTable"; // Import the new UploadTable component
+import UploadTable from "./UploadTable";
+import {InfoOutlined} from "@mui/icons-material"; // Import the new UploadTable component
 
 const UploadStep = ({ submissionId, datasets, uploadedFiles, onFileUploaded }) => {
     const [uploadingDatasetId, setUploadingDatasetId] = useState(null);
@@ -41,12 +42,13 @@ const UploadStep = ({ submissionId, datasets, uploadedFiles, onFileUploaded }) =
     };
 
     return (
-        <Card variant="outlined" sx={{ width: 1000, padding: 4 }}>
-            <Typography level="h2" mb={2} sx={{ textAlign: "center" }}>
+        <Box>
+            <Typography level="h2" mb={2}>
                 Upload the privatized datasets
             </Typography>
-            <Typography level="body1" sx={{ textAlign: "center", mb: 3 }}>
-                Below is the list of datasets. Please upload the corresponding privatized dataset for each in .csv format.
+            <Typography sx={{marginY: 2, p: 1}} startDecorator={<InfoOutlined/>} variant='soft'
+                        color='neutral' level="body1">
+                For every dataset listed below there needs to be uploaded the privatized counterpart in .csv format
             </Typography>
 
             <UploadTable
@@ -55,7 +57,7 @@ const UploadStep = ({ submissionId, datasets, uploadedFiles, onFileUploaded }) =
                 uploadingDatasetId={uploadingDatasetId}
                 onFileSelect={handleFileSelect}
             />
-        </Card>
+        </Box>
     );
 };
 

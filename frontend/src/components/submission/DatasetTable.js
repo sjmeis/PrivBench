@@ -9,7 +9,7 @@ const DatasetsTable = ({
                            handleSelectAll,
                        }) => {
     return (
-        <Box>
+        <Box sx={{ marginY: "20px",}}>
             <Box
                 sx={{
                     display: "flex",
