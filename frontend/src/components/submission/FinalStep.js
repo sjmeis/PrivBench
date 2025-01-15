@@ -152,15 +152,15 @@ const FinalStep = () => {
     };
 
     return (
-        <Card variant="outlined" sx={{ width: "100%", maxWidth: 1000, mx: "auto", textAlign: "center", p: 3 }}>
+        <Box  sx={{ width: "100%", maxWidth: 1000, mx: "auto", p: 3 }}>
             <Typography level="h2" mb={2}>
-                {loading ? "Evaluation in Progress" : "Evaluation Completed"}
+                {loading ? "Evaluation in Progress" : "Evaluation Summary"}
             </Typography>
 
             {loading ? (
-                <Box sx={{ width: '100%', mt: 3 }}>
+                <Card variant="outlined" sx={{ width: '100%', mt: 3 }}>
                     {tasks.map((task, index) => (
-                        <Box key={index} sx={{ mb: 4 }}>
+                        <Box key={index} sx={{ mb: 2, mt: 2 }}>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                                 <Typography level="body1" fontWeight="bold">
                                     {task.module_name}
@@ -193,13 +193,10 @@ const FinalStep = () => {
                             </Box>
                         </Box>
                     ))}
-                </Box>
+                </Card>
             ) : moduleScores.length > 0 ? (
                 <>
                     <Card variant="outlined" sx={{ p: 3, textAlign: "center" }}>
-                        <Typography level="h3" mb={3} sx={{ textAlign: "center", fontWeight: "bold" }}>
-                            Evaluation Summary
-                        </Typography>
                         <Box sx={{ display: "flex", flexDirection: "column", gap: 2, textAlign: "left" }}>
                             <Card
                                 variant="soft"
@@ -242,6 +239,7 @@ const FinalStep = () => {
                     </Card>
 
                     <Button
+                        fullWidth
                         variant="solid"
                         color="primary"
                         sx={{ mt: 3 }}
@@ -252,11 +250,11 @@ const FinalStep = () => {
                     </Button>
                 </>
             ) : (
-                <Typography level="h2" mb={2} color="error">
+                <Typography level="h2" mb={2} color="danger">
                     Evaluation Failed
                 </Typography>
             )}
-        </Card>
+        </Box>
     );
 };
 

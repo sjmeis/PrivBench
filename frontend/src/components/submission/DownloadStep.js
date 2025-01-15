@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from "react";
-import { Box, Button, Card, Typography } from "@mui/joy";
-import { CloudDownload } from "@mui/icons-material";
-import { useSnackbar } from "../../contexts/SnackbarProvider";
+import React, {useState, useEffect} from "react";
+import {Box, Button, Stack, Typography} from "@mui/joy";
+import {CloudDownload, InfoOutlined} from "@mui/icons-material";
+import {useSnackbar} from "../../contexts/SnackbarProvider";
 import DatasetsTable from "./DatasetTable";
 
-const DownloadStep = ({ onDatasetDownloaded, onDatasetsFetched, downloadedDatasets }) => {
+const DownloadStep = ({onDatasetDownloaded, onDatasetsFetched, downloadedDatasets}) => {
     const [datasets, setDatasets] = useState([]);
     const [selectedDatasets, setSelectedDatasets] = useState([]);
-    const { showSnackbar } = useSnackbar();
+    const {showSnackbar} = useSnackbar();
 
     useEffect(() => {
         const fetchDatasets = async () => {
@@ -95,31 +95,33 @@ const DownloadStep = ({ onDatasetDownloaded, onDatasetsFetched, downloadedDatase
     };
 
     return (
-        <Card variant="outlined" sx={{ width: 1000, padding: 4 }}>
-            <Typography level="h2" mb={1} sx={{ textAlign: "center" }}>
+        <Box>
+            <Typography level="h2" mb={2} sx={{textAlign: "start"}}>
                 Download Datasets
             </Typography>
-            <Box sx={{ textAlign: "center", mb: 1 }}>
-                <Typography level="body1">
-                    In this step, you need to download the original datasets provided. The datasets contain sensitive
-                    information, and your goal is to apply a data privatization method of your choice to ensure the privacy
-                    and security of the data.
-                </Typography>
-            </Box>
+            <Typography sx={{marginY: 1, p: 1}} variant='soft'
+                        color='neutral' level="body1">
+                <Stack spacing={2}>
+                    <Typography>
+                        Please download all the original datasets provided. The datasets contain sensitive
+                        information, and your goal is to apply a data privatization method of your choice to ensure the
+                        privacy
+                        and security of the data.
+                    </Typography>
 
-            <Box sx={{ textAlign: "center", mb: 1 }}>
-                <Typography level="body1">
-                    Once the privatization process is complete, save the resulting privatized datasets. You will need to
-                    upload them in the final step of this workflow. Ensure that the privatized datasets align with the
-                    required format and adhere to the constraints specified for upload compatibility.
-                </Typography>
-            </Box>
+                    <Typography>
+                        Once the privatization process is complete, save the resulting privatized datasets. You will
+                        need to
+                        upload them in the final step of this workflow. Ensure that the privatized datasets align with
+                        the
+                        required format and adhere to the constraints specified for upload compatibility.
+                    </Typography>
+                </Stack>
+            </Typography>
 
-            <Box sx={{ textAlign: "center", mb: 1 }}>
-                <Typography level="body1" sx={{ fontWeight: "bold" }}>
-                    Please make sure you have downloaded the datasets before proceeding to the next step!
-                </Typography>
-            </Box>
+
+
+
 
             <DatasetsTable
                 datasets={datasets}
@@ -128,20 +130,25 @@ const DownloadStep = ({ onDatasetDownloaded, onDatasetsFetched, downloadedDatase
                 handleToggleSelect={handleToggleSelect}
                 handleSelectAll={handleSelectAll}
             />
+            <Typography sx={{p: 1}} startDecorator={<InfoOutlined/>} variant='soft'
+                        color='neutral' level="body1">
+                Please make sure you have downloaded the datasets before proceeding to the next step!
+            </Typography>
 
-            <Box sx={{ mt: 3, textAlign: "center" }}>
+            <Box sx={{mt: 3, textAlign: "center"}}>
                 <Button
+                    fullWidth
                     variant="solid"
-                    size="lg"
-                    startDecorator={<CloudDownload />}
+                    startDecorator={<CloudDownload/>}
                     onClick={handleDownloadSelected}
                     disabled={selectedDatasets.length === 0}
                 >
                     Download Selected Datasets
                 </Button>
             </Box>
-        </Card>
-    );
+        </Box>
+    )
+        ;
 };
 
 export default DownloadStep;
