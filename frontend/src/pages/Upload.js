@@ -1,19 +1,19 @@
-import React, { useState, useEffect } from "react";
-import { Box, Button } from "@mui/joy";
-import {East, Publish, West} from "@mui/icons-material";
-import { useLocation } from "react-router-dom";
-import { useSnackbar } from "../contexts/SnackbarProvider";
-import SubmissionStepper from "../components/submission/SubmissionStepper";
+import React, {useState, useEffect} from "react";
+import {Box, Button} from "@mui/joy";
+import { Done, East, West} from "@mui/icons-material";
+import {useLocation} from "react-router-dom";
+import {useSnackbar} from "../contexts/SnackbarProvider";
 import DownloadStep from "../components/submission/DownloadStep";
 import MetadataStep from "../components/submission/MetadataStep";
 import UploadStep from "../components/submission/UploadStep";
 import FinalStep from "../components/submission/FinalStep";
 import {getUserSubmissions} from '../services/RankingsService';
+import {SideNaveSubmission} from "../components/submission/SideNaveSubmission";
 
 
 const Upload = () => {
     const location = useLocation();
-    const { state } = location;
+    const {state} = location;
 
     const [currentStep, setCurrentStep] = useState(state?.currentStep || 0);
     const [submissionId, setSubmissionId] = useState(state?.submissionId || null);
@@ -22,7 +22,7 @@ const Upload = () => {
     const [uploadedFiles, setUploadedFiles] = useState({});
     const [metadata, setMetadata] = useState(state?.metadata || null);
 
-    const { showSnackbar } = useSnackbar();
+    const {showSnackbar} = useSnackbar();
 
     const fetchUserSubmission = async () => {
         try {
@@ -100,55 +100,63 @@ const Upload = () => {
     };
 
     return (
-        <Box display="flex" height="100vh">
-            {/* Stepper Component */}
-            <SubmissionStepper currentStep={currentStep} handleStepClick={handleStepClick} />
+        <Box sx={{
+            display: 'flex',
+            minHeight: "calc(100vh - 65.5px)",
+            bgcolor: 'background.body',
+            marginTop: '-10px',
+            marginBottom: '-40px',
+            marginLeft: '-40px',
+            marginRight: '-40px'
+        }}>
 
-            {/* Step Content */}
-            <Box
-                flex={1}
-                display="flex"
-                flexDirection="column"
-                alignItems="center"
-                justifyContent="center"
-                sx={{
-                    overflowY: "auto",
-                    maxHeight: "100vh",
-                }}
-            >
-                {/* Navigation Buttons */}
-                <Box display="flex" justifyContent="center" gap={5} mb={2}>
+            <SideNaveSubmission currentStep={currentStep} handleStepClick={handleStepClick}/>
+
+            <Box sx={{flex: 1, p: 3}}>
+
+                {currentStep !== 3 && <Box
+                    sx={{
+                        position: "fixed",
+                        bottom: 0,
+                        left: 0,
+                        marginLeft: '260px',
+                        width: "calc(100vw - 260px )",
+                        p: 3,
+                        display: "flex",
+                        justifyContent: "flex-end",
+                        gap: 2,
+                        bgcolor: 'white',
+                        // borderTop: '1px solid',
+                        // borderColor: 'divider',
+                    }}
+                >
                     <Button
+                        sx={{width: '133px'}}
                         variant="soft"
+                        color='neutral'
                         onClick={() => setCurrentStep((prev) => prev - 1)}
-                        startDecorator={<West />}
+                        startDecorator={<West/>}
                         disabled={currentStep === 0}
-                        sx={{ fontSize: "1.2rem" }}
+                        size='lg'
                     >
                         Back
                     </Button>
                     <Button
-                        variant="soft"
+                        sx={{width: '133px'}}
+                        variant="solid"
+                        color={currentStep === 2 ? 'success': 'primary' }
                         onClick={handleNext}
-                        endDecorator={currentStep === 2 ? <Publish /> : <East />}
-                        disabled={currentStep === 3}
-                        sx={{ fontSize: "1.2rem" }}
+                        endDecorator={currentStep === 2 ? <Done/> : <East/>}
+                        size='lg'
                     >
                         {currentStep === 2 ? "Submit" : "Next"}
                     </Button>
-                </Box>
+                </Box>}
 
-
-                {/* Step Components */}
                 <Box
                     flex={1}
                     width="100%"
-                    maxWidth="1050px"
-                    overflow="auto"
                     padding={2}
-                    boxShadow="sm"
-                    bgcolor="background.surface"
-                    borderRadius="sm"
                     sx={{
                         maxHeight: "calc(100vh - 80px)",
                     }}
@@ -187,7 +195,7 @@ const Upload = () => {
                         />
                     )}
 
-                    {currentStep === 3 && <FinalStep />}
+                    {currentStep === 3 && <FinalStep/>}
                 </Box>
             </Box>
         </Box>

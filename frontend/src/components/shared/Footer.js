@@ -9,7 +9,10 @@ const Footer = () => {
                 py: 2,
                 bottom: 0,
                 width: '100%',
-                mt: 'auto'
+                mt: 'auto',
+                bgcolor: 'background.surface',
+                borderTop: '1px solid',
+                borderColor: 'divider',
             }}
         >
             <Typography level="body2" textColor="text.primary">
