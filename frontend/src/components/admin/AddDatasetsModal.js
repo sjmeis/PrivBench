@@ -14,26 +14,28 @@ import {
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import React, {useEffect, useState} from "react";
 import {fetchAllDatasets} from "../../services/DatasetService";
-import { Close,} from "@mui/icons-material";
+import { Close } from "@mui/icons-material";
 
 const AddDatasetsModal = ({isOpen, onClose, onSubmit}) => {
     const [datasets, setDatasets] = useState([]);
-    const [selectedDataset, setSelectedDataset] = useState();
+    const [selectedDataset, setSelectedDataset] = useState(null);
     const [uploadedDataset, setUploadedDataset] = useState(null);
 
     const handleFileChange = (e) => {
-        setUploadedDataset(e.target.files[0])
+        if (e.target.files && e.target.files[0]) {
+            setUploadedDataset(e.target.files[0]);
+        }
     };
 
     useEffect(() => {
         fetchAllDatasets()
-            .then((datasets) => setDatasets(datasets))//todo: filter out already selected datasets
+            .then((datasets) => setDatasets(datasets))
             .catch((error) => console.error(error));
     }, []);
 
     useEffect(() => {
         if (isOpen) {
-            setSelectedDataset([]);
+            setSelectedDataset(null);
             setUploadedDataset(null);
         }
     }, [isOpen]);
@@ -60,7 +62,7 @@ const AddDatasetsModal = ({isOpen, onClose, onSubmit}) => {
                             <Stack direction='row' spacing={1}>
                                 <Select
                                     sx={{width: '100%'}}
-                                    disabled={uploadedDataset}
+                                    disabled={Boolean(uploadedDataset)}
                                     value={selectedDataset}
                                     onChange={(e, newValue) => setSelectedDataset(newValue)}
                                     placeholder="Choose datasets"
@@ -71,29 +73,52 @@ const AddDatasetsModal = ({isOpen, onClose, onSubmit}) => {
                                         </Option>
                                     ))}
                                 </Select>
-                                {selectedDataset && <IconButton onClick={() => setSelectedDataset(null)} color='danger'
-                                                            variant='outlined'><Close/></IconButton>}
+                                {selectedDataset && (
+                                    <IconButton 
+                                        onClick={() => setSelectedDataset(null)} 
+                                        color='danger'
+                                        variant='outlined'
+                                    >
+                                        <Close/>
+                                    </IconButton>
+                                )}
                             </Stack>
                         </FormControl>
                         <Divider>or</Divider>
-                        {/*//fixme: implement upload functionality*/}
                         <FormControl>
                             <FormLabel>Upload New Dataset</FormLabel>
                             <Stack direction='row' spacing={1}>
-                                <Button disabled={selectedDataset}
-                                        fullWidth
-                                        component="label"
-                                        variant="outlined"
-                                        color="neutral"
-                                        startDecorator={<CloudUploadIcon/>}
+                                <Button
+                                    disabled={Boolean(selectedDataset)}
+                                    fullWidth
+                                    component="label"
+                                    variant="outlined"
+                                    color="neutral"
+                                    startDecorator={<CloudUploadIcon/>}
                                 >
-                                    {uploadedDataset
+                                    {uploadedDataset 
                                         ? `Uploaded: ${uploadedDataset.name}`
                                         : 'Upload a csv file'}
-                                    <input type="file" accept=".csv" hidden onChange={handleFileChange}/>
+                                    <input 
+                                        type="file" 
+                                        accept=".csv" 
+                                        hidden 
+                                        onChange={handleFileChange}
+                                        onClick={(e) => {
+                                            // Reset the value to allow selecting the same file again
+                                            e.target.value = '';
+                                        }}
+                                    />
                                 </Button>
-                                {uploadedDataset && <IconButton onClick={() => setUploadedDataset(null)} color='danger'
-                                                            variant='outlined'><Close/></IconButton>}
+                                {uploadedDataset && (
+                                    <IconButton 
+                                        onClick={() => setUploadedDataset(null)} 
+                                        color='danger'
+                                        variant='outlined'
+                                    >
+                                        <Close/>
+                                    </IconButton>
+                                )}
                             </Stack>
                         </FormControl>
                     </Stack>
