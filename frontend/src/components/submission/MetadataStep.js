@@ -1,16 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
-    Button,
-    Card,
-    FormControl,
-    Input,
-    Textarea,
-    Typography,
-    Select,
-    Option,
-    Checkbox,
-} from "@mui/joy";
-import { Save } from "@mui/icons-material";
+import MetadataCard from "./MetadataCard";
 import { useSnackbar } from "../../contexts/SnackbarProvider";
 
 const MetadataStep = ({ initialMetadata, submissionId, onMetadataSave }) => {
@@ -27,23 +16,15 @@ const MetadataStep = ({ initialMetadata, submissionId, onMetadataSave }) => {
 
     const [shouldDownload, setShouldDownload] = useState(false);
     const { showSnackbar } = useSnackbar();
-    // Mock data for dropdowns
+
     const licenseOptions = ["MIT", "Apache 2.0", "GPLv3", "BSD"];
 
-    // Set initial metadata if provided
+    // Initialize metadata if provided
     useEffect(() => {
         if (initialMetadata) {
             setMetadata(initialMetadata);
         }
     }, [initialMetadata]);
-
-    // Handle input changes
-    const handleChange = (field, value) => {
-        setMetadata((prevState) => ({
-            ...prevState,
-            [field]: value,
-        }));
-    };
 
     // Handle saving metadata
     const handleSave = async () => {
@@ -52,24 +33,14 @@ const MetadataStep = ({ initialMetadata, submissionId, onMetadataSave }) => {
                 handleDownload();
             }
 
-            const isUpdate = !!submissionId; // Determine whether it's an update or create request
+            const isUpdate = !!submissionId;
             const endpoint = `http://localhost:5000/metadata`;
-
             const method = isUpdate ? "PUT" : "POST";
 
             const body = isUpdate
                 ? JSON.stringify({
                     id: submissionId,
-                    metadata: {
-                        modelName: metadata.modelName,
-                        modelDescription: metadata.modelDescription,
-                        license: metadata.license,
-                        tags: metadata.tags,
-                        authors: metadata.authors,
-                        researchPaperUrl: metadata.researchPaperUrl,
-                        githubUrl: metadata.githubUrl,
-                        bibtexCitation: metadata.bibtexCitation,
-                    },
+                    metadata,
                 })
                 : JSON.stringify(metadata);
 
@@ -106,13 +77,9 @@ const MetadataStep = ({ initialMetadata, submissionId, onMetadataSave }) => {
             }
         } catch (error) {
             console.error("Error saving/updating metadata:", error);
-            showSnackbar(
-                "Failed to save metadata. Please try again!",
-                "error"
-            );
+            showSnackbar("Failed to save metadata. Please try again!", "error");
         }
     };
-
 
     // Generate Markdown content
     const generateMarkdown = () => `
@@ -155,121 +122,15 @@ ${metadata.bibtexCitation || "More information needed"}
     };
 
     return (
-        <Card variant="outlined" sx={{ width: 800, padding: 4 }}>
-            <Typography level="h2" mb={2} sx={{ textAlign: "center" }}>
-                Model Metadata
-            </Typography>
-
-            <FormControl>
-                <Typography level="body1" sx={{ marginTop: 1 }}>
-                    Model Name
-                </Typography>
-                <Input
-                    placeholder="Enter the model name"
-                    value={metadata.modelName}
-                    onChange={(e) => handleChange("modelName", e.target.value)}
-                    sx={{ marginBottom: 1, bgcolor: "grey.200" }}
-                />
-
-                <Typography level="body1" sx={{ marginTop: 1 }}>
-                    Model Description
-                </Typography>
-                <Textarea
-                    placeholder="Provide a detailed description of the model"
-                    value={metadata.modelDescription}
-                    onChange={(e) => handleChange("modelDescription", e.target.value)}
-                    minRows={4}
-                    sx={{ marginBottom: 1, bgcolor: "grey.200" }}
-                />
-
-                <Typography level="body1" sx={{ marginTop: 1 }}>
-                    License
-                </Typography>
-                <Select
-                    placeholder="Select a license"
-                    value={metadata.license}
-                    onChange={(e, value) => handleChange("license", value)}
-                    sx={{ marginBottom: 1, bgcolor: "grey.200" }}
-                >
-                    {licenseOptions.map((license) => (
-                        <Option key={license} value={license}>
-                            {license}
-                        </Option>
-                    ))}
-                </Select>
-
-                <Typography level="body1" sx={{ marginTop: 2 }}>
-                    Tags
-                </Typography>
-                <Input
-                    placeholder="Enter tags (comma-separated)"
-                    value={metadata.tags}
-                    onChange={(e) => handleChange("tags", e.target.value)}
-                    sx={{ marginBottom: 1, bgcolor: "grey.200" }}
-                />
-
-                <Typography level="body1" sx={{ marginTop: 2 }}>
-                    Author(s)
-                </Typography>
-                <Input
-                    placeholder="Enter authors (comma-separated)"
-                    value={metadata.authors}
-                    onChange={(e) => handleChange("authors", e.target.value)}
-                    sx={{ marginBottom: 1, bgcolor: "grey.200" }}
-                />
-
-                <Typography level="body1" sx={{ marginTop: 1 }}>
-                    Related Research Paper
-                </Typography>
-                <Input
-                    placeholder="Provide the URL to the research paper"
-                    value={metadata.researchPaperUrl}
-                    onChange={(e) => handleChange("researchPaperUrl", e.target.value)}
-                    sx={{ marginBottom: 1, bgcolor: "grey.200" }}
-                />
-
-                <Typography level="body1" sx={{ marginTop: 1 }}>
-                    Related GitHub Repository
-                </Typography>
-                <Input
-                    placeholder="Provide the URL to the GitHub repository"
-                    value={metadata.githubUrl}
-                    onChange={(e) => handleChange("githubUrl", e.target.value)}
-                    sx={{ marginBottom: 1, bgcolor: "grey.200" }}
-                />
-
-                <Typography level="body1" sx={{ marginTop: 1 }}>
-                    Bibtex Citation
-                </Typography>
-                <Textarea
-                    placeholder="Provide the Bibtex citation"
-                    value={metadata.bibtexCitation}
-                    onChange={(e) => handleChange("bibtexCitation", e.target.value)}
-                    minRows={4}
-                    sx={{ marginBottom: 1, bgcolor: "grey.200" }}
-                />
-
-                <Checkbox
-                    checked={shouldDownload}
-                    onChange={(e) => setShouldDownload(e.target.checked)}
-                    label="Download model card as markdown"
-                    sx={{ mt: 1 }}
-                />
-                <Button
-                    variant="solid"
-                    size="lg"
-                    color="primary"
-                    onClick={handleSave}
-                    sx={{ mt: 2 }}
-                    startDecorator={<Save />}
-                >
-                    Save Metadata
-                </Button>
-            </FormControl>
-        </Card>
+        <MetadataCard
+            metadata={metadata}
+            setMetadata={setMetadata}
+            licenseOptions={licenseOptions}
+            handleSave={handleSave}
+            shouldDownload={shouldDownload}
+            setShouldDownload={setShouldDownload}
+        />
     );
 };
 
 export default MetadataStep;
-
-

@@ -7,7 +7,6 @@ import {AuthProvider} from './contexts/AuthContext';
 
 // Components
 import Navbar from "./components/shared/Navbar";
-import Footer from "./components/shared/Footer";
 
 // Pages
 import Home from "./pages/Home";
@@ -61,7 +60,6 @@ function App() {
                                 </Route>
                             </Routes>
                         </Box>
-                        <Footer/>
                     </Box>
                 </CssVarsProvider>
             </AuthProvider>
