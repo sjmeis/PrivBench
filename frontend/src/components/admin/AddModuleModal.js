@@ -29,6 +29,7 @@ const AddModuleModal = ({isOpen, onClose, onSubmit, onError}) => {
         name: "",
         description: "",
         algorithmFile: null,
+        requirementsFile: null,
         selectedDatasets: [],
         uploadedDatasets: [],
     });
@@ -38,6 +39,7 @@ const AddModuleModal = ({isOpen, onClose, onSubmit, onError}) => {
             name: "",
             description: "",
             algorithmFile: null,
+            requirementsFile: null,
             selectedDatasets: [],
             uploadedDatasets: [],
         })
@@ -48,7 +50,7 @@ const AddModuleModal = ({isOpen, onClose, onSubmit, onError}) => {
             formData.description.trim() &&
             formData.algorithmFile &&
             (formData.selectedDatasets.length > 0 || formData.uploadedDatasets.length > 0);
-    }
+    };
 
     const handleInputChange = (e) => {
         const {name, value} = e.target;
@@ -178,6 +180,24 @@ const AddModuleModal = ({isOpen, onClose, onSubmit, onError}) => {
                                         />
                                     </Button>
                                 </FormControl>
+                                <FormControl>
+                                <FormLabel>Requirements File</FormLabel>
+                                <Button
+                                    variant="outlined"
+                                    startDecorator={<CloudUploadIcon/>}
+                                    component="label"
+                                >
+                                    {formData.requirementsFile
+                                        ? `Uploaded: ${formData.requirementsFile.name}`
+                                        : 'Upload requirements.txt'}
+                                    <input
+                                        type="file"
+                                        accept=".txt"
+                                        hidden
+                                        onChange={(e) => setFormData({...formData, requirementsFile: e.target.files[0]})}
+                                    />
+                                </Button>
+                            </FormControl>
                             </Stack>
                         </Box>
 

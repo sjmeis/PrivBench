@@ -66,25 +66,41 @@ def run_benchmark_task(self, module_path, module_name, dataset_path, priv_datase
                                'totalRows': total_rows})
 
         # Create a progress callback for the benchmark
-        def progress_callback(processed_rows):
+        def progress_callback(processed_rows, score=None):
+            current_meta = {
+                'current': 30 + int((processed_rows / total_rows) * 70),
+                'total': total_steps,
+                'status': f'Processing {processed_rows}/{total_rows} rows...',
+                'processedRows': processed_rows,
+                'totalRows': total_rows,
+                'score': score  # Include score in state update
+            }
             self.update_state(
                 state='PROGRESS',
-                meta={
-                    'current': 30 + int((processed_rows / total_rows) * 70),
-                    'total': total_steps,
-                    'status': f'Processing {processed_rows}/{total_rows} rows...',
-                    'processedRows': processed_rows,
-                    'totalRows': total_rows
-                }
+                meta=current_meta
             )
 
-        # Pass the callback to the benchmark instance
+        # After getting the score:
         score = run_benchmark(
             module_path,
+            module_id,
             module_name,
             dataset_path,
             priv_dataset_path,
             progress_callback
+        )
+
+        # Immediately update the task state with the score
+        self.update_state(
+            state='PROGRESS',
+            meta={
+                'current': 90,
+                'total': total_steps,
+                'status': 'Processing complete, saving results...',
+                'processedRows': total_rows,
+                'totalRows': total_rows,
+                'score': float(score)
+            }
         )
 
         logger.info(f"Benchmark completed with score: {score}")
