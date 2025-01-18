@@ -37,7 +37,7 @@ const UploadTable = ({ datasets, uploadedFiles, uploadingDatasetId, onFileSelect
                     columns !== originalDimensions.columns
                 ) {
                     showSnackbar(
-                        "Error! Please make sure you to upload the correct file!",
+                        "Error! Please make sure to upload the correct file!",
                         "error"
                     );
                     return;
@@ -86,7 +86,7 @@ const UploadTable = ({ datasets, uploadedFiles, uploadingDatasetId, onFileSelect
                                     <input
                                         type="file"
                                         accept=".csv"
-                                        onChange={(e) => handleFileSelect(e, dataset.id)}  // Use the modified file select handler
+                                        onChange={(e) => handleFileSelect(e, dataset.id)}
                                         style={{ display: "none" }}
                                     />
                                 </Button>
