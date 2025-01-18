@@ -1,19 +1,18 @@
-import React, {useState, useEffect} from "react";
-import {Box, Button} from "@mui/joy";
-import { Done, East, West} from "@mui/icons-material";
-import {useLocation} from "react-router-dom";
-import {useSnackbar} from "../contexts/SnackbarProvider";
+import React, { useState, useEffect } from "react";
+import { Box, Button } from "@mui/joy";
+import { Done, East, West } from "@mui/icons-material";
+import { useLocation } from "react-router-dom";
+import { useSnackbar } from "../contexts/SnackbarProvider";
 import DownloadStep from "../components/submission/DownloadStep";
 import MetadataStep from "../components/submission/MetadataStep";
 import UploadStep from "../components/submission/UploadStep";
 import FinalStep from "../components/submission/FinalStep";
-import {getUserSubmissions} from '../services/RankingsService';
-import {SideNaveSubmission} from "../components/submission/SideNaveSubmission";
-
+import { getUserSubmissions } from "../services/RankingsService";
+import { SideNaveSubmission } from "../components/submission/SideNaveSubmission";
 
 const Upload = () => {
     const location = useLocation();
-    const {state} = location;
+    const { state } = location;
 
     const [currentStep, setCurrentStep] = useState(state?.currentStep || 0);
     const [submissionId, setSubmissionId] = useState(state?.submissionId || null);
@@ -22,7 +21,7 @@ const Upload = () => {
     const [uploadedFiles, setUploadedFiles] = useState({});
     const [metadata, setMetadata] = useState(state?.metadata || null);
 
-    const {showSnackbar} = useSnackbar();
+    const { showSnackbar } = useSnackbar();
 
     const fetchUserSubmission = async () => {
         try {
@@ -53,22 +52,59 @@ const Upload = () => {
         }
     }, [currentStep]);
 
-
     useEffect(() => {
         const fetchDatasets = async () => {
             try {
-                const response = await fetch("http://localhost:5000/datasets/list");
-                if (!response.ok) {
-                    const errorData = await response.json();
+                const listResponse = await fetch("http://localhost:5000/datasets/list", {
+                    credentials: "include",
+                    cache: "no-cache",
+                });
+                if (!listResponse.ok) {
+                    const errorData = await listResponse.json();
                     console.error("Failed to fetch datasets:", errorData.error);
                     return;
                 }
-                const data = await response.json();
-                setDatasets(data.datasets);
+
+                const data = await listResponse.json();
+
+                const datasetsWithDetails = await Promise.all(
+                    data.datasets.map(async (dataset) => {
+                        try {
+                            const contentResponse = await fetch(
+                                `http://localhost:5000/datasets/${encodeURIComponent(dataset.name)}`,
+                                {
+                                    credentials: "include",
+                                    cache: "no-cache",
+                                }
+                            );
+
+                            if (!contentResponse.ok) {
+                                console.error(`Failed to fetch content for dataset ${dataset.name}`);
+                                return { ...dataset, rows: 0, columns: 0 };
+                            }
+
+                            const content = await contentResponse.text();
+                            const rows = content.trim().split("\n"); // Split by newline
+                            const columns = rows[0]?.split(",").length || 0; // Use the first row for column count
+
+                            return {
+                                ...dataset,
+                                rows: rows.length, // Exclude header row
+                                columns,
+                            };
+                        } catch (error) {
+                            console.error(`Error fetching dataset ${dataset.name}:`, error);
+                            return { ...dataset, rows: 0, columns: 0 };
+                        }
+                    })
+                );
+
+                setDatasets(datasetsWithDetails);
             } catch (error) {
-                console.error("An error occurred:", error);
+                console.error("An error occurred while fetching datasets:", error);
             }
         };
+
         fetchDatasets();
     }, []);
 
@@ -100,58 +136,58 @@ const Upload = () => {
     };
 
     return (
-        <Box sx={{
-            display: 'flex',
-            minHeight: "calc(100vh - 65.5px)",
-            bgcolor: 'background.body',
-            marginTop: '-10px',
-            marginBottom: '-40px',
-            marginLeft: '-40px',
-            marginRight: '-40px'
-        }}>
+        <Box
+            sx={{
+                display: "flex",
+                minHeight: "calc(100vh - 65.5px)",
+                bgcolor: "background.body",
+                marginTop: "-10px",
+                marginBottom: "-40px",
+                marginLeft: "-40px",
+                marginRight: "-40px",
+            }}
+        >
+            <SideNaveSubmission currentStep={currentStep} handleStepClick={handleStepClick} />
 
-            <SideNaveSubmission currentStep={currentStep} handleStepClick={handleStepClick}/>
-
-            <Box sx={{flex: 1, p: 3}}>
-
-                {currentStep !== 3 && <Box
-                    sx={{
-                        position: "fixed",
-                        bottom: 0,
-                        left: 0,
-                        marginLeft: '260px',
-                        width: "calc(100vw - 260px )",
-                        p: 3,
-                        display: "flex",
-                        justifyContent: "flex-end",
-                        gap: 2,
-                        bgcolor: 'white',
-                        // borderTop: '1px solid',
-                        // borderColor: 'divider',
-                    }}
-                >
-                    <Button
-                        sx={{width: '133px'}}
-                        variant="soft"
-                        color='neutral'
-                        onClick={() => setCurrentStep((prev) => prev - 1)}
-                        startDecorator={<West/>}
-                        disabled={currentStep === 0}
-                        size='lg'
+            <Box sx={{ flex: 1, p: 3 }}>
+                {currentStep !== 3 && (
+                    <Box
+                        sx={{
+                            position: "fixed",
+                            bottom: 0,
+                            left: 0,
+                            marginLeft: "260px",
+                            width: "calc(100vw - 260px )",
+                            p: 3,
+                            display: "flex",
+                            justifyContent: "flex-end",
+                            gap: 2,
+                        }}
                     >
-                        Back
-                    </Button>
-                    <Button
-                        sx={{width: '133px'}}
-                        variant="solid"
-                        color={currentStep === 2 ? 'success': 'primary' }
-                        onClick={handleNext}
-                        endDecorator={currentStep === 2 ? <Done/> : <East/>}
-                        size='lg'
-                    >
-                        {currentStep === 2 ? "Submit" : "Next"}
-                    </Button>
-                </Box>}
+                        <Button
+                            sx={{ width: "133px" }}
+                            variant="soft"
+                            color="neutral"
+                            onClick={() => setCurrentStep((prev) => prev - 1)}
+                            startDecorator={<West />}
+                            disabled={currentStep === 0}
+                            size="lg"
+                        >
+                            Back
+                        </Button>
+
+                        <Button
+                            sx={{ width: "133px" }}
+                            variant="solid"
+                            color={currentStep === 2 ? "success" : "primary"}
+                            onClick={handleNext}
+                            endDecorator={currentStep === 2 ? <Done /> : <East />}
+                            size="lg"
+                        >
+                            {currentStep === 2 ? "Submit" : "Next"}
+                        </Button>
+                    </Box>
+                )}
 
                 <Box
                     flex={1}
@@ -195,7 +231,7 @@ const Upload = () => {
                         />
                     )}
 
-                    {currentStep === 3 && <FinalStep/>}
+                    {currentStep === 3 && <FinalStep />}
                 </Box>
             </Box>
         </Box>
@@ -203,3 +239,4 @@ const Upload = () => {
 };
 
 export default Upload;
+
