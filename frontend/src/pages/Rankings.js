@@ -26,10 +26,11 @@ import {getGravatarUrl} from "../utils/Gravatar";
 import {getDateString, isNewDate} from "../utils/Date";
 import {formatToTwoDecimals} from "../utils/FormatUtils";
 import {useAuth} from "../contexts/AuthContext";
+import {SubmissionStatus} from "../enums/SubmissionStatus";
 
 const headCells = [
-    {id: "status", numeric: false, label: "", width: "5%"},
-    {id: "score", numeric: true, label: "Privacy Score", width: "15%"},
+    {id: "status", numeric: false, label: "", width: "8%"},
+    {id: "score", numeric: true, label: "Privacy Score", width: "12%"},
     {id: "name", numeric: false, label: "Privatization Method", width: "20%"},
     {id: "submissionDate", numeric: false, label: "Submission Date", width: "20%"},
     {id: "username", numeric: false, label: "Submitted By", width: "18%"},
@@ -118,6 +119,11 @@ const Rankings = () => {
        }
        return userId === user.id;
     }
+
+    const isSubmissionOutdated = (status) => {
+        return status === SubmissionStatus.OUTDATED;
+    }
+
     return (
         <Box>
             <Box sx={{display: "flex", alignItems: "center"}}>
@@ -211,11 +217,17 @@ const Rankings = () => {
                     {rankings.map((row) => (
                         <tr style={{ backgroundColor: isCurrentUser(row.user.id) ? 'var(--joy-palette-background-level1)': 'inherit'}}  key={row.id}>
                             <td>
-                                {isNewDate(row.submissionDate) && (
+                                {isNewDate(row.submissionDate) && !isSubmissionOutdated(row.status) && (
                                     <Chip color="success" variant="soft">
                                         New
                                     </Chip>
                                 )}
+                                {isSubmissionOutdated(row.status) && (
+                                    <Chip color="danger" variant="soft">
+                                        Outdated
+                                    </Chip>
+                                )}
+
                             </td>
                             <td>{formatToTwoDecimals(row.overallScore)}</td>
                             <td>{row.name}</td>

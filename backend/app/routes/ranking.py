@@ -2,11 +2,12 @@ from flask import Blueprint, request, jsonify, make_response, current_app
 from ..models import User, Submission, SubmissionMetadata, BenchmarkModule, BenchmarkScore
 from .. import db
 from ..enums import SubmissionStatus
-from sqlalchemy import or_
+from sqlalchemy import or_, and_
 from flask_jwt_extended import (
     get_jwt_identity,
     jwt_required,
 )
+from datetime import datetime, timedelta
 
 ranking_bp = Blueprint('ranking', __name__)
 
@@ -146,8 +147,16 @@ def get_all_filtered():
             db.session.query(Submission)
             .join(User)
             .filter(
-                Submission.status == SubmissionStatus.COMPLETED,
-                Submission.is_public == True  # Ensure submission is public
+                or_(
+                    and_(
+                        Submission.status == SubmissionStatus.COMPLETED,
+                        Submission.is_public == True  # Ensure submission is public
+                    ),
+                    and_(
+                        Submission.status == SubmissionStatus.OUTDATED,
+                        Submission.outdated_at >= datetime.utcnow() - timedelta(days=3)  # Check if outdated within last 3 days
+                    )
+                )
             )
         )
 
