@@ -3,7 +3,7 @@ import IconButton from "@mui/joy/IconButton";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import {getDateTimeString} from "../../utils/Date";
-import {Chip} from "@mui/joy";
+import {Button, Chip} from "@mui/joy";
 import Switch from "@mui/joy/Switch";
 import Sheet from "@mui/joy/Sheet";
 import Table from "@mui/joy/Table";
@@ -16,14 +16,19 @@ const statusColor = (status) => {
         case SubmissionStatus.COMPLETED:
             return 'success';
         case SubmissionStatus.FAILED:
+        case SubmissionStatus.OUTDATED:
             return 'danger';
         default:
             return 'neutral';
     }
 }
 
-const UserSubmissionsTableRow = ({row, onTogglePublic}) => {
+const UserSubmissionsTableRow = ({row, onTogglePublic, onUpdateSubmission}) => {
     const [open, setOpen] = React.useState(false);
+
+    const onUpdateSubmissionClick = (submissionId) => {
+        onUpdateSubmission(submissionId)
+    }
 
     return (
         <React.Fragment>
@@ -44,13 +49,20 @@ const UserSubmissionsTableRow = ({row, onTogglePublic}) => {
                 <td><Chip color={statusColor(row.status)}>{row.status}</Chip></td>
                 <td>{row.overallScore !== null ? row.overallScore : 'N/A'}</td>
                 <td align="center">
-                    {row.status !== SubmissionStatus.COMPLETED ? <></> :
+                    {row.status == SubmissionStatus.COMPLETED &&
                         <Switch
                             color="success"
                             variant='soft'
                             checked={row.isPublic}
                             onClick={() => onTogglePublic(row.id, !row.isPublic)}
                         />}
+                    {row.status == SubmissionStatus.OUTDATED &&
+                        <Button
+                            color="success"
+                            size='md'
+                            variant='soft'
+                            onClick={() => onUpdateSubmissionClick(row.id)}
+                        >Update</Button>}
                 </td>
             </tr>
             <tr>
