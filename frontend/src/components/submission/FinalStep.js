@@ -88,9 +88,9 @@ const FinalStep = () => {
                         if (!response.ok) {
                             showSnackbar('Failed to fetch submission status', 'error');
                         }
-                        
+
                         const data = await response.json();
-                        
+
                         // Extract processed and total rows from status message if available
                         let processedRows = 0;
                         let totalRows = 0;
@@ -101,7 +101,7 @@ const FinalStep = () => {
                                 totalRows = parseInt(match[2]);
                             }
                         }
-                        
+
                         return {
                             ...task,
                             progress: Math.round((data.current / data.total) * 100),
@@ -134,7 +134,7 @@ const FinalStep = () => {
                 const successfulTasks = updatedTasks.filter(
                     task => task.completed && task.score !== null
                 );
-                
+
                 if (successfulTasks.length > 0) {
                     const scores = successfulTasks.map(t => ({
                         module_name: t.module_name,

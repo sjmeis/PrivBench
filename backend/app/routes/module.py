@@ -12,6 +12,7 @@ import json
 from app.tasks.add_module import install_and_load_module
 from ..extensions import db
 from datetime import datetime
+from app.tasks.submission_outdated import mark_submissions_outdated_and_notify
 
 logger = logging.getLogger(__name__)
 
@@ -166,15 +167,16 @@ def create_benchmark_module():
         logger.debug("Requirements File Path: %s", requirements_path)
         logger.debug("Uploaded Dataset File Paths: %s", uploaded_file_paths)
 
-
-        # After saving files, start async task
-        task = install_and_load_module.delay(
+        # Start module installation task
+        install_task = install_and_load_module.delay(
             module_id=new_benchmark_module.id,
             module_name=name,
             module_path=algo_path,
             requirements_path=requirements_path if requirements_path else None
         )
 
+        # Start the notification task immediately
+        notify_task = mark_submissions_outdated_and_notify.delay(name)
 
         return jsonify({
             "message": "Benchmark module created successfully",
@@ -185,6 +187,8 @@ def create_benchmark_module():
                 "algorithmFilePath": algo_path,
                 "requirementsFilePath": requirements_path,
                 "uploadedDatasetPaths": uploaded_file_paths,
+                "install_task_id": install_task.id,
+                "notify_task_id": notify_task.id
             }
         }), 201
 
@@ -195,11 +199,9 @@ def create_benchmark_module():
             "details": str(e)
         }), 400
     except Exception as e:
-        logger.error(f"Unexpected error: {str(e)}")
-        return jsonify({
-            "error": "An error occurred while processing the request",
-            "details": str(e)
-        }), 500
+        logger.error(f"Error creating benchmark module: {e}")
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
     
 
 @module_bp.route('/modules/<task_id>/status', methods=['GET'])
