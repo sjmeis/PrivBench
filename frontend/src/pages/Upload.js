@@ -250,7 +250,7 @@ const Upload = () => {
                             onClick={handleNext}
                             endDecorator={currentStep === 2 ? <Done /> : <East />}
                             size="lg"
-                            disabled={currentStep === 1 && !isMetadataValid || (currentStep === 2 && !datasets.every(dataset => uploadedFiles[dataset.id]))}
+                            disabled={(currentStep === 1 && !isMetadataValid) || (currentStep === 2 && !datasets.every(dataset => uploadedFiles[dataset.id]))}
                         >
                             {currentStep === 2 ? "Submit" : "Next"}
                         </Button>
