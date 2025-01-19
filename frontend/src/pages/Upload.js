@@ -19,8 +19,17 @@ const Upload = () => {
     const [downloadedDatasets, setDownloadedDatasets] = useState([]);
     const [datasets, setDatasets] = useState([]);
     const [uploadedFiles, setUploadedFiles] = useState({});
-    const [metadata, setMetadata] = useState(state?.metadata || null);
-
+    const [metadata, setMetadata] = useState({
+        modelName: "",
+        modelDescription: "",
+        license: "",
+        tags: [],
+        authors: "",
+        researchPaperUrl: "",
+        githubUrl: "",
+        bibtexCitation: "",
+    });
+    const [isMetadataValid, setIsMetadataValid] = useState(false);
     const { showSnackbar } = useSnackbar();
 
     const fetchUserSubmission = async () => {
@@ -112,27 +121,85 @@ const Upload = () => {
         setCurrentStep(step);
     };
 
-    const handleNext = () => {
-        if (currentStep === 1 && !submissionId) {
-            showSnackbar("Please save metadata!", "error");
-            return;
-        }
-
-        if (currentStep === 2) {
-            if (datasets.length > 0 && Object.keys(uploadedFiles).length < datasets.length) {
-                showSnackbar("Please upload the privatized datasets!", "error");
-                return;
-            }
-        }
-
-        setCurrentStep((prev) => prev + 1);
+    const validateMetadata = () => {
+        const requiredFields = [
+            "modelName",
+            "modelDescription",
+            "license",
+            "authors",
+            "researchPaperUrl",
+            "githubUrl",
+            "bibtexCitation",
+        ];
+        return requiredFields.every((field) => metadata[field] && metadata[field].trim().length > 0);
     };
 
-    const handleMetadataSave = (id, shouldIncreaseStep) => {
-        setSubmissionId(id);
-        if (shouldIncreaseStep) {
-            setCurrentStep((prev) => prev + 1);
+    useEffect(() => {
+        if (currentStep === 1) {
+            setIsMetadataValid(validateMetadata());
         }
+    }, [metadata, currentStep]);
+
+    const handleSaveMetadata = async () => {
+        try {
+            const isUpdate = Boolean(submissionId);
+            const endpoint = "http://localhost:5000/metadata";
+            const method = isUpdate ? "PUT" : "POST";
+
+            const body = isUpdate
+                ? JSON.stringify({
+                    id: submissionId,
+                    metadata,
+                })
+                : JSON.stringify(metadata);
+
+            const response = await fetch(endpoint, {
+                method,
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                credentials: "include",
+                body,
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                showSnackbar(
+                    isUpdate ? "Metadata updated successfully!" : "Metadata saved successfully!",
+                    "success"
+                );
+
+                if (!isUpdate && data.submission_id) {
+                    setSubmissionId(data.submission_id);
+                }
+
+                // Advance to the next step
+                setCurrentStep((prev) => prev + 1);
+            } else {
+                const errorData = await response.json().catch(() => ({}));
+                showSnackbar(
+                    `Failed to ${
+                        isUpdate ? "update" : "save"
+                    } metadata: ${errorData.message || response.statusText || "Unknown error"}`,
+                    "error"
+                );
+            }
+        } catch (error) {
+            console.error("Error saving/updating metadata:", error);
+            showSnackbar("Failed to save metadata. Please try again!", "error");
+        }
+    };
+
+    const handleNext = () => {
+        if (currentStep === 1) {
+            if (!isMetadataValid) {
+                showSnackbar("Please fill in all metadata fields!", "error");
+                return;
+            }
+            handleSaveMetadata();
+            return;
+        }
+        setCurrentStep((prev) => prev + 1);
     };
 
     return (
@@ -183,6 +250,7 @@ const Upload = () => {
                             onClick={handleNext}
                             endDecorator={currentStep === 2 ? <Done /> : <East />}
                             size="lg"
+                            disabled={currentStep === 1 && !isMetadataValid || (currentStep === 2 && !datasets.every(dataset => uploadedFiles[dataset.id]))}
                         >
                             {currentStep === 2 ? "Submit" : "Next"}
                         </Button>
@@ -211,9 +279,7 @@ const Upload = () => {
 
                     {currentStep === 1 && (
                         <MetadataStep
-                            initialMetadata={metadata}
-                            onMetadataSave={handleMetadataSave}
-                            submissionId={submissionId}
+                            metadata={metadata} setMetadata={setMetadata}
                         />
                     )}
 
@@ -239,4 +305,3 @@ const Upload = () => {
 };
 
 export default Upload;
-
