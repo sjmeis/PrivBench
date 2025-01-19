@@ -19,7 +19,7 @@ const UploadTable = ({ datasets, uploadedFiles, uploadingDatasetId, onFileSelect
                 const columns = rows[0].split(",").length;
 
                 // Store the calculated dimensions of the uploaded file
-                setUploadedDatasetDimensions(prevState => ({
+                    setUploadedDatasetDimensions(prevState => ({
                     ...prevState,
                     [datasetId]: {
                         rows: rows.length,
@@ -100,7 +100,3 @@ const UploadTable = ({ datasets, uploadedFiles, uploadingDatasetId, onFileSelect
 };
 
 export default UploadTable;
-
-
-
-

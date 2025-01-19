@@ -61,11 +61,3 @@ const UploadStep = ({ submissionId, datasets, uploadedFiles, onFileUploaded }) =
 };
 
 export default UploadStep;
-
-
-
-
-
-
-
-

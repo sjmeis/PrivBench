@@ -1,136 +1,177 @@
-import React, { useState, useEffect } from "react";
-import MetadataCard from "./MetadataCard";
-import { useSnackbar } from "../../contexts/SnackbarProvider";
+import React from "react";
+import {
+    FormControl,
+    Input,
+    Textarea,
+    Typography,
+    Select,
+    Option,
+    Box,
+} from "@mui/joy";
 
-const MetadataStep = ({ initialMetadata, submissionId, onMetadataSave }) => {
-    const [metadata, setMetadata] = useState({
-        modelName: "",
-        modelDescription: "",
-        license: "",
-        tags: [],
-        authors: "",
-        researchPaperUrl: "",
-        githubUrl: "",
-        bibtexCitation: "",
-    });
-
-    const [shouldDownload, setShouldDownload] = useState(false);
-    const { showSnackbar } = useSnackbar();
-
+const MetadataStep = ({ metadata, setMetadata }) => {
     const licenseOptions = ["MIT", "Apache 2.0", "GPLv3", "BSD"];
 
-    // Initialize metadata if provided
-    useEffect(() => {
-        if (initialMetadata) {
-            setMetadata(initialMetadata);
-        }
-    }, [initialMetadata]);
-
-    // Handle saving metadata
-    const handleSave = async () => {
-        try {
-            if (shouldDownload) {
-                handleDownload();
-            }
-
-            const isUpdate = !!submissionId;
-            const endpoint = `http://localhost:5000/metadata`;
-            const method = isUpdate ? "PUT" : "POST";
-
-            const body = isUpdate
-                ? JSON.stringify({
-                    id: submissionId,
-                    metadata,
-                })
-                : JSON.stringify(metadata);
-
-            const response = await fetch(endpoint, {
-                method,
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                credentials: "include",
-                body,
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                showSnackbar(
-                    isUpdate
-                        ? "Metadata updated successfully!"
-                        : "Metadata saved successfully!",
-                    "success"
-                );
-                if (!isUpdate) {
-                    onMetadataSave(data.submission_id, true);
-                } else {
-                    onMetadataSave(data.submission.id, true);
-                }
-            } else {
-                const errorData = await response.json();
-                showSnackbar(
-                    `Failed to ${
-                        isUpdate ? "update" : "save"
-                    } metadata: ${errorData.message || response.statusText}`,
-                    "error"
-                );
-            }
-        } catch (error) {
-            console.error("Error saving/updating metadata:", error);
-            showSnackbar("Failed to save metadata. Please try again!", "error");
-        }
-    };
-
-    // Generate Markdown content
-    const generateMarkdown = () => `
----
----
-
-# Model Card for ${metadata.modelName || "Unnamed Model"}
-
-${metadata.modelDescription || "Some cool model..."}
-
-## Model Details
-### License
-${metadata.license || "Unknown"}
-
-### Tags
-${metadata.tags || "None"}
-
-### Authors
-${metadata.authors || "None"}
-
-### Related Research Paper
-${metadata.researchPaperUrl || "None"}
-
-### Related GitHub Repository
-${metadata.githubUrl || "None"}
-
-## Citation
-### BibTeX
-${metadata.bibtexCitation || "More information needed"}
-`;
-
-    // Download Markdown file
-    const handleDownload = () => {
-        const markdownContent = generateMarkdown();
-        const blob = new Blob([markdownContent], { type: "text/markdown" });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.download = `${metadata.modelName || "Model_Card"}.md`;
-        link.click();
+    const handleChange = (field, value) => {
+        setMetadata((prevState) => ({
+            ...prevState,
+            [field]: value,
+        }));
     };
 
     return (
-        <MetadataCard
-            metadata={metadata}
-            setMetadata={setMetadata}
-            licenseOptions={licenseOptions}
-            handleSave={handleSave}
-            shouldDownload={shouldDownload}
-            setShouldDownload={setShouldDownload}
-        />
+        <Box>
+            <Typography level="h2" mb={2}>
+                Privatization Method
+            </Typography>
+            <FormControl>
+                <Box
+                    sx={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 0.4fr 1fr",
+                        gap: 2,
+                        alignItems: "center",
+                        mb: 2,
+                    }}
+                >
+                    <Box>
+                        <Typography level="body1" sx={{ marginBottom: 1 }}>
+                            Model Name
+                        </Typography>
+                        <Input
+                            placeholder="Enter the model name"
+                            value={metadata.modelName}
+                            onChange={(e) => handleChange("modelName", e.target.value)}
+                            sx={{ width: "100%" }}
+                        />
+                    </Box>
+
+                    <Box>
+                        <Typography level="body1" sx={{ marginBottom: 1 }}>
+                            License
+                        </Typography>
+                        <Select
+                            placeholder="Select a license"
+                            value={metadata.license}
+                            onChange={(e, value) => handleChange("license", value)}
+                            sx={{ width: "100%" }}
+                        >
+                            {licenseOptions.map((license) => (
+                                <Option key={license} value={license}>
+                                    {license}
+                                </Option>
+                            ))}
+                        </Select>
+                    </Box>
+
+                    <Box>
+                        <Typography level="body1" sx={{ marginBottom: 1 }}>
+                            Related Research Paper
+                        </Typography>
+                        <Input
+                            placeholder="Provide the URL to the research paper"
+                            value={metadata.researchPaperUrl}
+                            onChange={(e) => handleChange("researchPaperUrl", e.target.value)}
+                            sx={{ width: "100%" }}
+                        />
+                    </Box>
+                </Box>
+
+                <Box
+                    sx={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr",
+                        gap: 2,
+                        alignItems: "flex-start",
+                        mb: 2,
+                    }}
+                >
+                    <Box>
+                        <Typography level="body1" sx={{ marginBottom: 1 }}>
+                            Model Description
+                        </Typography>
+                        <Textarea
+                            placeholder="Provide a detailed description of the model"
+                            value={metadata.modelDescription}
+                            onChange={(e) => handleChange("modelDescription", e.target.value)}
+                            minRows={4}
+                            maxRows={4}
+                        />
+                    </Box>
+
+                    <Box>
+                        <Typography level="body1" sx={{ marginBottom: 1 }}>
+                            Bibtex Citation
+                        </Typography>
+                        <Textarea
+                            placeholder="Provide the Bibtex citation"
+                            value={metadata.bibtexCitation}
+                            onChange={(e) => handleChange("bibtexCitation", e.target.value)}
+                            minRows={4}
+                            maxRows={4}
+                        />
+                    </Box>
+                </Box>
+
+                <Box
+                    sx={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr",
+                        gap: 2,
+                        alignItems: "center",
+                        mb: 2,
+                    }}
+                >
+                    <Box>
+                        <Typography level="body1" sx={{ marginBottom: 1 }}>
+                            Tags
+                        </Typography>
+                        <Input
+                            placeholder="Enter tags (comma-separated)"
+                            value={metadata.tags}
+                            onChange={(e) => handleChange("tags", e.target.value)}
+                            sx={{ width: "100%" }}
+                        />
+                    </Box>
+                </Box>
+
+                <Box
+                    sx={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr",
+                        gap: 2,
+                        alignItems: "center",
+                        mb: 2,
+                    }}
+                >
+                    <Box>
+                        <Typography level="body1" sx={{ marginBottom: 1 }}>
+                            Author(s)
+                        </Typography>
+                        <Input
+                            placeholder="Enter authors (comma-separated)"
+                            value={metadata.authors}
+                            onChange={(e) => handleChange("authors", e.target.value)}
+                            sx={{ width: "100%" }}
+                        />
+                    </Box>
+
+                    <Box>
+                        <Typography level="body1" sx={{ marginBottom: 1 }}>
+                            Related GitHub Repository
+                        </Typography>
+                        <Input
+                            placeholder="Provide the URL to the GitHub repository"
+                            value={metadata.githubUrl}
+                            onChange={(e) => handleChange("githubUrl", e.target.value)}
+                            sx={{ width: "100%" }}
+                        />
+                    </Box>
+                </Box>
+            </FormControl>
+        </Box>
     );
 };
 
 export default MetadataStep;
+
