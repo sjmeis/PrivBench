@@ -12,7 +12,6 @@ import {
 } from "@mui/joy";
 import {InfoOutlined} from "@mui/icons-material";
 import UploadTable from "../submission/UploadTable";
-import axios from "axios";
 import {useSnackbar} from "../../contexts/SnackbarProvider";
 import { DatasetService } from '../../services/DatasetService';
 import { TaskService } from '../../services/TaskService';
@@ -66,13 +65,6 @@ const UpdateSubmissionModal = ({isOpen, onClose, submissionId}) => {
             setLoading(false);
         }
     };
-
-    const onFileUploaded = (datasetId, fileName) => {
-        setUploadedFiles(prev => ({
-            ...prev,
-            [datasetId]: fileName
-        }));
-    }
 
     useEffect(() => {
         const fetchDatasets = async () => {

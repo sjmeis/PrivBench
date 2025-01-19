@@ -49,14 +49,14 @@ const UserSubmissionsTableRow = ({row, onTogglePublic, onUpdateSubmission}) => {
                 <td><Chip color={statusColor(row.status)}>{row.status}</Chip></td>
                 <td>{row.overallScore !== null ? row.overallScore : 'N/A'}</td>
                 <td align="center">
-                    {row.status == SubmissionStatus.COMPLETED &&
+                    {row.status === SubmissionStatus.COMPLETED &&
                         <Switch
                             color="success"
                             variant='soft'
                             checked={row.isPublic}
                             onClick={() => onTogglePublic(row.id, !row.isPublic)}
                         />}
-                    {row.status == SubmissionStatus.OUTDATED &&
+                    {row.status === SubmissionStatus.OUTDATED &&
                         <Button
                             color="success"
                             size='md'
