@@ -3,7 +3,7 @@ from flask import send_from_directory, send_file
 import os
 from werkzeug.utils import secure_filename
 from ..extensions import db
-from ..models import PrivatizedDataset, Submission, Dataset
+from ..models import PrivatizedDataset, Submission, Dataset, BenchmarkModule
 from datetime import datetime
 import logging
 import zipfile
@@ -256,3 +256,39 @@ def get_all_datasets():
         return jsonify(dataset_list), 200
     except Exception as e:
         return jsonify({"error": "Failed to fetch datasets", "details": str(e)}), 500
+
+@data_bp.route('/update/datasets/list/<int:submission_id>', methods=['GET'])
+def get_required_datasets(submission_id):
+    try:
+        submission = Submission.query.get(submission_id)
+        if not submission:
+            return jsonify({'error': 'Submission not found'}), 404
+
+        # Get all active benchmark modules
+        active_modules = BenchmarkModule.query.filter_by(is_active=True).all()
+        
+        # Get existing benchmark scores for this submission
+        completed_module_ids = {score.module_id for score in submission.benchmark_scores}
+        
+        # Find modules that haven't been evaluated yet
+        incomplete_modules = [module for module in active_modules 
+                            if module.id not in completed_module_ids]
+
+        # Get unique datasets required for incomplete modules
+        required_datasets = []
+        seen_dataset_ids = set()
+        
+        for module in incomplete_modules:
+            if module.dataset_id not in seen_dataset_ids:
+                dataset = module.dataset
+                required_datasets.append({
+                    'id': dataset.id,
+                    'name': dataset.name
+                })
+                seen_dataset_ids.add(dataset.id)
+
+        return jsonify({'datasets': required_datasets}), 200
+
+    except Exception as e:
+        logger.error(f"Error fetching required datasets: {str(e)}")
+        return jsonify({'error': str(e)}), 500

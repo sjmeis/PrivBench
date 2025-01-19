@@ -365,3 +365,77 @@ def task_status(task_id):
         logger.info(f"Task {task_id} in progress: {response}")
     
     return jsonify(response)
+
+@benchmark_bp.route('/run-benchmark/update/<int:submission_id>', methods=['POST'])
+@jwt_required()
+def benchmark_update(submission_id):
+    """Endpoint to run benchmark tasks for new modules only."""
+    submission = None
+    try:
+        response_headers = {
+            'Access-Control-Allow-Origin': 'http://localhost:3000',
+            'Access-Control-Allow-Credentials': 'true',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type'
+        }
+
+        if request.method == 'OPTIONS':
+            return ('', 204, response_headers)
+
+        user_id = get_jwt_identity()
+        logger.info(f"Starting update benchmark for submission {submission_id}")
+        
+        # Get submission and verify ownership
+        submission = Submission.query.get(submission_id)
+        if not submission or submission.user_id != user_id:
+            return jsonify({"message": "Submission not found or unauthorized"}), 404, response_headers
+
+        # Get modules that don't have scores for this submission
+        completed_module_ids = {score.module_id for score in submission.benchmark_scores}
+        new_modules = BenchmarkModule.query.filter(
+            BenchmarkModule.is_active == True,
+            ~BenchmarkModule.id.in_(completed_module_ids) if completed_module_ids else True
+        ).all()
+
+        if not new_modules:
+            return jsonify({"message": "No new modules to benchmark"}), 200, response_headers
+
+        # Start tasks only for new modules
+        tasks = []
+        for module in new_modules:
+            dataset = Dataset.query.get(module.dataset_id)
+            if not dataset:
+                continue
+            
+            privatized_dataset = PrivatizedDataset.query.filter_by(
+                submission_id=submission_id,
+                original_dataset_id=module.dataset_id
+            ).first()
+            if not privatized_dataset:
+                continue
+            
+            task = run_benchmark_task.delay(
+                str(module.path),
+                module.name,
+                str(dataset.file_path),
+                str(privatized_dataset.file_path),
+                privatized_dataset.id,
+                submission_id,
+                module.id
+            )
+            
+            tasks.append({
+                "task_id": task.id,
+                "module_id": module.id,
+                "module_name": module.name
+            })
+            logger.info(f"Update task created for module {module.name}: {task.id}")
+
+        if not tasks:
+            return jsonify({"message": "No tasks could be started"}), 400, response_headers
+            
+        return jsonify({"task_ids": tasks}), 202, response_headers
+
+    except Exception as e:
+        logger.error(f"Error in benchmark update endpoint: {str(e)}", exc_info=True)
+        return jsonify({"message": str(e)}), 500, response_headers
