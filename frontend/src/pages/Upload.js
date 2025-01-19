@@ -40,7 +40,7 @@ const Upload = () => {
             );
 
             if (pendingSubmission) {
-                setCurrentStep(1);
+                setCurrentStep(2);
                 setMetadata(pendingSubmission.metadata);
                 setSubmissionId(pendingSubmission.id);
             } else {
@@ -54,12 +54,6 @@ const Upload = () => {
     useEffect(() => {
         fetchUserSubmission();
     }, []);
-
-    useEffect(() => {
-        if (currentStep === 1) {
-            fetchUserSubmission();
-        }
-    }, [currentStep]);
 
     useEffect(() => {
         const fetchDatasets = async () => {
