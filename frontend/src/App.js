@@ -7,6 +7,7 @@ import {AuthProvider} from './contexts/AuthContext';
 
 // Components
 import Navbar from "./components/shared/Navbar";
+
 // Pages
 import Home from "./pages/Home";
 import Login from "./pages/Login";

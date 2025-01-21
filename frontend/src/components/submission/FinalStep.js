@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Typography, Card, Box, Button, LinearProgress } from "@mui/joy";
 import { useNavigate } from "react-router-dom";
-import CustomSnackbar from "../shared/CustomSnackbar";
+import { useSnackbar } from "../../contexts/SnackbarProvider";
 import { RemoveRedEye } from "@mui/icons-material";
 
 const FinalStep = () => {
@@ -9,9 +9,7 @@ const FinalStep = () => {
     const [averageScore, setAverageScore] = useState(null);
     const [moduleScores, setModuleScores] = useState([]);
     const [tasks, setTasks] = useState([]);
-    const [openSnackbar, setOpenSnackbar] = useState(false);
-    const [snackbarMessage, setSnackbarMessage] = useState("");
-    const [snackbarSeverity, setSnackbarSeverity] = useState("info");
+    const { showSnackbar } = useSnackbar();
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -27,9 +25,7 @@ const FinalStep = () => {
                 });
 
                 if (response.status === 404) {
-                    setSnackbarMessage("No submissions available for benchmarking. Please submit your data first.");
-                    setSnackbarSeverity("warning");
-                    setOpenSnackbar(true);
+                    showSnackbar("No submissions available for benchmarking. Please submit your data first.", "error");
                     setLoading(false);
                     return;
                 }
@@ -59,15 +55,13 @@ const FinalStep = () => {
 
             } catch (err) {
                 console.error("Benchmark error:", err);
-                setSnackbarMessage(err.message);
-                setSnackbarSeverity("error");
-                setOpenSnackbar(true);
+                showSnackbar(err.message, "error");
                 setLoading(false);
             }
         };
 
         startBenchmark();
-    }, []);
+    }, [showSnackbar]);
 
     useEffect(() => {
         if (tasks.length === 0) return;
@@ -158,15 +152,15 @@ const FinalStep = () => {
     };
 
     return (
-        <Card variant="outlined" sx={{ width: "100%", maxWidth: 800, mx: "auto", textAlign: "center", p: 3 }}>
+        <Box  sx={{ width: "100%", maxWidth: 1000, mx: "auto", p: 3 }}>
             <Typography level="h2" mb={2}>
-                {loading ? "Evaluation in Progress" : "Evaluation Completed"}
+                {loading ? "Evaluation in Progress" : "Evaluation Summary"}
             </Typography>
 
             {loading ? (
-                <Box sx={{ width: '100%', mt: 3 }}>
+                <Card variant="outlined" sx={{ width: '100%', mt: 3 }}>
                     {tasks.map((task, index) => (
-                        <Box key={index} sx={{ mb: 4 }}>
+                        <Box key={index} sx={{ mb: 2, mt: 2 }}>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                                 <Typography level="body1" fontWeight="bold">
                                     {task.module_name}
@@ -199,13 +193,10 @@ const FinalStep = () => {
                             </Box>
                         </Box>
                     ))}
-                </Box>
+                </Card>
             ) : moduleScores.length > 0 ? (
                 <>
                     <Card variant="outlined" sx={{ p: 3, textAlign: "center" }}>
-                        <Typography level="h3" mb={3} sx={{ textAlign: "center", fontWeight: "bold" }}>
-                            Evaluation Summary
-                        </Typography>
                         <Box sx={{ display: "flex", flexDirection: "column", gap: 2, textAlign: "left" }}>
                             <Card
                                 variant="soft"
@@ -248,6 +239,7 @@ const FinalStep = () => {
                     </Card>
 
                     <Button
+                        fullWidth
                         variant="solid"
                         color="primary"
                         sx={{ mt: 3 }}
@@ -258,21 +250,11 @@ const FinalStep = () => {
                     </Button>
                 </>
             ) : (
-                <Typography level="h2" mb={2} color="error">
+                <Typography level="h2" mb={2} color="danger">
                     Evaluation Failed
-                    <Typography level="body1" color="error">
-                        {snackbarMessage}
-                    </Typography>
                 </Typography>
             )}
-
-            <CustomSnackbar
-                open={openSnackbar}
-                message={snackbarMessage}
-                severity={snackbarSeverity}
-                onClose={() => setOpenSnackbar(false)}
-            />
-        </Card>
+        </Box>
     );
 };
 
