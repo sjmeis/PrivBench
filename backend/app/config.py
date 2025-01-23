@@ -25,4 +25,4 @@ class Config:
     MAIL_USE_SSL = bool(int(os.getenv('MAIL_USE_SSL', 0)))  # Use SSL (if set to true)
     MAIL_USERNAME = os.getenv('MAIL_USERNAME', 'privbench@web.de')  # Email address
     MAIL_PASSWORD = os.getenv('MAIL_PASSWORD', 'privbench123')  # Password
-    MAIL_DEFAULT_SENDER = os.getenv('MAIL_DEFAULT_SENDER', 'privbench@web.de')  # Default sender email
+    MAIL_DEFAULT_SENDER = os.getenv('MAIL_DEFAULT_SENDER', ('PrivBench', 'privbench@web.de'))  # Default sender email
