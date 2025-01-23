@@ -16,5 +16,7 @@ class Coherence():
         self.ppl = PPL()
 
     def score(self, original, private):
-        p = self.ppl.score(original, private)
-        return round(p, 3)
+        o = self.ppl.score(original)
+        p = self.ppl.score(private)
+        score = max(o / p, 1)
+        return round(score, 3)
