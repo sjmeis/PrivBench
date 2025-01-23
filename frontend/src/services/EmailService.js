@@ -15,4 +15,4 @@ const sendEmail = async (to, subject, body, redirectUrl) => {
     }
 };
 
-export default { sendEmail };
+export default sendEmail;

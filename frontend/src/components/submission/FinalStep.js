@@ -3,6 +3,9 @@ import { Typography, Card, Box, Button, LinearProgress } from "@mui/joy";
 import { useNavigate } from "react-router-dom";
 import { useSnackbar } from "../../contexts/SnackbarProvider";
 import { RemoveRedEye } from "@mui/icons-material";
+import { useAuth } from "../../contexts/AuthContext";
+import  sendEmail from "../../services/EmailService"
+
 
 const FinalStep = () => {
     const [loading, setLoading] = useState(true);
@@ -11,6 +14,8 @@ const FinalStep = () => {
     const [tasks, setTasks] = useState([]);
     const { showSnackbar } = useSnackbar();
     const navigate = useNavigate();
+    const { user } = useAuth();
+
 
     useEffect(() => {
         const startBenchmark = async () => {
@@ -38,7 +43,7 @@ const FinalStep = () => {
                     } catch {
                         errorMessage = `HTTP error! status: ${response.status}`;
                     }
-                    throw new Error(errorMessage || "Failed to run benchmark!");
+                    showSnackbar(`${errorMessage}`, 'error');
                 }
 
                 const data = await response.json();
@@ -81,7 +86,7 @@ const FinalStep = () => {
                         );
                         
                         if (!response.ok) {
-                            throw new Error("Failed to fetch task status");
+                            showSnackbar('Failed to fetch submission status', 'error');
                         }
                         
                         const data = await response.json();
@@ -139,6 +144,7 @@ const FinalStep = () => {
                     setAverageScore(
                         scores.reduce((sum, curr) => sum + curr.score, 0) / scores.length
                     );
+                    sendEmail(user.mailAddress, "Successful submission", "Your submission has been evaluated! You can see your score on our website", "http://localhost:3000/")
                 }
             }
         };
