@@ -152,10 +152,15 @@ const FinalStep = () => {
                 if (allTasksSuccessful) {
                     sendEmail(
                         user.mailAddress,
-                        "Submission evaluated",
+                        "Submission evaluated successfully",
                         "Your submission has been evaluated! You can now view your results.",
                         "http://localhost:3000/"
                     );
+                } else {
+                    sendEmail( user.mailAddress,
+                        "Submission evaluated",
+                        "There was an error with the evaluation of your submission.",
+                        "http://localhost:3000/")
                 }
             }
         };

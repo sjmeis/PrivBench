@@ -132,6 +132,7 @@ const Upload = () => {
         if (currentStep === 1) {
             setIsMetadataValid(validateMetadata());
         }
+        // eslint-disable-next-line
     }, [metadata, currentStep]);
 
     const handleSaveMetadata = async () => {

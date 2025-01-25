@@ -23,11 +23,11 @@ def send_email(to, subject, body, redirect_url=None):
     if redirect_url:
         html_body = f"""
         <p>{body}</p>
-        <p style="text-align: center;">
-            <a href="{redirect_url}" style="display: inline-block; padding: 14px 28px; 
+        <p style="text-align: center; margin-top: 20px;">
+            <a href="{redirect_url}" style="display: inline-block; padding: 10px 20px; 
             font-size: 18px; font-weight: bold; background-color: #007bff; color: #fff; 
             text-decoration: none; border-radius: 8px; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-                Go to Privbench
+                See more
             </a>
         </p>
         """
