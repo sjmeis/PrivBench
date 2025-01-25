@@ -144,13 +144,25 @@ const FinalStep = () => {
                     setAverageScore(
                         scores.reduce((sum, curr) => sum + curr.score, 0) / scores.length
                     );
-                    sendEmail(user.mailAddress, "Successful submission", "Your submission has been evaluated! You can see your score on our website", "http://localhost:3000/")
+                }
+                const allTasksSuccessful = updatedTasks.every(
+                    task => task.completed && task.error === null && task.state === 'SUCCESS'
+                );
+
+                if (allTasksSuccessful) {
+                    sendEmail(
+                        user.mailAddress,
+                        "Submission evaluated",
+                        "Your submission has been evaluated! You can now view your results.",
+                        "http://localhost:3000/"
+                    );
                 }
             }
         };
 
         const intervalId = setInterval(pollTasks, 1000);
         return () => clearInterval(intervalId);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [tasks.length]);
 
     const handleViewSubmissions = () => {
