@@ -8,7 +8,7 @@ const DatasetsTable = ({
                            handleSelectAll,
                        }) => {
     return (
-        <Box sx={{ display: "flex", flexDirection: "column", width: "100%", border: "1px solid #e0e0e0", borderRadius: 2 }}>
+        <Box sx={{ display: "flex", flexDirection: "column", width: "100%", border: "1px solid #e0e0e0", borderRadius: 2, marginBottom: 2, marginTop: 2 }}>
             <Box sx={{ display: "flex", padding: "8px 16px", borderBottom: "1px solid #e0e0e0", fontWeight: "bold" }}>
                 <Box sx={{ flex: 1 }}>Dataset</Box>
                 <Box sx={{ flex: 1 }}>Status</Box>
@@ -43,10 +43,10 @@ const DatasetsTable = ({
                 </Box>
             ))}
 
-            <Box sx={{ display: "flex", padding: "8px 16px", borderTop: "1px solid #e0e0e0" }}>
-                <Box sx={{ flex: 1.53 }} />
-                <Box sx={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center" }}>
-                    <Typography level="body2" sx={{ marginRight: 2 }}>
+            <Box sx={{ display: "flex", padding: "8px 16px", borderTop: "1px solid #e0e0e0", alignItems: "center" }}>
+                <Box sx={{ flex: 3 }} />
+                <Box sx={{ flex: 1, display: "flex", textAlign: "center" }}>
+                    <Typography level="body2" sx={{ marginRight: 3 }}>
                         Select All
                     </Typography>
                     <Checkbox

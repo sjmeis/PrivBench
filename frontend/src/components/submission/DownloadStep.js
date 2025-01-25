@@ -33,6 +33,7 @@ const DownloadStep = ({ onDatasetDownloaded, onDatasetsFetched }) => {
             }
         };
         fetchDatasets();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const handleDownloadDataset = async (datasetName) => {
@@ -111,13 +112,15 @@ const DownloadStep = ({ onDatasetDownloaded, onDatasetsFetched }) => {
 
                     <Typography>
                         Once the privatization process is complete, save the resulting privatized datasets. You will
-                        need to
-                        upload them in the final step of this workflow. Ensure that the privatized datasets align with
-                        the
-                        required format and adhere to the constraints specified for upload compatibility.
+                        need to upload them in the final step of this workflow.
+                    </Typography>
+
+                    <Typography sx={{ fontWeight: 'bold' }}>
+                        Important: Replace the textual data column with the privatized data while keeping all other columns unchanged and in their original order. This ensures that the benchmarking process functions correctly and handles the datasets as intended.
                     </Typography>
                 </Stack>
             </Typography>
+
 
             <DatasetsTable
                 datasets={datasets}
