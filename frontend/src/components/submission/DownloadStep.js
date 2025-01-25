@@ -1,13 +1,13 @@
-import React, {useState, useEffect} from "react";
-import {Box, Button, Stack, Typography} from "@mui/joy";
-import {CloudDownload, InfoOutlined} from "@mui/icons-material";
-import {useSnackbar} from "../../contexts/SnackbarProvider";
+import React, { useState, useEffect } from "react";
+import { Box, Button, Stack, Typography } from "@mui/joy";
+import { CloudDownload, InfoOutlined } from "@mui/icons-material";
+import { useSnackbar } from "../../contexts/SnackbarProvider";
 import DatasetsTable from "./DatasetTable";
 
-const DownloadStep = ({onDatasetDownloaded, onDatasetsFetched, downloadedDatasets}) => {
+const DownloadStep = ({ onDatasetDownloaded, onDatasetsFetched }) => {
     const [datasets, setDatasets] = useState([]);
     const [selectedDatasets, setSelectedDatasets] = useState([]);
-    const {showSnackbar} = useSnackbar();
+    const { showSnackbar } = useSnackbar();
 
     useEffect(() => {
         const fetchDatasets = async () => {
@@ -22,12 +22,18 @@ const DownloadStep = ({onDatasetDownloaded, onDatasetsFetched, downloadedDataset
                 }
                 const data = await response.json();
                 setDatasets(data.datasets);
+
+                // Pre-select all datasets by default
+                const preselectedDatasets = data.datasets.map((dataset) => dataset.name);
+                setSelectedDatasets(preselectedDatasets);
+
                 onDatasetsFetched(data.datasets);
             } catch (error) {
                 showSnackbar("Failed to fetch datasets", "error");
             }
         };
         fetchDatasets();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const handleDownloadDataset = async (datasetName) => {
@@ -77,7 +83,6 @@ const DownloadStep = ({onDatasetDownloaded, onDatasetsFetched, downloadedDataset
     const handleSelectAll = (checked) => {
         if (checked) {
             const selectableDatasets = datasets
-                .filter((dataset) => !downloadedDatasets.includes(dataset.name))
                 .map((dataset) => dataset.name);
             setSelectedDatasets(selectableDatasets);
         } else {
@@ -87,59 +92,51 @@ const DownloadStep = ({onDatasetDownloaded, onDatasetsFetched, downloadedDataset
 
     const handleDownloadSelected = async () => {
         for (const datasetName of selectedDatasets) {
-            if (!downloadedDatasets.includes(datasetName)) {
-                await handleDownloadDataset(datasetName);
-            }
+            await handleDownloadDataset(datasetName);
         }
         setSelectedDatasets([]);
     };
 
     return (
         <Box>
-            <Typography level="h2" mb={2} sx={{textAlign: "start"}}>
+            <Typography level="h2" mb={2} sx={{ textAlign: "start" }}>
                 Download Datasets
             </Typography>
-            <Typography sx={{marginY: 1, p: 1}} variant='soft'
-                        color='neutral' level="body1">
+            <Typography sx={{ marginY: 1, p: 1 }} variant="soft" color="neutral" level="body1">
                 <Stack spacing={2}>
                     <Typography>
                         Please download all the original datasets provided. The datasets contain sensitive
                         information, and your goal is to apply a data privatization method of your choice to ensure the
-                        privacy
-                        and security of the data.
+                        privacy and security of the data.
                     </Typography>
 
                     <Typography>
                         Once the privatization process is complete, save the resulting privatized datasets. You will
-                        need to
-                        upload them in the final step of this workflow. Ensure that the privatized datasets align with
-                        the
-                        required format and adhere to the constraints specified for upload compatibility.
+                        need to upload them in the final step of this workflow.
+                    </Typography>
+
+                    <Typography sx={{ fontWeight: 'bold' }}>
+                        Important: Replace the textual data column with the privatized data while keeping all other columns unchanged and in their original order. This ensures that the benchmarking process functions correctly and handles the datasets as intended.
                     </Typography>
                 </Stack>
             </Typography>
 
 
-
-
-
             <DatasetsTable
                 datasets={datasets}
-                downloadedDatasets={downloadedDatasets}
                 selectedDatasets={selectedDatasets}
                 handleToggleSelect={handleToggleSelect}
                 handleSelectAll={handleSelectAll}
             />
-            <Typography sx={{p: 1}} startDecorator={<InfoOutlined/>} variant='soft'
-                        color='neutral' level="body1">
+            <Typography sx={{ p: 1 }} startDecorator={<InfoOutlined />} variant="soft" color="neutral" level="body1">
                 Please make sure you have downloaded the datasets before proceeding to the next step!
             </Typography>
 
-            <Box sx={{mt: 3, textAlign: "center"}}>
+            <Box sx={{ mt: 3, textAlign: "center" }}>
                 <Button
                     fullWidth
                     variant="solid"
-                    startDecorator={<CloudDownload/>}
+                    startDecorator={<CloudDownload />}
                     onClick={handleDownloadSelected}
                     disabled={selectedDatasets.length === 0}
                 >
@@ -147,10 +144,13 @@ const DownloadStep = ({onDatasetDownloaded, onDatasetsFetched, downloadedDataset
                 </Button>
             </Box>
         </Box>
-    )
-        ;
+    );
 };
 
 export default DownloadStep;
+
+
+
+
 
 
