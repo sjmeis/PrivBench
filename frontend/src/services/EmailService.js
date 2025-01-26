@@ -6,7 +6,7 @@ const sendEmail = async (to, subject, body, redirectUrl) => {
             to,
             subject,
             body,
-            redirect_url: redirectUrl,
+            redirect_url: redirectUrl
         });
         console.log('Email sent successfully to:', to);
     } catch (error) {
