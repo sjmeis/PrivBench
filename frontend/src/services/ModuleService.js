@@ -1,6 +1,5 @@
 import axios from 'axios';
-
-const API_BASE_URL = 'http://localhost:5000';
+import { API_BASE_URL } from '../config';
 
 // Helper function to poll status
 const pollModuleStatus = async (taskId, onProgress) => {
@@ -105,5 +104,19 @@ export const createBenchmarkingModule = async (formData, onProgress) => {
       console.error('Error message:', error.message);
       throw new Error(error.message);
     }
+  }
+};
+
+export const fetchBenchmarkingModulesForSubmission = async (submissionId) => {
+  try {
+    const response = await axios.post(
+      `${API_BASE_URL}/modules/update/information`,
+      { id: submissionId },
+      { withCredentials: true }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching benchmarking modules:', error);
+    throw error;
   }
 };

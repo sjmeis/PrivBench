@@ -11,17 +11,6 @@ const Information = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    //fixme: remove this dummy data after some moduels have been added
-    const BENCHMARK_DESCRIPTIONS = [
-        {
-            title: "Membership Inference – Masked Token Prediction",
-            description: "Tests a privatization method's ability to defend against masked token prediction. Here, an attacker is simulated who attempts to infer tokens from the original text by leveraging the surrounding context. An effective privatization method should not divulge information about the original content given the private context."
-        },
-        {
-            title: "Membership Inference – Nearest Neighbors",
-            description: "Evaluates the level of plausible deniability granted by a privatization method. Given the private dataset, we check how semantically distant a private text is to its original counterpart. The further away this distance is on average, the higher degree of deniability that is afforded."
-        }
-    ];
 
     const navigate = useNavigate();
 
@@ -29,7 +18,7 @@ const Information = () => {
         const fetchModules = async () => {
             try {
                 const response = await axios.get('http://localhost:5000/modules'); // Adjust endpoint as needed
-                setModules(response.data.concat(BENCHMARK_DESCRIPTIONS));
+                setModules(response.data);
             } catch (err) {
                 setError('Failed to load modules');
                 console.error(err);
@@ -131,7 +120,7 @@ const Information = () => {
                                 <Grid
                                     key={module.id}
                                     item
-                                    xs={3}
+                                    xs={4}
                                 >
                                     <BenchmarkCard
                                         title={module.title}

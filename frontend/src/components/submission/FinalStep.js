@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import { Typography, Card, Box, Button, LinearProgress } from "@mui/joy";
-import { useNavigate } from "react-router-dom";
+import { Typography, Box, } from "@mui/joy";
 import { useSnackbar } from "../../contexts/SnackbarProvider";
-import { RemoveRedEye } from "@mui/icons-material";
 import { useAuth } from "../../contexts/AuthContext";
 import  sendEmail from "../../services/EmailService"
+import TaskProgressCard from "./TaskProgressCard";
+import ScoreOverviewCard from "./ScoreOverviewCard";
 
 
 const FinalStep = () => {
@@ -13,7 +13,6 @@ const FinalStep = () => {
     const [moduleScores, setModuleScores] = useState([]);
     const [tasks, setTasks] = useState([]);
     const { showSnackbar } = useSnackbar();
-    const navigate = useNavigate();
     const { user } = useAuth();
 
 
@@ -84,13 +83,13 @@ const FinalStep = () => {
                                 credentials: "include"
                             }
                         );
-                        
+
                         if (!response.ok) {
                             showSnackbar('Failed to fetch submission status', 'error');
                         }
-                        
+
                         const data = await response.json();
-                        
+
                         // Extract processed and total rows from status message if available
                         let processedRows = 0;
                         let totalRows = 0;
@@ -101,7 +100,7 @@ const FinalStep = () => {
                                 totalRows = parseInt(match[2]);
                             }
                         }
-                        
+
                         return {
                             ...task,
                             progress: Math.round((data.current / data.total) * 100),
@@ -134,7 +133,7 @@ const FinalStep = () => {
                 const successfulTasks = updatedTasks.filter(
                     task => task.completed && task.score !== null
                 );
-                
+
                 if (successfulTasks.length > 0) {
                     const scores = successfulTasks.map(t => ({
                         module_name: t.module_name,
@@ -170,9 +169,7 @@ const FinalStep = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [tasks.length]);
 
-    const handleViewSubmissions = () => {
-        navigate("/profile", { state: "submissions" });
-    };
+
 
     return (
         <Box  sx={{ width: "100%", maxWidth: 1000, mx: "auto", p: 3 }}>
@@ -181,97 +178,9 @@ const FinalStep = () => {
             </Typography>
 
             {loading ? (
-                <Card variant="outlined" sx={{ width: '100%', mt: 3 }}>
-                    {tasks.map((task, index) => (
-                        <Box key={index} sx={{ mb: 2, mt: 2 }}>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                <Typography level="body1" fontWeight="bold">
-                                    {task.module_name}
-                                </Typography>
-                                <Typography level="body1">
-                                    {task.progress}%
-                                </Typography>
-                            </Box>
-                            <LinearProgress 
-                                determinate 
-                                value={task.progress} 
-                                sx={{ mb: 1 }}
-                                color={task.error ? "danger" : "success"}
-                            />
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
-                                <Typography 
-                                    level="body2" 
-                                    sx={{ 
-                                        color: task.error ? 'error.main' : 'text.secondary',
-                                        fontSize: '0.875rem'
-                                    }}
-                                >
-                                    {task.error || task.status}
-                                </Typography>
-                                {task.totalRows > 0 && (
-                                    <Typography level="body2" sx={{ fontSize: '0.875rem' }}>
-                                        {task.processedRows.toLocaleString()} / {task.totalRows.toLocaleString()} rows
-                                    </Typography>
-                                )}
-                            </Box>
-                        </Box>
-                    ))}
-                </Card>
+                <TaskProgressCard tasks={tasks} />
             ) : moduleScores.length > 0 ? (
-                <>
-                    <Card variant="outlined" sx={{ p: 3, textAlign: "center" }}>
-                        <Box sx={{ display: "flex", flexDirection: "column", gap: 2, textAlign: "left" }}>
-                            <Card
-                                variant="soft"
-                                sx={{
-                                    display: "flex",
-                                    justifyContent: "space-between",
-                                    alignItems: "center",
-                                    p: 2
-                                }}
-                            >
-                                <Typography level="body1" sx={{ fontWeight: "bold" }}>
-                                    Overall Score
-                                </Typography>
-                                <Typography level="body1" color="success">
-                                    {averageScore?.toFixed(2)}%
-                                </Typography>
-                            </Card>
-
-                            {moduleScores.map((module, index) => (
-                                <Card
-                                    key={index}
-                                    variant="soft"
-                                    sx={{
-                                        display: "flex",
-                                        justifyContent: "space-between",
-                                        alignItems: "center",
-                                        p: 2,
-                                        borderColor: "#e0e0e0",
-                                    }}
-                                >
-                                    <Typography level="body1" sx={{ fontWeight: "bold" }}>
-                                        {module.module_name} Score
-                                    </Typography>
-                                    <Typography level="body1" color="primary">
-                                        {module.score?.toFixed(2)}%
-                                    </Typography>
-                                </Card>
-                            ))}
-                        </Box>
-                    </Card>
-
-                    <Button
-                        fullWidth
-                        variant="solid"
-                        color="primary"
-                        sx={{ mt: 3 }}
-                        onClick={handleViewSubmissions}
-                        endDecorator={<RemoveRedEye />}
-                    >
-                        View My Submissions
-                    </Button>
-                </>
+                <ScoreOverviewCard averageScore={averageScore} moduleScores={moduleScores}/>
             ) : (
                 <Typography level="h2" mb={2} color="danger">
                     Evaluation Failed

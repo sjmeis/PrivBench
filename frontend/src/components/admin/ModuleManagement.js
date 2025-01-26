@@ -13,29 +13,30 @@ import AddIcon from "@mui/icons-material/Add";
 import ModuleDetailView from "./ModuleDetailView";
 import AddModuleModal from "./AddModuleModal";
 import {useSnackbar} from "../../contexts/SnackbarProvider";
+import LoadingSpinner from "../shared/LoadingSpinner";
 
 const ModuleManagement = () => {
     const [modules, setModules] = useState([]);
     const [selectedModule, setSelectedModule] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [loading, setLoading] = useState(true)
     const { showSnackbar } = useSnackbar();
 
     //TODO: add search functionality
     //TODO: finalize detailview including update
 
-    useEffect(() => {
-        const fetchModules = async () => {
-            try {
-                const response = await axios.get('http://localhost:5000/modules'); // Adjust endpoint as needed
-                setModules(response.data);
-            } catch (err) {
-                //setError('Failed to load modules');
-                console.error(err);
-            } finally {
-                //setLoading(false);
-            }
-        };
+    const fetchModules = async () => {
+        try {
+            const response = await axios.get('http://localhost:5000/modules'); // Adjust endpoint as needed
+            setModules(response.data);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoading(false)
+        }
+    };
 
+    useEffect(() => {
         fetchModules();
     }, []);
 
@@ -60,7 +61,14 @@ const ModuleManagement = () => {
         setSelectedModule(null);
     };
 
+    const onModalClose = () => {
+        //setLoading(true) //currently not used as not necessery performance wise
+        fetchModules();
+       setIsModalOpen(false)
+    }
+
     return (
+
         <Box sx={{width: selectedModule ? 'calc(70vw - 270px)' : '100%'}}>
             <Box>
                 <Box
@@ -88,19 +96,22 @@ const ModuleManagement = () => {
                     </FormControl>
                     <Button onClick={handleAddModuleClick} endDecorator={<AddIcon/>} size='sm'>Add Module</Button>
                 </Box>
-                <Box>
-                    <Grid container spacing={2}>
-                        {modules.map((module) => (
-                            <Grid key={module.id} item xs={selectedModule ? 12 : 6}>
-                                <BenchmarkCardAdmin
-                                    item={module}
-                                    handleCardClick={() => handleModuleClick(module)}
-                                    isSelected={selectedModule && selectedModule.id === module.id}
-                                />
-                            </Grid>
-                        ))}
-                    </Grid>
-                </Box>
+                {loading?  <LoadingSpinner ></LoadingSpinner>: (
+                    <Box>
+                        <Grid container spacing={2}>
+                            {modules.map((module) => (
+                                <Grid key={module.id} item xs={selectedModule ? 12 : 6}>
+                                    <BenchmarkCardAdmin
+                                        item={module}
+                                        handleCardClick={() => handleModuleClick(module)}
+                                        isSelected={selectedModule && selectedModule.id === module.id}
+                                    />
+                                </Grid>
+                            ))}
+                        </Grid>
+                    </Box>
+                )}
+
             </Box>
 
             {selectedModule && (
@@ -108,7 +119,7 @@ const ModuleManagement = () => {
             )}
             <AddModuleModal
                 isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
+                onClose={onModalClose}
                 onSubmit={handleAddModuleSubmit}
                 onError={handleAddModuleError}
             />
