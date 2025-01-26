@@ -2,9 +2,22 @@ import {IconButton, Sheet, Table, Typography} from "@mui/joy";
 import InsertDriveFileRoundedIcon from "@mui/icons-material/InsertDriveFileRounded";
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
 import React from "react";
+import {CloudDownloadRounded, CloudUploadRounded, Download} from "@mui/icons-material";
+import {DatasetService} from "../../services/DatasetService";
+import {useSnackbar} from "../../contexts/SnackbarProvider";
 
-const DatasetTableSmall = ({datasets}) => {
+const FileTableSmall = ({datasets, title, isDataset= true}) => {
+    const {showSnackbar} = useSnackbar()
+    const downloadDataset = (name) => {
+        DatasetService.downloadDatasets([name])
+            .then(() => {
+                showSnackbar("File download was successfull", "success");
+            })
+            .catch((error) => {
 
+                showSnackbar("Error downloading file", "error");
+            });
+    }
 
     return (
         <Sheet
@@ -29,7 +42,7 @@ const DatasetTableSmall = ({datasets}) => {
                 <thead>
                 <tr>
                     <th style={{ width: '85%' }}>
-                        <Typography level="title-sm">Datasets associated this Module</Typography>
+                        <Typography level="title-sm">{title}</Typography>
                     </th>
                     <th style={{ width: '15%' }}>
                     </th>
@@ -50,11 +63,12 @@ const DatasetTableSmall = ({datasets}) => {
                             </td>
                             <td>
                                 <IconButton
-                                    variant="soft"
-                                    color='danger'
-                                    // todo: implement delete logic
+                                    onClick={() => downloadDataset(item.name)}
+                                    variant='outlined'
+                                    color='primary'
+                                    // todo: implement download logic
                                 >
-                                    <DeleteForeverIcon />
+                                    <CloudDownloadRounded />
                                 </IconButton>
                             </td>
                         </tr>
@@ -74,4 +88,4 @@ const DatasetTableSmall = ({datasets}) => {
     )
 }
 
-export default DatasetTableSmall;
+export default FileTableSmall;

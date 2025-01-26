@@ -2,6 +2,8 @@ import os
 from datetime import timedelta
 
 class Config:
+    FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+
     SECRET_KEY = os.getenv("SECRET_KEY", "supersecretkey")
     SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL", "postgresql://user:password@db:5432/dbname")
     SQLALCHEMY_TRACK_MODIFICATIONS = False

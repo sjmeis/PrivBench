@@ -3,4 +3,5 @@ export const SubmissionStatus = Object.freeze({
     COMPLETED: "completed",
     IN_PROGRESS: "in_progress",
     FAILED: "failed",
+    OUTDATED: "outdated",
 });

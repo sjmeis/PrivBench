@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from "react";
-import { Box, Button, Stack, Typography } from "@mui/joy";
-import { CloudDownload, InfoOutlined } from "@mui/icons-material";
-import { useSnackbar } from "../../contexts/SnackbarProvider";
+import React, {useState, useEffect} from "react";
+import {Box, Button, Stack, Typography} from "@mui/joy";
+import {CloudDownload, InfoOutlined} from "@mui/icons-material";
+import {useSnackbar} from "../../contexts/SnackbarProvider";
 import DatasetsTable from "./DatasetTable";
+import {DatasetService} from "../../services/DatasetService";
 
-const DownloadStep = ({ onDatasetDownloaded, onDatasetsFetched }) => {
+const DownloadStep = ({onDatasetDownloaded, onDatasetsFetched}) => {
     const [datasets, setDatasets] = useState([]);
     const [selectedDatasets, setSelectedDatasets] = useState([]);
-    const { showSnackbar } = useSnackbar();
+    const {showSnackbar} = useSnackbar();
 
     useEffect(() => {
         const fetchDatasets = async () => {
@@ -36,41 +37,6 @@ const DownloadStep = ({ onDatasetDownloaded, onDatasetsFetched }) => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    const handleDownloadDataset = async (datasetName) => {
-        try {
-            const response = await fetch(
-                `http://localhost:5000/datasets/${encodeURIComponent(datasetName)}`,
-                {
-                    credentials: "include",
-                    cache: "no-cache",
-                }
-            );
-            if (!response.ok) {
-                const errorData = await response.json();
-                console.error("Failed to load dataset:", errorData.error);
-                showSnackbar(`Failed to download ${datasetName}`, "error");
-                return;
-            }
-
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-
-            const link = document.createElement("a");
-            link.href = url;
-            link.download = decodeURIComponent(datasetName);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-
-            window.URL.revokeObjectURL(url);
-
-            onDatasetDownloaded(datasetName);
-            showSnackbar(`Selected datasets were downloaded successfully!`, "success");
-        } catch (error) {
-            console.error("An error occurred:", error);
-            showSnackbar(`Error downloading datasets`, "error");
-        }
-    };
 
     const handleToggleSelect = (datasetName) => {
         setSelectedDatasets((prevSelected) =>
@@ -90,19 +56,24 @@ const DownloadStep = ({ onDatasetDownloaded, onDatasetsFetched }) => {
         }
     };
 
-    const handleDownloadSelected = async () => {
-        for (const datasetName of selectedDatasets) {
-            await handleDownloadDataset(datasetName);
-        }
-        setSelectedDatasets([]);
+    const handleDownloadSelected = () => {
+        DatasetService.downloadDatasets(selectedDatasets)
+            .then(() => {
+                showSnackbar("All selected datasets were downloaded successfully!", "success");
+            })
+            .catch((error) => {
+
+                showSnackbar("Error downloading datasets", "error");
+            });
     };
+
 
     return (
         <Box>
-            <Typography level="h2" mb={2} sx={{ textAlign: "start" }}>
+            <Typography level="h2" mb={2} sx={{textAlign: "start"}}>
                 Download Datasets
             </Typography>
-            <Typography sx={{ marginY: 1, p: 1 }} variant="soft" color="neutral" level="body1">
+            <Typography sx={{marginY: 1, p: 1}} variant="soft" color="neutral" level="body1">
                 <Stack spacing={2}>
                     <Typography>
                         Please download all the original datasets provided. The datasets contain sensitive
@@ -128,15 +99,15 @@ const DownloadStep = ({ onDatasetDownloaded, onDatasetsFetched }) => {
                 handleToggleSelect={handleToggleSelect}
                 handleSelectAll={handleSelectAll}
             />
-            <Typography sx={{ p: 1 }} startDecorator={<InfoOutlined />} variant="soft" color="neutral" level="body1">
+            <Typography sx={{p: 1}} startDecorator={<InfoOutlined/>} variant="soft" color="neutral" level="body1">
                 Please make sure you have downloaded the datasets before proceeding to the next step!
             </Typography>
 
-            <Box sx={{ mt: 3, textAlign: "center" }}>
+            <Box sx={{mt: 3, textAlign: "center"}}>
                 <Button
                     fullWidth
                     variant="solid"
-                    startDecorator={<CloudDownload />}
+                    startDecorator={<CloudDownload/>}
                     onClick={handleDownloadSelected}
                     disabled={selectedDatasets.length === 0}
                 >

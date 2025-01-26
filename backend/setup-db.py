@@ -26,17 +26,16 @@ else:
 app = create_app()
 
 with app.app_context():
-    # Drop all tables and recreate them (optional, uncomment if needed)
+    # Drop all tables and recreate them
     # db.drop_all()
     # db.create_all()
 
-    module_names = ['NERpriv', 'AttInfpriv', 'CohGenpriv']
-    module_file_names = ['ner_priv.py', 'attinf_priv.py', 'cohgen_priv.py']
-    module_titles = ['NER Evaluation', 'Attribute Inference', 'Coherent Generation']
+    module_names = ['NERpriv']
+    module_file_names = ['ner_priv.py']
+    module_titles = ['NER Evaluation']
     module_descriptions = []
     module_descriptions.append("On the surface, text privatization should pay particular attention to named entities, or words or groups of words that point to some real-world object, person, organization, etc. Ensuring that such entities are not leaked into the privatized text, while also balancing the preservation of semantics, is the mark of an effective privatization method.")
-    module_descriptions.append("In this module, we empirically test for a text privatization's ability to obfuscate implicit attributes or sensitive identifiers hidden within text, such as authorship cues or gender signals. Thus, an effective privatization method should hide these attributes, while also maintaining the original semantic meaning of the text.")
-    module_descriptions.append("An effective privatization method should not only obfuscate sensitive information, but it should also produce coherent outputs which can be utilized downstream. As a proxy for coherent generation, we measure the perplexity of the private texts, or rather, how “predictable” these texts are to a pretrained language model.")
+
 
     # Iterate over all files in the dataset folder
     if os.path.exists(DATASET_FOLDER):
