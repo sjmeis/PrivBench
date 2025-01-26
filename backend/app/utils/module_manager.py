@@ -47,7 +47,8 @@ class ModuleManager:
             
             logger.debug(f"Temp directory contents: {list(temp_path.glob('*'))}")
             
-            tag = f"module-{module_id}"
+            #tag = f"module-{module_id}"
+            tag = f"module-{module_name.lower()}"
             _, build_logs = self.docker_client.images.build(
                 path=str(temp_path),
                 tag=tag,
