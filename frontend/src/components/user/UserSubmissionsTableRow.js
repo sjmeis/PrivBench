@@ -26,8 +26,8 @@ const statusColor = (status) => {
 const UserSubmissionsTableRow = ({row, onTogglePublic, onUpdateSubmission}) => {
     const [open, setOpen] = React.useState(false);
 
-    const onUpdateSubmissionClick = (submissionId) => {
-        onUpdateSubmission(submissionId)
+    const onUpdateSubmissionClick = (row) => {
+        onUpdateSubmission(row)
     }
 
     return (
@@ -60,8 +60,7 @@ const UserSubmissionsTableRow = ({row, onTogglePublic, onUpdateSubmission}) => {
                         <Button
                             color="success"
                             size='md'
-                            variant='soft'
-                            onClick={() => onUpdateSubmissionClick(row.id)}
+                            onClick={() => onUpdateSubmissionClick(row)}
                         >Update</Button>}
                 </td>
             </tr>

@@ -106,3 +106,17 @@ export const createBenchmarkingModule = async (formData, onProgress) => {
     }
   }
 };
+
+export const fetchBenchmarkingModulesForSubmission = async (submissionId) => {
+  try {
+    const response = await axios.post(
+      `${API_BASE_URL}/modules/update/information`,
+      { id: submissionId },
+      { withCredentials: true }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching benchmarking modules:', error);
+    throw error;
+  }
+};

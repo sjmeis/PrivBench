@@ -19,7 +19,7 @@ const UploadTable = ({ datasets, uploadedFiles, uploadingDatasetId, onFileSelect
                 const columns = rows[0].split(",").length;
 
                 // Store the calculated dimensions of the uploaded file
-                    setUploadedDatasetDimensions(prevState => ({
+                setUploadedDatasetDimensions(prevState => ({
                     ...prevState,
                     [datasetId]: {
                         rows: rows.length,
@@ -27,9 +27,25 @@ const UploadTable = ({ datasets, uploadedFiles, uploadingDatasetId, onFileSelect
                     }
                 }));
 
+                // Debugging: Log datasets and datasetId
+                console.log("Datasets:", datasets);
+                console.log("Dataset ID:", datasetId);
+
                 // Find original dataset dimensions
                 const originalDataset = datasets.find((dataset) => dataset.id === datasetId);
+
+                // Debugging: Log originalDataset
+                console.log("Original Dataset:", originalDataset);
+
+                if (!originalDataset) {
+                    showSnackbar("Error! Original dataset not found.", "error");
+                    return;
+                }
+
                 const originalDimensions = { rows: originalDataset.rows, columns: originalDataset.columns };
+
+                // Debugging: Log originalDimensions
+                console.log("Original Dimensions:", originalDimensions);
 
                 // Check if dimensions match
                 if (

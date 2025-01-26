@@ -283,7 +283,8 @@ def get_required_datasets(submission_id):
                 dataset = module.dataset
                 required_datasets.append({
                     'id': dataset.id,
-                    'name': dataset.name
+                    'name': dataset.name,
+                    'moduleName': module.name
                 })
                 seen_dataset_ids.add(dataset.id)
 

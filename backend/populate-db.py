@@ -48,6 +48,7 @@ with app.app_context():
         db.session.add(user)
 
     db.session.commit()
+
     admin = User(
         username='admin',
         mail_address='admin@privbench.com',

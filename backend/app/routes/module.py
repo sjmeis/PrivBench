@@ -3,7 +3,7 @@ from flask_jwt_extended import (
     get_jwt_identity,
     jwt_required
 )
-from ..models import BenchmarkModule, Dataset
+from ..models import BenchmarkModule, Dataset, BenchmarkScore
 from ..models.user import User
 import os
 from werkzeug.utils import secure_filename
@@ -13,6 +13,7 @@ from app.tasks.add_module import install_and_load_module
 from ..extensions import db
 from datetime import datetime
 from app.tasks.submission_outdated import mark_submissions_outdated_and_notify
+from ..models.submission import Submission
 
 logger = logging.getLogger(__name__)
 
@@ -215,3 +216,51 @@ def get_module_status(task_id):
         "status": "pending",
         "message": "Installation in progress"
     })
+
+
+
+@module_bp.route('/modules/update/information', methods=['POST'])
+@jwt_required()
+def get_benchmarking_modules_for_submission():
+    try:
+        data = request.get_json()
+        submission_id = data.get('id')
+
+        if not submission_id:
+            return jsonify({"message": "Submission ID is required"}), 400
+
+        # Fetch the submission to get its name
+        submission = db.session.query(Submission).get(submission_id)
+        if not submission:
+            return jsonify({"message": "Submission not found"}), 404
+
+        # Fetch all active benchmarking modules
+        active_modules = db.session.query(BenchmarkModule).filter_by(is_active=True).all()
+
+        # Fetch existing benchmark scores for the submission
+        scores = db.session.query(BenchmarkScore).filter_by(submission_id=submission_id).all()
+        score_map = {score.module_id: score.score for score in scores}
+
+        # Prepare the response data
+        modules_data = []
+        for module in active_modules:
+            module_data = {
+                "id": module.id,
+                "name": module.name,
+                "title": module.title,
+                "version": module.version,
+                "isActive": module.is_active,
+                "createdAt": module.created_at.isoformat() if module.created_at else None,
+                "score": score_map.get(module.id), 
+                "description": module.description 
+            }
+            modules_data.append(module_data)
+
+        return jsonify({
+            "submissionName": submission.name,  # Include submission name
+            "modules": modules_data
+        }), 200
+
+    except Exception as e:
+        return jsonify({"message": "Internal server error", "error": str(e)}), 500
+

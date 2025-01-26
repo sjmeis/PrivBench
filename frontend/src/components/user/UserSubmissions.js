@@ -13,14 +13,13 @@ const UserSubmissions = () => {
     const [error, setError] = useState(null);
     const [pendingSubmission, setPendingSubmission] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false)
-    const [submissionId, setSubmissionId] = useState(null)
+    const [submission, setSubmission] = useState(null)
 
     const fetchSubmissions = async () => {
         try {
             const data = await rankingService.getUserSubmissions();
             setSubmissions(data.submissions);
 
-            // Check for a submission with "Pending" status
             const pending = data.submissions.find(submission => submission.status === "Pending");
             setPendingSubmission(pending);
         } catch (err) {
@@ -43,14 +42,15 @@ const UserSubmissions = () => {
 
     const navigate = useNavigate();
 
-    const onUpdateSubmissionClick = (submissionId) => {
-        setSubmissionId(submissionId)
+    const onUpdateSubmissionClick = (submission) => {
+        console.log(submission)
+        setSubmission(submission)
         setIsModalOpen(true)
     }
 
     const onClose = () => {
         setIsModalOpen(false)
-        setSubmissionId(null)
+        setSubmission(null)
     }
 
     const handleAddClick = () => {
@@ -137,7 +137,7 @@ const UserSubmissions = () => {
                     </Stack>
                 </Box>
             </Stack>
-            <UpdateSubmissionModal isOpen={isModalOpen} submissionId={submissionId} onClose={onClose}/>
+            <UpdateSubmissionModal isOpen={isModalOpen} submission={submission} onClose={onClose}/>
 
         </>
     );
