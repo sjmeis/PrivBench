@@ -51,19 +51,15 @@ setup_database() {
 
     echo "Database is ready."
 
-#    # Run the database setup script
-#    echo "Running setup-db.py..."
-#    python /app/setup-db.py
+    # Run the database setup script to add modules
+    echo "Running setup-db.py..."
+    python /app/setup-db.py
 
 
     # Populate the database  //FIXME: remove this in production, only needed for demo data
     echo "Running populate-db.py..."
     python /app/populate-db.py
 
-    # Run the database setup script
-    echo "Running admin-setup.py..."
-    python /app/admin-setup.py
-}
 
 # Main execution logic for Flask backend
 echo "Starting Flask backend..."
