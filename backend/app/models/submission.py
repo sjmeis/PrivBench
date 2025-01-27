@@ -15,6 +15,7 @@ class Submission(db.Model):
     score = db.Column(db.Float, nullable=False)
     is_public = db.Column(db.Boolean, nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    outdated_at = db.Column(db.DateTime, nullable=True)
 
     # Relationships
     user = db.relationship('User', back_populates='submissions')

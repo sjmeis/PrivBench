@@ -41,6 +41,24 @@ setup_database() {
     # Apply migrations
     echo "Applying database migrations..."
     python -m flask db upgrade
+
+
+    # Ensure the database is ready before running the scripts
+    echo "Waiting for the database to be ready..."
+    until pg_isready -h db -p 5432 -U user; do
+      sleep 1
+    done
+
+    echo "Database is ready."
+
+    # Run the database setup script to add modules
+    #echo "Running setup-db.py..."
+    #python /app/setup-db.py
+
+
+    # Populate the database  //FIXME: remove this in production, only needed for demo data
+    #echo "Running populate-db.py..."
+    #python /app/populate-db.py
 }
 
 # Main execution logic for Flask backend

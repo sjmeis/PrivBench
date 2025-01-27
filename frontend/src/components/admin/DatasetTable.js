@@ -4,10 +4,27 @@ import Table from '@mui/joy/Table';
 
 import InsertDriveFileRoundedIcon from '@mui/icons-material/InsertDriveFileRounded';
 import ArrowDropDownRoundedIcon from '@mui/icons-material/ArrowDropDownRounded';
-import {Chip, Sheet} from "@mui/joy";
+import {Chip, IconButton, Sheet} from "@mui/joy";
 import {getDateString} from "../../utils/Date";
+import {CloudDownloadRounded} from "@mui/icons-material";
+import {DatasetService} from "../../services/DatasetService";
+import {useSnackbar} from "../../contexts/SnackbarProvider";
+
 
 const DatasetTable = ({datasets}) => {
+    const {showSnackbar} = useSnackbar()
+    const downloadDataset = (dataset) => {
+        console.log(dataset)
+        DatasetService.downloadDatasets([dataset.name])
+            .then(() => {
+                showSnackbar("Dataset was downloaded", "success");
+            })
+            .catch((error) => {
+
+                showSnackbar("Error downloading datasets", "error");
+            });
+    }
+
     return (
         <Sheet
             variant="outlined"
@@ -44,6 +61,9 @@ const DatasetTable = ({datasets}) => {
                         <th style={{width: '15%'}}>
                             <Typography level="title-sm">Status</Typography>
                         </th>
+                        <th style={{width: '15%', textAlign: 'right'}}>
+                            <Typography level="title-sm">Download</Typography>
+                        </th>
                     </tr>
                     </thead>
                     <tbody>
@@ -67,6 +87,15 @@ const DatasetTable = ({datasets}) => {
                             <td>
                                 {item.isActive ? <Chip variant='soft' color='success'>Active</Chip> :
                                     <Chip color='error' variant='soft'>Not Active</Chip>}
+                            </td>
+                            <td style={{textAlign: "right"}}>
+                                <IconButton
+                                    variant='soft'
+                                    color='primary'
+                                    onClick={() => downloadDataset(item)}
+                                >
+                                    <CloudDownloadRounded/>
+                                </IconButton>
                             </td>
                         </tr>)
                     )}

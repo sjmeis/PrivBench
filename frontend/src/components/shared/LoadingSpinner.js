@@ -6,7 +6,7 @@ export default function LoadingSpinner({visible = true}){
         <>
             {visible && (
                 <CircularProgress
-                    sx={{ml: 'calc(50% - 30px)', mt: 'calc(50% - 100px)'}}
+                    sx={{ml: 'calc(50% - 30px)', mt: 'calc(50vh - 150px)'}}
                     color="primary"
                     determinate={false}
                     size="lg"
