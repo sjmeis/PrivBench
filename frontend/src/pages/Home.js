@@ -17,6 +17,7 @@ import StorageIcon from '@mui/icons-material/Storage';
 import SecurityIcon from '@mui/icons-material/Security';
 import {useNavigate} from "react-router-dom";
 import Footer from "../components/shared/Footer";
+import RankingsPreview from '../components/ranking/RankingPreview';
 
 const Home = () => {
     const [scrolled, setScrolled] = useState(false);
@@ -108,7 +109,7 @@ const Home = () => {
                 {/* Background Image with Parallax Effect */}
                 <Box
                 sx={{
-                    position: 'fixed', 
+                    position: 'absolute', 
                     top: 0,
                     left: 0,
                     right: 0,
@@ -116,7 +117,7 @@ const Home = () => {
                     opacity: 0.2,
                     '&::before': {
                         content: '""',
-                        position: 'fixed', 
+                        position: 'absolute', 
                         inset: 0,
                         backgroundImage: 'url(/images/background.jpg)',
                         backgroundSize: 'cover',
@@ -389,31 +390,7 @@ const Home = () => {
                         </Button>
                     </Grid>
                     <Grid item xs={12} md={6}>
-                        <Card
-                            variant="outlined"
-                            sx={{
-                                p: 2,
-                                bgcolor: isLightMode ? 'background.surface' : 'neutral.900',
-                                transition: 'transform 0.3s',
-                                '&:hover': {
-                                    transform: 'translateY(-4px)',
-                                    boxShadow: 'lg'
-                                }
-                            }}
-                        >
-                            <AspectRatio ratio="4/3">
-                                <img
-                                    src="/api/placeholder/800/600"
-                                    alt="Rankings Preview"
-                                    style={{
-                                        objectFit: 'cover',
-                                        width: '100%',
-                                        height: '100%',
-                                        borderRadius: 'md'
-                                    }}
-                                />
-                            </AspectRatio>
-                        </Card>
+                        <RankingsPreview />
                     </Grid>
                 </Grid>
             </Box>
