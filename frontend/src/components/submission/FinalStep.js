@@ -129,6 +129,7 @@ const FinalStep = () => {
             );
 
             if (allTasksFinished) {
+                clearInterval(intervalId); // Stop polling
                 setLoading(false);
                 const successfulTasks = updatedTasks.filter(
                     task => task.completed && task.score !== null
