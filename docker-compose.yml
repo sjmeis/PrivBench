@@ -11,6 +11,7 @@ services:
       - ./data/datasets:/data/datasets
       - privatized_datasets:/data/privatized_datasets
       - ./modules:/modules
+      - ./benchmarks:/benchmarks
       - /var/run/docker.sock:/var/run/docker.sock
     user: root
     environment:
@@ -35,6 +36,7 @@ services:
       - ./data/datasets:/data/datasets
       - privatized_datasets:/data/privatized_datasets
       - ./modules:/modules
+      - ./benchmarks:/benchmarks
       - /var/run/docker.sock:/var/run/docker.sock
     user: root
     environment:

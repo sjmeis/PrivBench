@@ -35,6 +35,21 @@ class ModuleManager:
             shutil.copy2(module_path, module_dest)
             logger.debug(f"Module file copied to: {module_dest}")
             logger.debug(f"Module contents: {module_dest.read_text()}")
+
+            # Copy files from benchmarks folder
+            benchmarks_path = Path("/benchmarks")  # This is the mounted path in the container
+            if benchmarks_path.exists():
+                # Create a benchmarks directory in the temp folder
+                benchmark_dest = temp_path / "benchmarks"
+                benchmark_dest.mkdir(exist_ok=True)
+                
+                # Copy all files from benchmarks directory
+                for benchmark_file in benchmarks_path.glob("*"):
+                    if benchmark_file.is_file():
+                        shutil.copy2(benchmark_file, benchmark_dest / benchmark_file.name)
+                        logger.debug(f"Benchmark file copied: {benchmark_file.name}")
+            
+            logger.debug(f"Temp directory contents: {list(temp_path.glob('**/*'))}")
             
             if requirements_path:
                 shutil.copy2(requirements_path, requirements_dest)
