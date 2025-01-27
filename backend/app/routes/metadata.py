@@ -3,6 +3,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from ..models import Submission, SubmissionMetadata, User
 from datetime import datetime
 from ..extensions import db
+from ..enums import License
 
 metadata_bp = Blueprint("metadata", __name__)
 
@@ -30,12 +31,23 @@ def save_metadata():
         db.session.add(new_submission)
         db.session.flush()  # Flush to get the submission ID
 
+        # Map the license string to the enum value
+        license_str = data.get("license")
+        try:
+            transformed_license = (
+                license_str.replace(" ", "_").replace(".", "_").upper()
+            )
+            license_enum = License[transformed_license]
+        except KeyError:
+            return jsonify({"message": f"Invalid license type: {license_str}"}), 400
+
+
         # Create metadata
         metadata = SubmissionMetadata(
             submission_id=new_submission.id,
             model_name=data["modelName"],
             model_description=data["modelDescription"],
-            license=data["license"],
+            license=license_enum,
             tags=data.get("tags"),
             authors=data.get("authors"),
             research_paper_url=data.get("researchPaperUrl"),
@@ -45,7 +57,7 @@ def save_metadata():
         db.session.add(metadata)
         db.session.commit()
 
-        return jsonify({"message": "Submission and metadata saved successfully", 
+        return jsonify({"message": "Submission and metadata saved successfully",
                         "submission_id": new_submission.id}), 201
 
     except Exception as e:
@@ -53,8 +65,8 @@ def save_metadata():
         return jsonify({"message": str(e)}), 500
 
 
-
 @metadata_bp.route('/metadata', methods=['PUT'])
+@jwt_required()
 def update_submission_detail():
     try:
         data = request.get_json()
@@ -86,7 +98,16 @@ def update_submission_detail():
             submission_metadata = submission.submission_metadata or SubmissionMetadata()
             submission_metadata.model_name = metadata_data.get('modelName', submission_metadata.model_name)
             submission_metadata.model_description = metadata_data.get('modelDescription', submission_metadata.model_description)
-            submission_metadata.license = metadata_data.get('license', submission_metadata.license)
+
+            # Map the license string to the enum value (same as save_metadata function)
+            license_str = metadata_data.get('license')
+            if license_str:
+                try:
+                    transformed_license = license_str.replace(" ", "_").replace(".", "_").upper()
+                    submission_metadata.license = License[transformed_license]
+                except KeyError:
+                    return jsonify({"message": f"Invalid license type: {license_str}"}), 400
+
             submission_metadata.tags = metadata_data.get('tags', submission_metadata.tags)
             submission_metadata.authors = metadata_data.get('authors', submission_metadata.authors)
             submission_metadata.research_paper_url = metadata_data.get('researchPaperUrl', submission_metadata.research_paper_url)
@@ -123,7 +144,7 @@ def update_submission_detail():
             updated_submission_detail["metadata"] = {
                 "modelName": submission.submission_metadata.model_name,
                 "modelDescription": submission.submission_metadata.model_description,
-                "license": submission.submission_metadata.license,
+                "license": submission.submission_metadata.license.name,
                 "tags": submission.submission_metadata.tags.split(",") if submission.submission_metadata.tags else [],
                 "authors": submission.submission_metadata.authors,
                 "researchPaperUrl": submission.submission_metadata.research_paper_url,
@@ -134,5 +155,13 @@ def update_submission_detail():
         # Return the updated submission details
         return jsonify({"submission": updated_submission_detail}), 200
 
+    except Exception as e:
+        return jsonify({"message": "Internal server error", "error": str(e)}), 500
+
+@metadata_bp.route('/licenses', methods=['GET'])
+def get_licenses():
+    try:
+        licenses = [license.value for license in License]
+        return jsonify({"licenses": licenses}), 200
     except Exception as e:
         return jsonify({"message": "Internal server error", "error": str(e)}), 500
