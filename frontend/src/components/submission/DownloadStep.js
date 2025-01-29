@@ -73,7 +73,8 @@ const DownloadStep = ({onDatasetDownloaded, onDatasetsFetched}) => {
             <Typography level="h2" mb={2} sx={{textAlign: "start"}}>
                 Download Datasets
             </Typography>
-            <Typography sx={{marginY: 1, p: 1}} variant="soft" color="neutral" level="body1">
+
+            <Typography sx={{marginY: 1, }} level="body1">
                 <Stack spacing={2}>
                     <Typography>
                         Please download all the original datasets provided. The datasets contain sensitive
@@ -85,6 +86,12 @@ const DownloadStep = ({onDatasetDownloaded, onDatasetsFetched}) => {
                         Once the privatization process is complete, save the resulting privatized datasets. You will
                         need to upload them in the final step of this workflow.
                     </Typography>
+                </Stack>
+            </Typography>
+
+
+            <Typography sx={{marginY: 1, p: 1}} variant="soft" color="neutral" level="body1">
+                <Stack spacing={2}>
 
                     <Typography sx={{ fontWeight: 'bold' }}>
                         Important: Replace the textual data column with the privatized data while keeping all other columns unchanged and in their original order. This ensures that the benchmarking process functions correctly and handles the datasets as intended.
