@@ -71,7 +71,7 @@ const UploadTable = ({ datasets, uploadedFiles, uploadingDatasetId, onFileSelect
             <Box sx={{ display: "flex", padding: "8px 16px", borderBottom: "1px solid #e0e0e0", fontWeight: "bold" }}>
                 <Box sx={{ flex: 1 }}>Original Dataset</Box>
                 <Box sx={{ flex: 1 }}>Uploaded Dataset</Box>
-                <Box sx={{ flex: 1, textAlign: "center" }}>Actions</Box>
+                <Box sx={{ flex: 1, paddingRight: 1, textAlign: "end" }}>Actions</Box>
             </Box>
 
             {datasets.map((dataset) => {
@@ -91,10 +91,10 @@ const UploadTable = ({ datasets, uploadedFiles, uploadingDatasetId, onFileSelect
                         </Box>
 
                         <Box sx={{ flex: 1 }}>
-                            <Box display="flex" justifyContent="center" alignItems="center">
+                            <Box display="flex" justifyContent="end" alignItems="center">
                                 <Button
                                     component="label"
-                                    size="lg"
+                                    size="sm"
                                     variant="soft"
                                     startDecorator={uploadingDatasetId === dataset.id ? <CircularProgress size="sm" /> : <CloudUpload />}
                                 >
