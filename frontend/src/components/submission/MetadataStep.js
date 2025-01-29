@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
     FormControl,
     Input,
@@ -8,9 +8,21 @@ import {
     Option,
     Box,
 } from "@mui/joy";
+import axios from 'axios';
 
 const MetadataStep = ({ metadata, setMetadata }) => {
-    const licenseOptions = ["MIT", "Apache 2.0", "GPLv3", "BSD"];
+    const [licenseOptions, setLicenseOptions] = useState([]);
+
+    // Fetch the license options from the backend
+    useEffect(() => {
+        axios.get('http://localhost:5000/licenses')
+            .then((response) => {
+                setLicenseOptions(response.data.licenses);
+            })
+            .catch((error) => {
+                console.error('Error fetching licenses:', error);
+            });
+    }, []);
 
     const handleChange = (field, value) => {
         setMetadata((prevState) => ({
@@ -50,17 +62,18 @@ const MetadataStep = ({ metadata, setMetadata }) => {
                         <Typography level="body1" sx={{ marginBottom: 1 }}>
                             License
                         </Typography>
+
                         <Select
-                            placeholder="Select a license"
+                            placeholder="License"
                             value={metadata.license}
                             onChange={(e, value) => handleChange("license", value)}
                             sx={{ width: "100%" }}
                         >
-                            {licenseOptions.map((license) => (
-                                <Option key={license} value={license}>
-                                    {license}
-                                </Option>
-                            ))}
+                            {licenseOptions.map((license, index) => (
+                                    <Option key={index} value={license}>
+                                        {license}
+                                    </Option>
+                                ))}
                         </Select>
                     </Box>
 
@@ -174,4 +187,3 @@ const MetadataStep = ({ metadata, setMetadata }) => {
 };
 
 export default MetadataStep;
-
