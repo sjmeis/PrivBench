@@ -395,57 +395,72 @@ const Home = () => {
                 </Grid>
             </Box>
 
-                        {/* Dashboard Preview Section */}
-                        <Box sx={{ px: { xs: 2, md: 4 }, py: 8, maxWidth: '6xl', mx: 'auto' }}>
-                <Typography
-                    level="h2"
-                    sx={{
-                        textAlign: 'center',
-                        mb: 2,
-                        color: isLightMode ? 'primary.main' : 'primary.300'
-                    }}
-                >
-                    Powerful Dashboard
-                </Typography>
-                <Typography
-                    level="body-lg"
-                    sx={{
-                        textAlign: 'center',
-                        mb: 6,
-                        color: isLightMode ? 'text.secondary' : 'neutral.300',
-                        maxWidth: '800px',
-                        mx: 'auto'
-                    }}
-                >
-                    Monitor your privacy metrics in real-time with our comprehensive dashboard. 
-                    Track performance, analyze trends, and make data-driven decisions to enhance your privacy preservation methods.
-                </Typography>
-                <Card
-                    variant="outlined"
-                    sx={{
-                        p: 2,
-                        transition: 'transform 0.3s',
-                        '&:hover': {
-                            transform: 'scale(1.02)',
-                            boxShadow: 'lg'
-                        }
-                    }}
-                >
-                    <AspectRatio ratio="21/9">
-                        <img
-                            src="/api/placeholder/1200/600"
-                            alt="Dashboard Preview"
-                            style={{
-                                objectFit: 'cover',
-                                width: '100%',
-                                height: '100%',
-                                borderRadius: 'md'
+{/* Dashboard Preview Section */}
+<Box sx={{ px: { xs: 2, md: 4 }, py: 8, maxWidth: '6xl', mx: 'auto' }}>
+                <Grid container spacing={4} alignItems="center">
+                    <Grid item xs={12} md={5}>
+                        <Card
+                            variant="outlined"
+                            sx={{
+                                p: 2,
+                                transition: 'transform 0.3s',
+                                '&:hover': {
+                                    transform: 'scale(1.02)',
+                                    boxShadow: 'lg'
+                                }
                             }}
-                        />
-                    </AspectRatio>
-                </Card>
+                        >
+                            <Box sx={{ width: 'fit-content' }}>
+                                <img
+                                    src="/images/submissions.jpeg"
+                                    alt="Dashboard Preview"
+                                    style={{
+                                        maxWidth: '100%',
+                                        height: 'auto',
+                                        display: 'block',
+                                        borderRadius: 'md'
+                                    }}
+                                />
+                            </Box>
+                        </Card>
+                    </Grid>
+                    <Grid item xs={12} md={7}>
+                        <Typography
+                            level="h2"
+                            sx={{
+                                mb: 2,
+                                color: isLightMode ? 'primary.main' : 'primary.300'
+                            }}
+                        >
+                            Submissions Overview
+                        </Typography>
+                        <Typography
+                            level="body-lg"
+                            sx={{
+                                mb: 4,
+                                color: isLightMode ? 'text.secondary' : 'neutral.300'
+                            }}
+                        >
+                            Monitor your privacy metrics in real-time with our comprehensive overview. 
+                            Track performance, publish results, and make data-driven decisions to enhance 
+                            your privacy preservation methods.
+                        </Typography>
+                        <Button
+                            size="lg"
+                            onClick={() => navigate('/upload')}
+                            endDecorator="→"
+                            sx={{
+                                '&:hover': { 
+                                    transform: 'translateX(4px)',
+                                    transition: 'all 0.2s'
+                                }
+                            }}
+                        >
+                            Start Submitting
+                        </Button>
+                    </Grid>
+                </Grid>
             </Box>
-
             <IconButton
                 onClick={scrollToTop}
                 sx={{
