@@ -5,6 +5,7 @@ class SubmissionStatus(Enum):
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
     FAILED = "failed"
+    OUTDATED = "outdated"
 
     # dont forget to update also frontend enums
 

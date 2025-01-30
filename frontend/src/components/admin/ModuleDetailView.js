@@ -15,10 +15,13 @@ import {
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import FormControl from "@mui/joy/FormControl";
 import React, {useEffect, useState} from "react";
-import DatasetTableSmall from "./DatasetTableSmall";
+import FileTableSmall from "./FileTableSmall";
+import {getDateString} from "../../utils/Date";
 
 const ModuleDetailView = ({selectedModule, handleCloseDetailView}) => {
     const [formData, setFormData] = useState({})
+    const DATASET_TABLE_TITLE = 'Associated Dataset';
+    const SCRIPT_TABLE_TITLE = 'Python Benchmarking Module Logic'
     const handleInputChange = (e) => {
         const {name, value} = e.target;
         setFormData(prev => ({
@@ -26,6 +29,15 @@ const ModuleDetailView = ({selectedModule, handleCloseDetailView}) => {
             [name]: value
         }));
     };
+
+    const disableSaveButton = () => {
+        return formData.name === selectedModule.name && formData.description === selectedModule.description
+    }
+
+    const saveChanges = () => {
+        //todo: implemenbt
+    }
+
 
     useEffect(() => {
         setFormData(selectedModule)
@@ -63,7 +75,7 @@ const ModuleDetailView = ({selectedModule, handleCloseDetailView}) => {
                         <Typography level="title-sm">Details</Typography>
                     </Tab>
                     <Tab sx={{flexGrow: 1}}>
-                        <Typography level="title-sm">Datasets</Typography>
+                        <Typography level="title-sm">Files</Typography>
                     </Tab>
                 </TabList>
                 <TabPanel value={0} sx={{p: 2}}>
@@ -95,13 +107,21 @@ const ModuleDetailView = ({selectedModule, handleCloseDetailView}) => {
                                 />
                             </FormControl>
                             <FormControl>
+                                <FormLabel>Active Since</FormLabel>
+                                <Input
+                                    disabled
+                                    name="createdAt"
+                                    type="text"
+                                    value={formData.createdAt ? getDateString(formData.createdAt) : 'N/A'}
+                                />
+                            </FormControl>
+                            <FormControl>
                                 <FormLabel>Version</FormLabel>
                                 <Input
                                     disabled
                                     name="version"
                                     type="text"
                                     value={formData.version}
-                                    onChange={handleInputChange}
                                 />
                             </FormControl>
                             <FormControl>
@@ -122,7 +142,7 @@ const ModuleDetailView = ({selectedModule, handleCloseDetailView}) => {
                                 mt: 'auto',
                             }}
                         >
-                            <Button type="submit" fullWidth>Save Updates</Button>
+                            <Button disabled={disableSaveButton()} onClick={saveChanges} fullWidth>Save Updates</Button>
                         </Box>
                     </Box>
                 </TabPanel>
@@ -135,16 +155,11 @@ const ModuleDetailView = ({selectedModule, handleCloseDetailView}) => {
                             flexDirection: 'column',
                         }}
                     >
-                        {/*//todo: pass array here when multiple datasets per module are possible*/}
-                        <DatasetTableSmall datasets={[selectedModule.dataset]} />
-                        <Box
-                            sx={{
-                                p: 2,
-                                mt: 'auto',
-                            }}
-                        >
-                            <Button type="submit" fullWidth>Add Datasets to this Module</Button>
-                        </Box>
+                        <Stack spacing={2}>
+                            <FileTableSmall datasets={[selectedModule]} title={SCRIPT_TABLE_TITLE}/>
+                            <FileTableSmall datasets={[selectedModule.dataset]} title={DATASET_TABLE_TITLE} />
+                        </Stack>
+
                         </Box>
                 </TabPanel>
             </Tabs>

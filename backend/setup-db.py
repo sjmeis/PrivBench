@@ -1,5 +1,6 @@
 from app import create_app, db
 from app.models import Dataset, BenchmarkModule
+from app.tasks.add_module import install_and_load_module
 from datetime import datetime
 import os
 import logging
@@ -26,60 +27,83 @@ else:
 app = create_app()
 
 with app.app_context():
-    # Drop all tables and recreate them (optional, uncomment if needed)
-    # db.drop_all()
-    # db.create_all()
+    # Drop all tables and recreate them
+    db.drop_all()
+    db.create_all()
 
-    module_names = ['NERpriv', 'AttInfpriv', 'CohGenpriv']
-    module_file_names = ['ner_priv.py', 'attinf_priv.py', 'cohgen_priv.py']
-    module_titles = ['NER Evaluation', 'Attribute Inference', 'Coherent Generation']
-    module_descriptions = []
-    module_descriptions.append("On the surface, text privatization should pay particular attention to named entities, or words or groups of words that point to some real-world object, person, organization, etc. Ensuring that such entities are not leaked into the privatized text, while also balancing the preservation of semantics, is the mark of an effective privatization method.")
-    module_descriptions.append("In this module, we empirically test for a text privatization's ability to obfuscate implicit attributes or sensitive identifiers hidden within text, such as authorship cues or gender signals. Thus, an effective privatization method should hide these attributes, while also maintaining the original semantic meaning of the text.")
-    module_descriptions.append("An effective privatization method should not only obfuscate sensitive information, but it should also produce coherent outputs which can be utilized downstream. As a proxy for coherent generation, we measure the perplexity of the private texts, or rather, how “predictable” these texts are to a pretrained language model.")
+    module_names = ['NERpriv', 'Coherence', 'NearestNeighbor', 'Similarity']
+    module_file_names = ['NERpriv.py', 'Coherence.py',  'NearestNeighbor.py', 'Similarity.py']
+    module_requirement_file_names = [
+        'ner_requirements.txt', 'coh-reqs.txt',
+        'nearest-neighbor-reqs.txt', 'similarity-reqs.txt'
+    ]
+
+    module_titles = [
+        'NER Evaluation', 'Text Coherence',
+        'Nearest Neighbor Search', 'Text Similarity'
+    ]
+    module_descriptions = [
+        "On the surface, text privatization should pay particular attention to named entities, or words or groups of words that point to some real-world object, person, organization, etc. Ensuring that such entities are not leaked into the privatized text, while also balancing the preservation of semantics, is the mark of an effective privatization method.",
+        "This module evaluates the coherence of text, ensuring logical flow and semantic connectivity between sentences and paragraphs.",
+        "The nearest neighbor module enables efficient searching for the closest data points, useful in "
+        "classification and recommendation systems.",
+        "Text similarity measures the likeness between two pieces of text, commonly used in search engines, clustering, and recommendation tasks."
+    ]
+    dataset_name = 'test_original.csv'
 
     # Iterate over all files in the dataset folder
-    if os.path.exists(DATASET_FOLDER):
-        for i, dataset_name in enumerate(os.listdir(DATASET_FOLDER)):
-            file_path = os.path.join(DATASET_FOLDER, dataset_name)
-            
-            # Check if the file exists and is a file (not a directory)
-            if os.path.isfile(file_path):
-                logger.info(f"Adding dataset: {dataset_name} at path: {file_path}")
-                
-                # Create a new Dataset entry
-                new_dataset = Dataset(
-                    name=dataset_name,
-                    file_path=file_path,
-                    created_at=datetime.utcnow(),
-                    is_active=True
-                )
+    if os.path.exists(DATASET_FOLDER) and os.path.exists(MODULE_FOLDER):
 
-                # Add and commit the new entry to the database
-                db.session.add(new_dataset)
-                db.session.flush()
+        file_path = os.path.join(DATASET_FOLDER, dataset_name)
+        if os.path.isfile(file_path):
+            logger.info(f"Adding dataset: {dataset_name} at path: {file_path}")
 
-                # Dynamically fetch the module name from the list
-                module_name = module_names[i % len(module_names)]  # Ensure it wraps around if there are more datasets than modules
-                module_title = module_titles[i % len(module_titles)]
-                module_file_name = module_file_names[i % len(module_file_names)]
-                module_path = os.path.join(MODULE_FOLDER, module_file_name)
-                module_description = module_descriptions[i % len(module_descriptions)]
+            # Create a new Dataset entry
+            new_dataset = Dataset(
+                name=dataset_name,
+                file_path=file_path,
+                created_at=datetime.utcnow(),
+                is_active=True
+            )
 
-                logger.info(f"Adding module: {module_name} at path: {module_path}")
+            # Add and commit the new entry to the database
+            db.session.add(new_dataset)
+            db.session.flush()
 
-                new_benchmark_module = BenchmarkModule(
-                    name=module_name,
-                    title=module_title,
-                    description=module_description,
-                    version="1.0.0",
-                    is_active=True,
-                    path=module_path,
-                    dataset_id=new_dataset.id
-                )
-                db.session.add(new_benchmark_module)
-        
-        # Commit all changes
+        for i, module_name in enumerate(module_names):
+
+            module_name = module_names[i % len(module_names)]
+            module_title = module_titles[i % len(module_titles)]
+            module_file_name = module_file_names[i % len(module_file_names)]
+            module_path = os.path.join(MODULE_FOLDER, module_file_name)
+            module_description = module_descriptions[i % len(module_descriptions)]
+            requirements_file_name = module_requirement_file_names[i % len(module_requirement_file_names)]
+            requirements_path = os.path.join(MODULE_FOLDER, requirements_file_name)
+
+            logger.info(f"Adding module: {module_name} at path: {module_path}")
+
+
+            new_benchmark_module = BenchmarkModule(
+                name=module_name,
+                title=module_title,
+                description=module_description,
+                version="1.0.0",
+                is_active=True,
+                path=module_path,
+                dataset_id=new_dataset.id
+            )
+
+            install_task = install_and_load_module.delay(
+                module_id=new_benchmark_module.id,
+                module_name=module_name,
+                module_path=module_path,
+                requirements_path=requirements_path
+            )
+
+            db.session.add(new_benchmark_module)
+
+            logger.info(f"Module {module_name} installed successfully")
+
         db.session.commit()
         logger.info("All datasets and modules have been added to the database.")
     else:

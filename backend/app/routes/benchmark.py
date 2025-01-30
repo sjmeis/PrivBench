@@ -365,3 +365,109 @@ def task_status(task_id):
         logger.info(f"Task {task_id} in progress: {response}")
     
     return jsonify(response)
+
+@benchmark_bp.route('/run-benchmark/update', methods=['POST'])
+@jwt_required()
+def benchmark_update():
+    """Endpoint to run benchmark tasks for new modules only."""
+    try:
+        response_headers = {
+            'Access-Control-Allow-Origin': 'http://localhost:3000',
+            'Access-Control-Allow-Credentials': 'true',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type'
+        }
+
+        if request.method == 'OPTIONS':
+            logger.info("CORS preflight request received")
+            return ('', 204, response_headers)
+
+        logger.info("Parsing request data")
+        request_data = request.get_json()
+        if not request_data or 'submissionId' not in request_data:
+            logger.warning("Missing 'submissionId' in request body")
+            return jsonify({"message": "Missing submission_id in request body"}), 400, response_headers
+
+        submission_id = request_data['submissionId']
+        logger.info(f"Parsed submission_id: {submission_id}")
+
+        user_id = get_jwt_identity()
+        logger.info(f"Retrieved user_id from JWT: {user_id}")
+
+        # Get submission and verify ownership
+        logger.info(f"Fetching submission with ID {submission_id}")
+
+        submission = Submission.query.get(submission_id)
+        if not submission:
+            logger.warning(f"Submission with ID {submission_id} not found in the database")
+            return jsonify({"message": "Submission not found"}), 404, response_headers
+
+        logger.info(f"Fetching submission with user id {submission.user_id}")
+
+
+        # if submission.user_id != user_id: //fixme: add this verificaiton
+        #     logger.warning(f"Unauthorized access attempt by user {user_id} for submission {submission_id}")
+        #     return jsonify({"message": "Unauthorized access to the submission"}), 403, response_headers
+
+        # Get modules that don't have scores for this submission
+        logger.info("Fetching completed module IDs")
+        completed_module_ids = {score.module_id for score in submission.benchmark_scores}
+        logger.info(f"Completed module IDs: {completed_module_ids}")
+
+        logger.info("Fetching new modules for benchmarking")
+        new_modules = BenchmarkModule.query.filter(
+            BenchmarkModule.is_active == True,
+            ~BenchmarkModule.id.in_(completed_module_ids) if completed_module_ids else True
+        ).all()
+        logger.info(f"Found {len(new_modules)} new modules to benchmark")
+
+        if not new_modules:
+            logger.info("No new modules to benchmark")
+            return jsonify({"message": "No new modules to benchmark"}), 200, response_headers
+
+        # Start tasks only for new modules
+        tasks = []
+        for module in new_modules:
+            logger.info(f"Processing module: {module.name} (ID: {module.id})")
+            dataset = Dataset.query.get(module.dataset_id)
+            if not dataset:
+                logger.warning(f"Dataset with ID {module.dataset_id} not found for module {module.name}")
+                continue
+
+            privatized_dataset = PrivatizedDataset.query.filter_by(
+                submission_id=submission_id,
+                original_dataset_id=module.dataset_id
+            ).first()
+            if not privatized_dataset:
+                logger.warning(f"Privatized dataset not found for submission {submission_id} and dataset {module.dataset_id}")
+                continue
+
+            logger.info(f"Starting benchmark task for module {module.name}")
+            task = run_benchmark_task.delay(
+                str(module.path),
+                module.name,
+                str(dataset.file_path),
+                str(privatized_dataset.file_path),
+                privatized_dataset.id,
+                submission_id,
+                module.id
+            )
+
+            tasks.append({
+                "task_id": task.id,
+                "module_id": module.id,
+                "module_name": module.name
+            })
+            logger.info(f"Task created for module {module.name} with task ID {task.id}")
+
+        if not tasks:
+            logger.warning("No tasks could be started")
+            return jsonify({"message": "No tasks could be started"}), 400, response_headers
+
+        logger.info(f"{len(tasks)} tasks successfully created")
+        return jsonify({"task_ids": tasks}), 202, response_headers
+
+    except Exception as e:
+        logger.error(f"Error in benchmark update endpoint: {str(e)}", exc_info=True)
+        return jsonify({"message": str(e)}), 500, response_headers
+
