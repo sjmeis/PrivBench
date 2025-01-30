@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
 import { Typography, Box, } from "@mui/joy";
 import { useSnackbar } from "../../contexts/SnackbarProvider";
-import { useAuth } from "../../contexts/AuthContext";
-import  sendEmail from "../../services/EmailService"
 import TaskProgressCard from "./TaskProgressCard";
 import ScoreOverviewCard from "./ScoreOverviewCard";
 
@@ -13,7 +11,6 @@ const FinalStep = () => {
     const [moduleScores, setModuleScores] = useState([]);
     const [tasks, setTasks] = useState([]);
     const { showSnackbar } = useSnackbar();
-    const { user } = useAuth();
 
 
     useEffect(() => {
@@ -144,23 +141,6 @@ const FinalStep = () => {
                     setAverageScore(
                         scores.reduce((sum, curr) => sum + curr.score, 0) / scores.length
                     );
-                }
-                const allTasksSuccessful = updatedTasks.every(
-                    task => task.completed && task.error === null && task.state === 'SUCCESS'
-                );
-
-                if (allTasksSuccessful) {
-                    sendEmail(
-                        user.mailAddress,
-                        "Submission evaluated successfully",
-                        "Your submission has been evaluated! You can now view your results.",
-                        "http://localhost:3000/"
-                    );
-                } else {
-                    sendEmail( user.mailAddress,
-                        "Submission evaluated",
-                        "There was an error with the evaluation of your submission.",
-                        "http://localhost:3000/")
                 }
             }
         };
