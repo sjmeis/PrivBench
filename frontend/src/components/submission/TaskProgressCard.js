@@ -26,7 +26,7 @@ const TaskProgressCard = ({ tasks }) => {
                                 fontSize: "0.875rem",
                             }}
                         >
-                            {"Benchmarking module failed" || task.status}
+                            {task.status}
                         </Typography>
                         {task.totalRows > 0 && (
                             <Typography level="body2" sx={{ fontSize: "0.875rem" }}>
