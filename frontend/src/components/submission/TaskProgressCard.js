@@ -16,7 +16,7 @@ const TaskProgressCard = ({ tasks }) => {
                         determinate
                         value={task.progress}
                         sx={{ mb: 1 }}
-                        color={task.error ? "error" : "success"}
+                        color={task.error ? "danger" : "success"}
                     />
                     <Box sx={{ display: "flex", justifyContent: "space-between", mt: 1 }}>
                         <Typography
@@ -26,7 +26,7 @@ const TaskProgressCard = ({ tasks }) => {
                                 fontSize: "0.875rem",
                             }}
                         >
-                            {task.error || task.status}
+                            {"Benchmarking module failed" || task.status}
                         </Typography>
                         {task.totalRows > 0 && (
                             <Typography level="body2" sx={{ fontSize: "0.875rem" }}>
