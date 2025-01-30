@@ -10,7 +10,7 @@ const fetchRankings = async (searchTerm = '', page = 1, limit = 8, sortOrder = '
             page: page,
             limit: limit,
             sortOrder: sortOrder,
-            orderBy: orderBy
+            sortBy: orderBy
         };
 
         const response = await axios.post(url, requestBody, {

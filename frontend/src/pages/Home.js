@@ -5,18 +5,24 @@ import {
     Card,
     Button,
     IconButton,
-    Sheet
+    Sheet,
+    Grid,
+    AspectRatio
 } from "@mui/joy";
 import { useTheme } from "@mui/joy";
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
+import LockIcon from '@mui/icons-material/Lock';
+import SpeedIcon from '@mui/icons-material/Speed';
+import StorageIcon from '@mui/icons-material/Storage';
+import SecurityIcon from '@mui/icons-material/Security';
 import {useNavigate} from "react-router-dom";
 import Footer from "../components/shared/Footer";
+import RankingsPreview from '../components/ranking/RankingPreview';
 
 const Home = () => {
     const [scrolled, setScrolled] = useState(false);
     const [activeIndex, setActiveIndex] = useState(0);
     const theme = useTheme();
-
     const navigate = useNavigate();
     const isLightMode = theme.palette.mode === 'light';
 
@@ -54,6 +60,29 @@ const Home = () => {
         }
     ];
 
+    const features = [
+        {
+            icon: <LockIcon sx={{ fontSize: 32 }} />,
+            title: "Privacy-First Architecture",
+            description: "State-of-the-art privacy preservation with end-to-end encryption and secure data handling"
+        },
+        {
+            icon: <SpeedIcon sx={{ fontSize: 32 }} />,
+            title: "Real-time Analysis",
+            description: "Get instant feedback on your privacy methods with comprehensive metrics and benchmarks"
+        },
+        {
+            icon: <StorageIcon sx={{ fontSize: 32 }} />,
+            title: "Scalable Infrastructure",
+            description: "Handle large-scale datasets with our distributed computing infrastructure"
+        },
+        {
+            icon: <SecurityIcon sx={{ fontSize: 32 }} />,
+            title: "Advanced Security",
+            description: "Enterprise-grade security protocols ensuring your data remains protected"
+        }
+    ];
+
     return (
         <Sheet
             sx={{
@@ -68,6 +97,7 @@ const Home = () => {
                     : 'linear-gradient(to bottom, var(--joy-palette-neutral-900), var(--joy-palette-neutral-800))',
             }}
         >
+            {/* Hero Section */}
             <Box sx={{
                 height: '100vh',
                 display: 'flex',
@@ -76,6 +106,30 @@ const Home = () => {
                 position: 'relative',
                 overflow: 'hidden'
             }}>
+                {/* Background Image with Parallax Effect */}
+                <Box
+                sx={{
+                    position: 'absolute', 
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0, 
+                    opacity: 0.2,
+                    '&::before': {
+                        content: '""',
+                        position: 'absolute', 
+                        inset: 0,
+                        backgroundImage: 'url(/images/background.jpg)',
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        backgroundAttachment: 'fixed', 
+                        transform: 'scale(1.1)',
+                        filter: 'blur(5px)',
+                        height: '100vh',
+                        width: '100vw', 
+                    }
+                }}
+            />
                 <Box sx={{
                     position: 'absolute',
                     inset: 0,
@@ -165,7 +219,11 @@ const Home = () => {
                             onClick={() => navigate('/upload')}
                             sx={{
                                 bgcolor: 'primary.500',
-                                '&:hover': { bgcolor: 'primary.600' },
+                                '&:hover': { 
+                                    bgcolor: 'primary.600',
+                                    transform: 'translateY(-2px)',
+                                    transition: 'all 0.2s'
+                                },
                                 px: 4
                             }}
                         >
@@ -179,8 +237,10 @@ const Home = () => {
                                 borderColor: 'primary.400',
                                 color: 'primary.400',
                                 '&:hover': {
-                                    bgcolor: 'primary.400',
-                                    opacity: 0.1
+                                    borderColor: 'primary.500',
+                                    bgcolor: 'primary.50',
+                                    transform: 'translateY(-2px)',
+                                    transition: 'all 0.2s'
                                 },
                                 px: 4
                             }}
@@ -191,84 +251,216 @@ const Home = () => {
                 </Box>
             </Box>
 
+            {/* Feature Cards Section */}
             <Box sx={{ px: { xs: 2, md: 4 }, py: 8, maxWidth: '6xl', mx: 'auto' }}>
-                <Box sx={{
-                    display: 'grid',
-                    gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
-                    gap: 4
-                }}>
-                    <Card
-                        variant="outlined"
-                        sx={{
-                            bgcolor: isLightMode ? 'background.paper' : 'neutral.800',
-                            borderColor: isLightMode ? 'divider' : 'neutral.700',
-                            '&:hover': {
-                                borderColor: 'primary.500',
-                                transform: 'translateY(-4px)',
-                                transition: 'all 0.3s'
-                            }
-                        }}
-                    >
-                        <Typography level="h3" sx={{ color: 'primary.400', mb: 2 }}>
-                            Comprehensive Evaluation
-                        </Typography>
-                        <Typography level="body-md" sx={{ color: isLightMode ? 'text.secondary' : 'neutral.300', mb: 2 }}>
-                            Our platform provides thorough assessment of text privatization methods across multiple dimensions
-                        </Typography>
-                        <Box component="ul" sx={{ color: isLightMode ? 'text.primary' : 'neutral.400', pl: 4 }}>
-                            <li>Privacy preservation metrics</li>
-                            <li>Real-time performance analysis</li>
-                            <li>Comparative benchmarking</li>
-                            <li>Detailed reporting</li>
-                        </Box>
-                    </Card>
-
-                    <Card
-                        variant="outlined"
-                        sx={{
-                            bgcolor: isLightMode ? 'background.paper' : 'neutral.800',
-                            borderColor: isLightMode ? 'divider' : 'neutral.700',
-                            '&:hover': {
-                                borderColor: 'primary.500',
-                                transform: 'translateY(-4px)',
-                                transition: 'all 0.3s'
-                            }
-                        }}
-                    >
-                        <Typography level="h3" sx={{ color: 'primary.400', mb: 2 }}>
-                            How It Works
-                        </Typography>
-                        <Typography level="body-md" sx={{ color: isLightMode ? 'text.secondary' : 'neutral.300', mb: 4 }}>
-                            Submit your privatized datasets for evaluation using our standardized benchmarking process. Track your progress in real-time and compare your results with other researchers.
-                        </Typography>
-                        <Box sx={{ display: 'flex', gap: 2, mt: 'auto' }}>
-                            <Button
-                                sx={{
-                                    flex: 1,
-                                    bgcolor: 'primary.500',
-                                    '&:hover': { bgcolor: 'primary.600' }
-                                }}
-                                onClick={() => navigate('/rankings')}
-                            >
-                                View Rankings
-                            </Button>
-                            <Button
+                <Typography
+                    level="h2"
+                    sx={{
+                        textAlign: 'center',
+                        mb: 6,
+                        color: isLightMode ? 'primary.main' : 'primary.300'
+                    }}
+                >
+                    Key Features
+                </Typography>
+                <Grid container spacing={3}>
+                    {features.map((feature, index) => (
+                        <Grid key={index} item xs={12} md={6} lg={3}>
+                            <Card
                                 variant="outlined"
                                 sx={{
-                                    flex: 1,
-                                    borderColor: 'neutral.600',
-                                    color: isLightMode ? 'text.primary' : 'neutral.300',
-                                    '&:hover': { borderColor: 'primary.400' }
+                                    height: '100%',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    textAlign: 'center',
+                                    p: 3,
+                                    bgcolor: isLightMode ? 'background.paper' : 'neutral.800',
+                                    borderColor: isLightMode ? 'divider' : 'neutral.700',
+                                    '&:hover': {
+                                        borderColor: 'primary.500',
+                                        transform: 'translateY(-4px)',
+                                        transition: 'all 0.3s',
+                                        boxShadow: 'md'
+                                    }
                                 }}
-                                onClick={() => navigate('/information')}
                             >
-                                Learn More
-                            </Button>
-                        </Box>
-                    </Card>
-                </Box>
+                                <Box
+                                    sx={{
+                                        mb: 2,
+                                        p: 2,
+                                        borderRadius: 'xl',
+                                        bgcolor: isLightMode ? 'primary.50' : 'primary.900',
+                                        color: isLightMode ? 'primary.500' : 'primary.300'
+                                    }}
+                                >
+                                    {feature.icon}
+                                </Box>
+                                <Typography level="h4" sx={{ mb: 2 }}>
+                                    {feature.title}
+                                </Typography>
+                                <Typography level="body-md" sx={{ color: isLightMode ? 'text.secondary' : 'neutral.300' }}>
+                                    {feature.description}
+                                </Typography>
+                            </Card>
+                        </Grid>
+                    ))}
+                </Grid>
             </Box>
 
+            {/* Rankings Section */}
+            <Box 
+                sx={{ 
+                    px: { xs: 2, md: 4 }, 
+                    py: 8, 
+                    maxWidth: '6xl', 
+                    mx: 'auto',
+                    bgcolor: isLightMode ? 'primary.50' : 'neutral.800'
+                }}
+            >
+                <Grid container spacing={4} alignItems="center">
+                    <Grid item xs={12} md={6}>
+                        <Typography
+                            level="h2"
+                            sx={{
+                                mb: 2,
+                                color: isLightMode ? 'primary.main' : 'primary.300'
+                            }}
+                        >
+                            Competitive Rankings
+                        </Typography>
+                        <Typography
+                            level="body-lg"
+                            sx={{
+                                mb: 4,
+                                color: isLightMode ? 'text.secondary' : 'neutral.300'
+                            }}
+                        >
+                            Compare your privacy preservation methods against other researchers and institutions. 
+                            Our ranking system provides transparent metrics and fair comparisons across different approaches.
+                        </Typography>
+                        <Grid container spacing={2} sx={{ mb: 4 }}>
+                            <Grid item xs={6}>
+                                <Card
+                                    variant="soft"
+                                    sx={{
+                                        p: 2,
+                                        textAlign: 'center',
+                                        bgcolor: isLightMode ? 'background.surface' : 'neutral.700'
+                                    }}
+                                >
+                                    <Typography level="h3" sx={{ color: 'primary.500' }}>
+                                        100+
+                                    </Typography>
+                                    <Typography level="body-sm">
+                                        Active Researchers
+                                    </Typography>
+                                </Card>
+                            </Grid>
+                            <Grid item xs={6}>
+                                <Card
+                                    variant="soft"
+                                    sx={{
+                                        p: 2,
+                                        textAlign: 'center',
+                                        bgcolor: isLightMode ? 'background.surface' : 'neutral.700'
+                                    }}
+                                >
+                                    <Typography level="h3" sx={{ color: 'primary.500' }}>
+                                        500+
+                                    </Typography>
+                                    <Typography level="body-sm">
+                                        Submissions
+                                    </Typography>
+                                </Card>
+                            </Grid>
+                        </Grid>
+                        <Button
+                            size="lg"
+                            onClick={() => navigate('/rankings')}
+                            endDecorator="→"
+                            sx={{
+                                '&:hover': { 
+                                    transform: 'translateX(4px)',
+                                    transition: 'all 0.2s'
+                                }
+                            }}
+                        >
+                            View Rankings
+                        </Button>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                        <RankingsPreview />
+                    </Grid>
+                </Grid>
+            </Box>
+
+{/* Dashboard Preview Section */}
+<Box sx={{ px: { xs: 2, md: 4 }, py: 8, maxWidth: '6xl', mx: 'auto' }}>
+                <Grid container spacing={4} alignItems="center">
+                    <Grid item xs={12} md={5}>
+                        <Card
+                            variant="outlined"
+                            sx={{
+                                p: 2,
+                                transition: 'transform 0.3s',
+                                '&:hover': {
+                                    transform: 'scale(1.02)',
+                                    boxShadow: 'lg'
+                                }
+                            }}
+                        >
+                            <Box sx={{ width: 'fit-content' }}>
+                                <img
+                                    src="/images/submissions.jpeg"
+                                    alt="Dashboard Preview"
+                                    style={{
+                                        maxWidth: '100%',
+                                        height: 'auto',
+                                        display: 'block',
+                                        borderRadius: 'md'
+                                    }}
+                                />
+                            </Box>
+                        </Card>
+                    </Grid>
+                    <Grid item xs={12} md={7}>
+                        <Typography
+                            level="h2"
+                            sx={{
+                                mb: 2,
+                                color: isLightMode ? 'primary.main' : 'primary.300'
+                            }}
+                        >
+                            Submissions Overview
+                        </Typography>
+                        <Typography
+                            level="body-lg"
+                            sx={{
+                                mb: 4,
+                                color: isLightMode ? 'text.secondary' : 'neutral.300'
+                            }}
+                        >
+                            Monitor your privacy metrics in real-time with our comprehensive overview. 
+                            Track performance, publish results, and make data-driven decisions to enhance 
+                            your privacy preservation methods.
+                        </Typography>
+                        <Button
+                            size="lg"
+                            onClick={() => navigate('/upload')}
+                            endDecorator="→"
+                            sx={{
+                                '&:hover': { 
+                                    transform: 'translateX(4px)',
+                                    transition: 'all 0.2s'
+                                }
+                            }}
+                        >
+                            Start Submitting
+                        </Button>
+                    </Grid>
+                </Grid>
+            </Box>
             <IconButton
                 onClick={scrollToTop}
                 sx={{
@@ -279,12 +471,15 @@ const Home = () => {
                     transform: `translateY(${scrolled ? 0 : '20px'})`,
                     transition: 'all 0.3s',
                     bgcolor: 'primary.500',
-                    '&:hover': { bgcolor: 'primary.600' }
+                    '&:hover': { 
+                        bgcolor: 'primary.600',
+                        transform: `translateY(${scrolled ? -4 : '20px'})`,
+                    }
                 }}
             >
                 <KeyboardArrowUpIcon />
             </IconButton>
-            <Footer></Footer>
+            <Footer />
         </Sheet>
     );
 };
