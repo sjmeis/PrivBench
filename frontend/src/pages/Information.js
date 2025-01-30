@@ -5,19 +5,30 @@ import StepIndicator from "@mui/joy/StepIndicator";
 import {Add} from "@mui/icons-material";
 import {useNavigate} from "react-router-dom";
 import BenchmarkCard from "../components/ranking/BenchmarkCard";
+import { motion } from 'framer-motion';
+
+const stepVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: (i) => ({
+        opacity: 1,
+        y: 0,
+        transition: {
+            delay: i * 1,
+            duration: 0.5,
+        }
+    })
+};
 
 const Information = () => {
     const [modules, setModules] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-
-
     const navigate = useNavigate();
 
     useEffect(() => {
         const fetchModules = async () => {
             try {
-                const response = await axios.get('http://localhost:5000/modules'); // Adjust endpoint as needed
+                const response = await axios.get('http://localhost:5000/modules');
                 setModules(response.data);
             } catch (err) {
                 setError('Failed to load modules');
@@ -30,105 +41,62 @@ const Information = () => {
         fetchModules();
     }, []);
 
+    const steps = [
+        {
+            title: "Download Datasets",
+            description: "Start by downloading datasets from our platform containing sensitive personal data.",
+        },
+        {
+            title: "Fill Metadata Form",
+            description: "Complete a metadata form detailing the chosen data privatization technique.",
+        },
+        {
+            title: "Apply Data Privatization",
+            description: "Apply your own data privatization algorithm to the downloaded datasets.",
+        },
+        {
+            title: "Upload Privatized Data",
+            description: "Upload the privatized datasets back to our platform for evaluation.",
+        },
+        {
+            title: "Evaluation",
+            description: "Our platform evaluates the privatized datasets to assess privacy preservation and data utility.",
+        }
+    ];
+
     return (
-        <Box
-            sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: 4,
-                padding: 4,
-            }}
-        >
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, paddingY: 4 }}>
             <Grid container spacing={3}>
-                <Grid sx={{height: '80vh'}} item xs={4}>
+                <Grid sx={{ height: '80vh' }} item xs={4}>
                     <Box>
-                        <Typography sx={{marginBottom: 3}} level='h3'>Submission Process</Typography>
-                        <Stepper orientation="vertical" sx={{'--Stepper-verticalGap': '2rem'}}>
-                            <Step
-                                completed
-                                indicator={<StepIndicator variant="soft" color="success">1</StepIndicator>}
-                            >
-                                <Typography level="body1" sx={{fontWeight: 'bold'}}>
-                                    Download Datasets
-                                </Typography>
-                                <Typography level="body2">
-                                    Start by downloading datasets from our platform containing sensitive personal data.
-                                </Typography>
-                            </Step>
-                            <Step
-                                completed
-                                indicator={<StepIndicator variant="soft" color="success">2</StepIndicator>}
-                            >
-                                <Typography level="body1" sx={{fontWeight: 'bold'}}>
-                                    Fill Metadata Form
-                                </Typography>
-                                <Typography level="body2">
-                                    Complete a metadata form detailing the chosen data privatization technique.
-                                </Typography>
-                            </Step>
-                            <Step
-                                active
-                                indicator={<StepIndicator variant="soft" color="success">3</StepIndicator>}
-                            >
-                                <Typography level="body1" sx={{fontWeight: 'bold'}}>
-                                    Apply Data Privatization
-                                </Typography>
-                                <Typography level="body2">
-                                    Apply your own data privatization algorithm to the downloaded datasets.
-                                </Typography>
-                            </Step>
-                            <Step
-                                active
-                                indicator={<StepIndicator variant="soft" color="success">4</StepIndicator>}
-                            >
-                                <Typography level="body1" sx={{fontWeight: 'bold'}}>
-                                    Upload Privatized Data
-                                </Typography>
-                                <Typography level="body2">
-                                    Upload the privatized datasets back to our platform for evaluation.
-                                </Typography>
-                            </Step>
-                            <Step
-                                active
-                                indicator={<StepIndicator variant="soft" color="success">5</StepIndicator>}
-                            >
-                                <Typography level="body1" sx={{fontWeight: 'bold'}}>
-                                    Evaluation
-                                </Typography>
-                                <Typography level="body2">
-                                    Our platform evaluates the privatized datasets to assess privacy preservation and
-                                    data utility.
-                                </Typography>
-                            </Step>
+                        <Typography sx={{ marginBottom: 3 }} level='h3'>Submission Process</Typography>
+                        <Stepper orientation="vertical" sx={{ '--Stepper-verticalGap': '2rem' }}>
+                            {steps.map((step, index) => (
+                                <motion.div key={index} custom={index} initial="hidden" animate="visible" variants={stepVariants}>
+                                    <Step active indicator={<StepIndicator variant="soft" color="success">{index + 1}</StepIndicator>}>
+                                        <Typography level="body1" sx={{ fontWeight: 'bold' }}>{step.title}</Typography>
+                                        <Typography level="body2">{step.description}</Typography>
+                                    </Step>
+                                </motion.div>
+                            ))}
                         </Stepper>
-                        <Box sx={{marginTop: 1, marginBottom: 1, display: 'flex', justifyContent: 'flex-end'}}>
-                            <Button variant='soft' onClick={() => navigate('/upload')} color='success' startDecorator={<Add/>}>Try
-                                Out</Button>
-                        </Box>
 
                     </Box>
                 </Grid>
-                <Divider sx={{margin: 2, height: 'auto'}} orientation="vertical"/>
-                <Grid item sx={{height: '80vh'}} xs={7}>
-                    <Box sx={{height: '100%'}}>
-                        <Typography level="h3" sx={{marginBottom: 2}}>
-                            Privatization benchmarking modules
-                        </Typography>
+                <Divider sx={{ margin: 2, height: 'auto' }} orientation="vertical" />
+                <Grid item sx={{ height: '80vh' }} xs={7}>
+                    <Box sx={{ height: '90%' }}>
+                        <Typography level="h3" sx={{ marginBottom: 2 }}>Privatization Benchmarking Modules</Typography>
                         <Grid container spacing={2}>
                             {modules.map((module) => (
-                                <Grid
-                                    key={module.id}
-                                    item
-                                    xs={4}
-                                >
-                                    <BenchmarkCard
-                                        title={module.title}
-                                        description={module.description || 'No description available.'}
-                                    />
+                                <Grid key={module.id} item xs={4}>
+                                    <BenchmarkCard title={module.title} description={module.description || 'No description available.'} />
                                 </Grid>
                             ))}
                         </Grid>
+                    </Box>
+                    <Box sx={{ marginTop: 1, marginBottom: 1, display: 'flex', justifyContent: 'flex-end' }}>
+                        <Button sx={{width: '250px'}} variant='soft' onClick={() => navigate('/upload')} color='success' startDecorator={<Add />}>Try Out</Button>
                     </Box>
                 </Grid>
             </Grid>

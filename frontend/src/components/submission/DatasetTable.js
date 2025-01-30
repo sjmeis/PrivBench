@@ -12,7 +12,7 @@ const DatasetsTable = ({
             <Box sx={{ display: "flex", padding: "8px 16px", borderBottom: "1px solid #e0e0e0", fontWeight: "bold" }}>
                 <Box sx={{ flex: 1 }}>Dataset</Box>
                 <Box sx={{ flex: 1 }}>Status</Box>
-                <Box sx={{ flex: 1, textAlign: "center" }}>Actions</Box>
+                <Box sx={{ flex: 1, textAlign: "end"}}>Actions</Box>
             </Box>
 
             {datasets.map((dataset, index) => (
@@ -33,19 +33,17 @@ const DatasetsTable = ({
                         {"Not Downloaded"}
                     </Box>
 
-                    <Box sx={{ flex: 1, textAlign: "center" }}>
+                    <Box sx={{ flex: 1, textAlign: "end"}}>
                         <Checkbox
                             checked={selectedDatasets.includes(dataset.name)}
                             onChange={() => handleToggleSelect(dataset.name)}
-                            sx={{ mr: 3 }}
                         />
                     </Box>
                 </Box>
             ))}
 
-            <Box sx={{ display: "flex", padding: "8px 16px", borderTop: "1px solid #e0e0e0", alignItems: "center" }}>
-                <Box sx={{ flex: 3 }} />
-                <Box sx={{ flex: 1, display: "flex", textAlign: "center" }}>
+            <Box sx={{ display: "flex", padding: "8px 16px", borderTop: "1px solid #e0e0e0", alignItems: "end", justifyContent: "flex-end" }}>
+                <Box sx={{ display: "flex", textAlign: "end"}}>
                     <Typography level="body2" sx={{ marginRight: 3 }}>
                         Select All
                     </Typography>
@@ -53,7 +51,6 @@ const DatasetsTable = ({
                         indeterminate={selectedDatasets.length > 0 && selectedDatasets.length < datasets.length}
                         checked={selectedDatasets.length === datasets.length}
                         onChange={(e) => handleSelectAll(e.target.checked)}
-                        sx={{ mr: 3 }}
                     />
                 </Box>
             </Box>
