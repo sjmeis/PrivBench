@@ -1,14 +1,14 @@
 import {Box} from "@mui/joy";
 import DatasetTable from "./DatasetTable";
 import {useEffect, useState} from "react";
-import {fetchAllDatasets} from "../../services/DatasetService";
+import { DatasetService } from "../../services/DatasetService";
 
 const DatasetManagement = () => {
     const [datasets, setDatasets] = useState([]);
 
     useEffect(() => {
-        fetchAllDatasets()
-            .then((datasets) => setDatasets(datasets))
+        DatasetService.fetchAllDatasets()
+            .then((data) => setDatasets(data))
             .catch((error) => console.error(error));
     }, []);
 

@@ -1,12 +1,13 @@
 from flask import Blueprint, request, jsonify, make_response, current_app
 from ..models import User, Submission, SubmissionMetadata, BenchmarkModule, BenchmarkScore
 from .. import db
-from ..enums import SubmissionStatus
-from sqlalchemy import or_
+from ..enums import SubmissionStatus, License
+from sqlalchemy import or_, and_
 from flask_jwt_extended import (
     get_jwt_identity,
     jwt_required,
 )
+from datetime import datetime, timedelta
 
 ranking_bp = Blueprint('ranking', __name__)
 
@@ -43,7 +44,7 @@ def make_submission_public():
         if submission.status != SubmissionStatus.COMPLETED:
             return jsonify({"message": "Submission must be completed to make it public"}), 400
 
-        submission.is_public = is_public;
+        submission.is_public = is_public
         db.session.commit()
 
         return jsonify({"message": "Submission made public successfully", "submissionId": submission_id}), 200
@@ -94,7 +95,7 @@ def get_user_submissions():
                 submission_detail["metadata"] = {
                     "modelName": submission.submission_metadata.model_name,
                     "modelDescription": submission.submission_metadata.model_description,
-                    "license": submission.submission_metadata.license,
+                    "license": str(submission.submission_metadata.license),
                     "tags": submission.submission_metadata.tags,
                     "authors": submission.submission_metadata.authors,
                     "researchPaperUrl": submission.submission_metadata.research_paper_url,
@@ -146,8 +147,16 @@ def get_all_filtered():
             db.session.query(Submission)
             .join(User)
             .filter(
-                Submission.status == SubmissionStatus.COMPLETED,
-                Submission.is_public == True  # Ensure submission is public
+                or_(
+                    and_(
+                        Submission.status == SubmissionStatus.COMPLETED,
+                        Submission.is_public == True  # Ensure submission is public
+                    ),
+                    and_(
+                        Submission.status == SubmissionStatus.OUTDATED,
+                        Submission.outdated_at >= datetime.utcnow() - timedelta(days=3)  # Check if outdated within last 3 days
+                    )
+                )
             )
         )
 
@@ -256,7 +265,7 @@ def get_submission_detail():
             submission_detail["metadata"] = {
                 "modelName": submission.submission_metadata.model_name,
                 "modelDescription": submission.submission_metadata.model_description,
-                "license": submission.submission_metadata.license,
+                "license": str(submission.submission_metadata.license),
                 "tags": submission.submission_metadata.tags.split(",") if submission.submission_metadata.tags else [],
                 "authors": submission.submission_metadata.authors,
                 "researchPaperUrl": submission.submission_metadata.research_paper_url,
@@ -320,7 +329,9 @@ def update_submission_detail():
             submission_metadata = submission.submission_metadata or SubmissionMetadata()
             submission_metadata.model_name = metadata_data.get('modelName', submission_metadata.model_name)
             submission_metadata.model_description = metadata_data.get('modelDescription', submission_metadata.model_description)
-            submission_metadata.license = metadata_data.get('license', submission_metadata.license)
+            license_name = metadata_data.get('license')
+            if license_name:
+                submission_metadata.license = License[license_name]
             submission_metadata.tags = ",".join(metadata_data.get('tags', [])) if metadata_data.get('tags') else submission_metadata.tags
             submission_metadata.authors = metadata_data.get('authors', submission_metadata.authors)
             submission_metadata.research_paper_url = metadata_data.get('researchPaperUrl', submission_metadata.research_paper_url)
@@ -357,7 +368,7 @@ def update_submission_detail():
             updated_submission_detail["metadata"] = {
                 "modelName": submission.submission_metadata.model_name,
                 "modelDescription": submission.submission_metadata.model_description,
-                "license": submission.submission_metadata.license,
+                "license": submission.submission_metadata.license.name,
                 "tags": submission.submission_metadata.tags.split(",") if submission.submission_metadata.tags else [],
                 "authors": submission.submission_metadata.authors,
                 "researchPaperUrl": submission.submission_metadata.research_paper_url,
@@ -370,4 +381,9 @@ def update_submission_detail():
 
     except Exception as e:
         return jsonify({"message": "Internal server error", "error": str(e)}), 500
+    
+
+
+
+    
 

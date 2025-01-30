@@ -11,7 +11,7 @@ from app.models import (
 from faker import Faker
 from datetime import datetime, timedelta
 import random
-from app.enums import SubmissionStatus
+from app.enums import SubmissionStatus, License
 from sqlalchemy.exc import IntegrityError
 
 fake = Faker()
@@ -48,6 +48,7 @@ with app.app_context():
         db.session.add(user)
 
     db.session.commit()
+
     admin = User(
         username='admin',
         mail_address='admin@privbench.com',
@@ -122,7 +123,7 @@ with app.app_context():
                     submission_id=submission.id,
                     model_name=fake.word(),
                     model_description=fake.text(),
-                    license=fake.word(),
+                    license=random.choice(list(License)),
                     tags = random.sample(sample_tags, 2),
                     authors=fake.name(),
                     research_paper_url=fake.url(),

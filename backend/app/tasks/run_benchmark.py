@@ -21,7 +21,8 @@ def run_benchmark(module_path, module_id, module_name, dataset_path, priv_datase
     try:
         docker_client = docker.from_env()
         
-        image_tag = f"module-{module_id}"
+        #image_tag = f"module-{module_id}"
+        image_tag = f"module-{module_name.lower()}"
         logger.info(f"Looking for Docker image: {image_tag}")
         
         try:
@@ -67,6 +68,13 @@ def run():
         
         if dataset.shape != privatized_dataset.shape:
             raise ValueError(f"Dataset shapes don't match: {{dataset.shape}} vs {{privatized_dataset.shape}}")
+        
+        # Ensure the "text" column exists in both datasets
+        if 'text' not in dataset.columns or 'text' not in privatized_dataset.columns:
+            raise ValueError("'text' column is missing in one of the datasets")
+        
+        dataset_text = dataset['text'].to_list()
+        privatized_dataset_text = privatized_dataset['text'].to_list()
             
         # Simple progress callback that just outputs the number of processed rows
         def progress_wrapper(processed_rows):
@@ -75,7 +83,7 @@ def run():
                 sys.stdout.flush()
         
         # Run the benchmark
-        score = benchmark_instance.score(dataset, privatized_dataset, progress_wrapper)
+        score = benchmark_instance.score(dataset_text, privatized_dataset_text, progress_wrapper)
         
         if score is None:
             raise ValueError("Benchmark returned None score")
@@ -142,7 +150,7 @@ if __name__ == '__main__':
                     logger.info("Starting to process container output...")
                     for line in result.output:
                         line = line.decode('utf-8').strip()
-                        #logger.debug(f"Raw output line: {repr(line)}")
+                        logger.debug(f"Raw output line: {repr(line)}")
                         
                         # Skip tqdm progress bar lines
                         if "\r" in line or "%" in line or "it/s" in line:

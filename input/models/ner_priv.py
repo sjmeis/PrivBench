@@ -11,7 +11,7 @@ except Exception as e:
     gpu_available = False
     print("GPU is not available. Falling back to CPU.")
 
-class AttInfpriv:
+class NERpriv:
     def __init__(self):
         # Load SpaCy model with unnecessary components disabled
         self.nlp = spacy.load("en_core_web_sm", disable=["tagger", "parser", "attribute_ruler", "lemmatizer"])

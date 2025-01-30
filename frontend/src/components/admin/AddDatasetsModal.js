@@ -13,7 +13,7 @@ import {
 } from "@mui/joy";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import React, {useEffect, useState} from "react";
-import {fetchAllDatasets} from "../../services/DatasetService";
+import { DatasetService } from "../../services/DatasetService";
 import { Close } from "@mui/icons-material";
 
 const AddDatasetsModal = ({isOpen, onClose, onSubmit}) => {
@@ -28,10 +28,12 @@ const AddDatasetsModal = ({isOpen, onClose, onSubmit}) => {
     };
 
     useEffect(() => {
-        fetchAllDatasets()
-            .then((datasets) => setDatasets(datasets))
-            .catch((error) => console.error(error));
-    }, []);
+        if (isOpen) {
+            DatasetService.fetchAllDatasets()
+                .then(data => setDatasets(data))
+                .catch(error => console.error('Error fetching datasets:', error));
+        }
+    }, [isOpen]);
 
     useEffect(() => {
         if (isOpen) {
