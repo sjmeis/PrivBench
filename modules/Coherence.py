@@ -1,4 +1,9 @@
 import evaluate
+from transformers import pipeline
+import torch
+import pandas as pd
+import json
+from sklearn.metrics import f1_score
 from benchmarks.base_benchmark import BaseBenchmark
 from benchmarks.benchmark_utils import with_progress_tracking
 
@@ -40,12 +45,46 @@ class PPL:
         )["mean_perplexity"]
         
         return round(score, 3)
+    
+class SNIPS:
+    def __init__(self, model_checkpoint="benayas/roberta-full-finetuned-snips_100pct_v2"):
+        """
+        Initialize SNIPS inference with classification pipeline.
+        
+        Args:
+            model_checkpoint (str): Fine-tuned model to use.
+        """
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.clf = pipeline("text-classification", model=model_checkpoint, device=self.device)
+
+        with open("baselines.json", 'r') as f:
+            self.baseline = json.load(f)["snips"]
+        self.labels = pd.read_csv("baseline_data/snips.csv")["labels"].to_list()
+
+    def score(self, data, internal_progress_callback=None):
+        """
+        Calculate F1 score on SNIPS with internal progress tracking.
+        
+        Args:
+            data: List of (privatized) text sequences
+            internal_progress_callback: Internal callback for progress tracking
+            
+        Returns:
+            float: Micro-F1 score
+        """                
+        predictions = self.clf(data)
+        predictions = [x["label"] for x in predictions]
+        f1 = f1_score(self.labels, predictions, average="micro")
+
+        return round((f1 / self.baseline)*100, 3)
+
 
 @with_progress_tracking
 class Coherence(BaseBenchmark):
     def __init__(self):
-        """Initialize Coherence calculator using PPL"""
+        """Initialize Coherence calculator using PPL and SNIPS"""
         self.ppl = PPL()
+        self.snips = SNIPS()
     
     def score(self, original, private, progress_callback=None):
         """
@@ -74,5 +113,8 @@ class Coherence(BaseBenchmark):
         # Second phase: Process private texts
         p = self.ppl.score(private, internal_progress_callback=internal_progress_handler)
         
-        score = max(o / p, 1)
-        return round(score, 3)
+        ppl_score = (o / p)*100
+
+        snips_score = self.snips.score(private)
+
+        return round((ppl_score + snips_score) / 2, 3)
