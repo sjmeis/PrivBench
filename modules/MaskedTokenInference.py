@@ -1,5 +1,6 @@
 import torch
-from transformers import pipeline
+from transformers import pipeline, AutoTokenizer
+from torch.utils.data import Dataset
 import nltk
 import string
 from tqdm.auto import tqdm
@@ -23,8 +24,9 @@ class MaskedTokenInference():
             self.device = "cuda"
         else:
             self.device = "cpu"
-
+        
         self.top_k = top_k
+        self.tokenizer = AutoTokenizer.from_pretrained(model_checkpoint)
         self.pipe = pipeline("fill-mask", model=model_checkpoint, top_k=self.top_k, device=self.device)
         self.batch_size = batch_size
         if "roberta" in model_checkpoint.lower():
@@ -41,7 +43,8 @@ class MaskedTokenInference():
         test = []
         test_tokens = []
         for text in private:
-            tokens = [x.lower() for i, x in enumerate(nltk.word_tokenize(text)) if x not in PUNCT and i < 256]
+            truncated = self.tokenizer.decode(self.tokenizer(text.lower())[0].ids[:256], skip_special_tokens=True)
+            tokens = [x.lower() for x in nltk.word_tokenize(truncated) if x not in PUNCT]
             test_tokens.append(tokens)
             temp = []
             for i, _ in enumerate(tokens):
@@ -74,4 +77,4 @@ class MaskedTokenInference():
                     pass
                 total += 1
 
-        return round(correct_seq_1 / total, 3), round(correct_seq_k / total, 3), round(correct_bow_1 / total, 3), round(correct_bow_k / total, 3)
+        return 100-round((correct_seq_1 / total)*100, 3), 100-round((correct_seq_k / total)*100, 3), 100-round((correct_bow_1 / total)*100, 3), 100-round((correct_bow_k / total)*100, 3)
