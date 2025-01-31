@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
-import { Typography, Box, } from "@mui/joy";
+import { Typography, Box } from "@mui/joy";
 import { useSnackbar } from "../../contexts/SnackbarProvider";
 import TaskProgressCard from "./TaskProgressCard";
 import ScoreOverviewCard from "./ScoreOverviewCard";
-
 
 const FinalStep = () => {
     const [loading, setLoading] = useState(true);
@@ -11,7 +10,6 @@ const FinalStep = () => {
     const [moduleScores, setModuleScores] = useState([]);
     const [tasks, setTasks] = useState([]);
     const { showSnackbar } = useSnackbar();
-
 
     useEffect(() => {
         const startBenchmark = async () => {
@@ -70,6 +68,8 @@ const FinalStep = () => {
         const pollTasks = async () => {
             const updatedTasks = await Promise.all(
                 tasks.map(async (task) => {
+                    if (task.completed) return task; // Skip tasks that are already completed
+
                     try {
                         const response = await fetch(
                             `http://localhost:5000/task-status/${task.task_id}`,
@@ -148,8 +148,7 @@ const FinalStep = () => {
         const intervalId = setInterval(pollTasks, 1000);
         return () => clearInterval(intervalId);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [tasks.length]);
-
+    }, [tasks]);
 
 
     return (
