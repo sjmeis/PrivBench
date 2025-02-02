@@ -14,8 +14,8 @@ const CustomSnackbar = ({ open, message, severity = "info", onClose }) => {
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
-                width: '20%',
-                height: '6%'
+                width: '350px',
+                height: '50px'
             }}
         >
             <Alert
