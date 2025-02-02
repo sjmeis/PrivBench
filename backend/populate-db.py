@@ -20,6 +20,25 @@ app = create_app()
 
 with app.app_context():
 
+    institutions = [
+        "MIT",
+        "Stanford University",
+        "Harvard University",
+        "Technical University of Munich (TUM)",
+        "University of Cambridge",
+        "University of Oxford",
+        "ETH Zurich",
+        "University of Chicago",
+        "Columbia University",
+        "Princeton University",
+        "University of California, Berkeley (UC Berkeley)",
+        "University of Toronto",
+        "Imperial College London",
+        "National University of Singapore (NUS)",
+        "Tsinghua University"
+    ]
+
+
     # Check for existing BenchmarkModules
     benchmark_modules = BenchmarkModule.query.all()
     if not benchmark_modules:
@@ -41,7 +60,7 @@ with app.app_context():
             username=fake.user_name(),
             mail_address=fake.email(),
             bio=fake.text(max_nb_chars=400),
-            research_institute=fake.company(),
+            research_institute=random.choice(list(institutions)),
             password="test123",
         )
         users.append(user)
