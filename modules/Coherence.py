@@ -57,9 +57,9 @@ class SNIPS:
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.clf = pipeline("text-classification", model=model_checkpoint, device=self.device)
 
-        with open("baselines.json", 'r') as f:
+        with open("benchmarks/baselines.json", 'r') as f:
             self.baseline = json.load(f)["snips"]
-        self.labels = pd.read_csv("baseline_data/snips.csv")["labels"].to_list()
+        self.labels = pd.read_csv("benchmarks/snips_copy.csv")["label"].to_list()
 
     def score(self, data, internal_progress_callback=None):
         """
@@ -107,10 +107,8 @@ class Coherence(BaseBenchmark):
             if progress_callback and (steps_completed % 100 == 0 or steps_completed == total_steps):
                 progress_callback()
         
-        # First phase: Process original texts
         o = self.ppl.score(original, internal_progress_callback=internal_progress_handler)
         
-        # Second phase: Process private texts
         p = self.ppl.score(private, internal_progress_callback=internal_progress_handler)
         
         ppl_score = (o / p)*100
