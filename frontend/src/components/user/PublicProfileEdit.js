@@ -13,6 +13,7 @@ import {useState} from "react";
 import {useSnackbar} from "../../contexts/SnackbarProvider";
 import {useAuth} from "../../contexts/AuthContext";
 import {updateUser} from "../../services/UserService";
+import {Save, Cancel} from "@mui/icons-material";
 
 const PublicProfileEdit = ({user}) => {
     const [formData, setFormData] = useState({
@@ -24,11 +25,11 @@ const PublicProfileEdit = ({user}) => {
 
     const updateUserInfo = async () => {
         try {
-            await updateUser({...formData, researchInstitute: user.researchInstitute, mailAddress: user.mailAddress});
-            showSnackbar("User updated successfully", 'success')
-            checkAuth()
+            await updateUser({ bio: formData.bio });
+            showSnackbar("Bio updated successfully", 'success');
+            checkAuth();
         } catch (error) {
-            showSnackbar("An error occurred, try again", 'error')
+            showSnackbar(error.message, 'error');
         }
     };
 
@@ -98,10 +99,10 @@ const PublicProfileEdit = ({user}) => {
                     </Stack>
                     <CardOverflow sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
                         <CardActions sx={{alignSelf: "flex-end", pt: 2}}>
-                            <Button onClick={resetForm} disabled={isFormUntouched()} size="sm" variant="outlined" color="neutral">
+                            <Button onClick={resetForm} disabled={isFormUntouched()} size="sm" variant="outlined" color="neutral" startDecorator={<Cancel />}>
                                 Cancel
                             </Button>
-                            <Button disabled={!isFormValid()} size="sm" variant="solid" onClick={handleSaveClick}>
+                            <Button disabled={!isFormValid()} size="sm" variant="solid" onClick={handleSaveClick} endDecorator={<Save />}>
                                 Save
                             </Button>
                         </CardActions>
