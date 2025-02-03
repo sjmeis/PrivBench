@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, {useEffect, useState} from "react";
 import { Box, Typography } from "@mui/joy";
 import axios from "axios";
 import { useSnackbar } from "../../contexts/SnackbarProvider";
@@ -8,6 +8,10 @@ import { InfoOutlined } from "@mui/icons-material";
 const UploadStep = ({ submissionId, datasets, uploadedFiles, onFileUploaded }) => {
     const [uploadingDatasetId, setUploadingDatasetId] = useState(null);
     const { showSnackbar } = useSnackbar();
+
+    useEffect(() => {
+        localStorage.removeItem("tasks"); //clean past tasks from local storage
+    }, []);
 
     const handleFileSelect = async (event, originalDatasetId) => {
         const file = event.target.files[0];
