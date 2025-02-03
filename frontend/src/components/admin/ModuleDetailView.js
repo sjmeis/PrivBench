@@ -19,12 +19,14 @@ import FileTableSmall from "./FileTableSmall";
 import {getDateString} from "../../utils/Date";
 import ModuleDeletionConfirmationDialog from "./ModuleDeletionConfirmationDialog";
 import {deleteBenchmarkModule, updateBenchmarkModule} from "../../services/ModuleService";
+import {useSnackbar} from "../../contexts/SnackbarProvider";
 
 const ModuleDetailView = ({selectedModule, onUpdateOrDelete, handleCloseDetailView}) => {
     const [formData, setFormData] = useState({})
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const DATASET_TABLE_TITLE = 'Associated Dataset';
     const SCRIPT_TABLE_TITLE = 'Python Benchmarking Module Logic'
+    const {showSnackbar} = useSnackbar()
     const handleInputChange = (e) => {
         const {name, value} = e.target;
         setFormData(prev => ({
@@ -43,12 +45,13 @@ const ModuleDetailView = ({selectedModule, onUpdateOrDelete, handleCloseDetailVi
 
     const handleDeleteModule = async () => {
         try {
-            const response = await deleteBenchmarkModule(selectedModule.id);
+            await deleteBenchmarkModule(selectedModule.id);
             handleCloseDialog();
             handleCloseDetailView();
             onUpdateOrDelete();
+            showSnackbar("Benchmarking Module was deleted", "success");
         } catch (error) {
-            console.error('Failed to delete module:', error);
+            showSnackbar("Error deleting Module", "error");
         }
     };
 
@@ -58,10 +61,11 @@ const ModuleDetailView = ({selectedModule, onUpdateOrDelete, handleCloseDetailVi
 
     const saveChanges = async () => {
         try {
-            const updatedModule = await updateBenchmarkModule(selectedModule.id, formData);
+            await updateBenchmarkModule(selectedModule.id, formData);
             onUpdateOrDelete();
+            showSnackbar("Benchmarking Module was Updated", "success");
         } catch (error) {
-            console.error('Failed to update module:', error);
+            showSnackbar("Error on updating module", "error");
         }
     }
 
