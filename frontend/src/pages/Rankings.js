@@ -27,6 +27,7 @@ import {getDateString, isNewDate} from "../utils/Date";
 import {formatToTwoDecimals} from "../utils/FormatUtils";
 import {useAuth} from "../contexts/AuthContext";
 import {SubmissionStatus} from "../enums/SubmissionStatus";
+import {Visibility} from "@mui/icons-material";
 
 const headCells = [
     {id: "status", numeric: false, label: "", width: "8%"},
@@ -250,7 +251,7 @@ const Rankings = () => {
                                     {isCurrentUser(row.user.id) &&
                                         <Button size="sm" variant="outlined" color="neutral" onClick={() => navigate("/profile", { state: 'submissions' })}>Edit </Button>
                                     }
-                                    <Button size="sm" variant="soft" color="primary" onClick={() => onViewClick(row)}>
+                                    <Button size="sm" variant="soft" color="primary" startDecorator={<Visibility />}   onClick={() => onViewClick(row)}>
                                         View
                                     </Button>
                                 </Stack>
