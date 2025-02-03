@@ -17,9 +17,12 @@ import FormControl from "@mui/joy/FormControl";
 import React, {useEffect, useState} from "react";
 import FileTableSmall from "./FileTableSmall";
 import {getDateString} from "../../utils/Date";
+import ModuleDeletionConfirmationDialog from "./ModuleDeletionConfirmationDialog";
+import {deleteBenchmarkModule, updateBenchmarkModule} from "../../services/ModuleService";
 
-const ModuleDetailView = ({selectedModule, handleCloseDetailView}) => {
+const ModuleDetailView = ({selectedModule, onUpdateOrDelete, handleCloseDetailView}) => {
     const [formData, setFormData] = useState({})
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
     const DATASET_TABLE_TITLE = 'Associated Dataset';
     const SCRIPT_TABLE_TITLE = 'Python Benchmarking Module Logic'
     const handleInputChange = (e) => {
@@ -30,12 +33,36 @@ const ModuleDetailView = ({selectedModule, handleCloseDetailView}) => {
         }));
     };
 
+    const handleOpenDialog = () => {
+        setIsDialogOpen(true);
+    };
+
+    const handleCloseDialog = () => {
+        setIsDialogOpen(false);
+    };
+
+    const handleDeleteModule = async () => {
+        try {
+            const response = await deleteBenchmarkModule(selectedModule.id);
+            handleCloseDialog();
+            handleCloseDetailView();
+            onUpdateOrDelete();
+        } catch (error) {
+            console.error('Failed to delete module:', error);
+        }
+    };
+
     const disableSaveButton = () => {
         return formData.name === selectedModule.name && formData.description === selectedModule.description
     }
 
-    const saveChanges = () => {
-        //todo: implemenbt
+    const saveChanges = async () => {
+        try {
+            const updatedModule = await updateBenchmarkModule(selectedModule.id, formData);
+            onUpdateOrDelete();
+        } catch (error) {
+            console.error('Failed to update module:', error);
+        }
     }
 
 
@@ -136,13 +163,19 @@ const ModuleDetailView = ({selectedModule, handleCloseDetailView}) => {
                                 />
                             </FormControl>
                         </Stack>
+
                         <Box
                             sx={{
                                 p: 2,
                                 mt: 'auto',
                             }}
+
                         >
-                            <Button disabled={disableSaveButton()} onClick={saveChanges} fullWidth>Save Updates</Button>
+                            <Stack spacing={2}>
+                                <Button disabled={disableSaveButton()} onClick={saveChanges} fullWidth>Save Updates</Button>
+                                <Button color='danger' onClick={() => handleOpenDialog()} fullWidth>Delete Module</Button>
+                            </Stack>
+
                         </Box>
                     </Box>
                 </TabPanel>
@@ -163,6 +196,12 @@ const ModuleDetailView = ({selectedModule, handleCloseDetailView}) => {
                         </Box>
                 </TabPanel>
             </Tabs>
+            <ModuleDeletionConfirmationDialog
+                isOpen={isDialogOpen}
+                handleClose={handleCloseDialog}
+                handleDelete={handleDeleteModule}
+                moduleName={selectedModule.name}
+            />
         </Sheet>)
 }
 
