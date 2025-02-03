@@ -9,6 +9,7 @@ from flask_jwt_extended import (
 from werkzeug.security import check_password_hash
 from ..models.user import User
 from .. import db
+import re
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -16,28 +17,32 @@ auth_bp = Blueprint("auth", __name__)
 def register():
     try:
         if not request.is_json:
-            return jsonify({"message": "Missing JSON in request"}), 400
+            return jsonify({"message": "Missing JSON in request!"}), 400
             
         data = request.get_json()
         
         # Validate required fields
         if not all(k in data for k in ["username", "mailAddress", "password"]):
-            return jsonify({"message": "All fields are required"}), 400
+            return jsonify({"message": "All fields are required!"}), 400
         
         # Validate username length and format if needed
         username = data["username"].strip()
         if len(username) < 3:
-            return jsonify({"message": "Username must be at least 3 characters long"}), 400
+            return jsonify({"message": "Username must be at least 3 characters long!"}), 400
             
         # Check if user already exists
         if User.query.filter_by(username=username).first():
-            return jsonify({"message": "Username already taken"}), 409
+            return jsonify({"message": "Username already taken!"}), 409
 
-        #//TODO: check also if is valid mail address in with regex
-
+        # Check if email address format is valid
         mail_address = data["mailAddress"].strip()
+        email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_regex, mail_address):
+            return jsonify({"message": "Invalid email address format!"}), 400
+
+        # Check if email address already in use
         if User.query.filter_by(mail_address=mail_address).first():
-            return jsonify({"message": "Mail address already registered"}), 409
+            return jsonify({"message": "Mail address already registered!"}), 409
             
         # Create new user
         new_user = User(
@@ -53,7 +58,7 @@ def register():
         # Create and set access token immediately after registration
         access_token = create_access_token(identity=str(new_user.id))
         response = jsonify({
-            "message": "Registration successful",
+            "message": "Registration successful!",
             "success": True
         })
         set_access_cookies(response, access_token)
@@ -69,25 +74,25 @@ def register():
 def login():
     try:
         if not request.is_json:
-            return jsonify({"message": "Missing JSON in request"}), 400
+            return jsonify({"message": "Missing JSON in request!"}), 400
             
         data = request.get_json()
         
         # Validate required fields
         if not all(k in data for k in ["username", "password"]):
-            return jsonify({"message": "All fields are required"}), 400
+            return jsonify({"message": "All fields are required!"}), 400
         
         # Find user
         user = User.query.filter_by(username=data["username"].strip()).first()
         if not user or not check_password_hash(user.password, data["password"]):
-            return jsonify({"message": "Invalid username or password"}), 401
+            return jsonify({"message": "Invalid username or password!"}), 401
         
         # Create access token
         access_token = create_access_token(identity=str(user.id))
         
         # Create response with token in cookie
         response = jsonify({
-            "message": "Login successful",
+            "message": "Login successful!",
             "success": True,
             "user": {
                 "username": user.username,
@@ -110,7 +115,7 @@ def get_user():
         user = User.query.get(int(user_id))
         
         if not user:
-            return jsonify({"message": "User not found"}), 404
+            return jsonify({"message": "User not found!"}), 404
             
         return jsonify({
             "user": {
@@ -131,10 +136,10 @@ def get_user():
 @jwt_required()
 def logout():
     try:
-        response = jsonify({"message": "Logout successful"})
+        response = jsonify({"message": "Logout successful!"})
         unset_jwt_cookies(response)
         return response, 200
         
     except Exception as e:
         current_app.logger.error(f"Logout error: {str(e)}")
-        return jsonify({"message": "Logout failed"}), 500
+        return jsonify({"message": "Logout failed!"}), 500

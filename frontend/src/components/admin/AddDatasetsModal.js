@@ -14,7 +14,7 @@ import {
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import React, {useEffect, useState} from "react";
 import { DatasetService } from "../../services/DatasetService";
-import { Close } from "@mui/icons-material";
+import {Cancel, Close, Save} from "@mui/icons-material";
 
 const AddDatasetsModal = ({isOpen, onClose, onSubmit}) => {
     const [datasets, setDatasets] = useState([]);
@@ -131,10 +131,10 @@ const AddDatasetsModal = ({isOpen, onClose, onSubmit}) => {
                         spacing={2}
                         sx={{justifyContent: "flex-end", alignItems: "center"}}
                     >
-                        <Button variant="outlined" onClick={onClose}>
+                        <Button variant="outlined" onClick={onClose} startDecorator={<Cancel />}>
                             Cancel
                         </Button>
-                        <Button disabled={!isFormValid()} variant="solid" onClick={handleSave}>
+                        <Button disabled={!isFormValid()} variant="solid" onClick={handleSave} endDecorator={<Save />}>
                             Save
                         </Button>
                     </Stack>
