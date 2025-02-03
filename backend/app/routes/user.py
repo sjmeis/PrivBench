@@ -5,6 +5,7 @@ from flask_jwt_extended import (
 )
 from ..models.user import User
 from .. import db
+import re
 
 user_bp = Blueprint("user", __name__)
 
@@ -16,7 +17,7 @@ def update_user():
         user = User.query.get(user_id)
 
         if not user:
-            return jsonify({"error": "User not found"}), 404
+            return jsonify({"error": "User not found!"}), 404
 
         data = request.get_json()
         if not data:
@@ -25,10 +26,19 @@ def update_user():
         bio = data.get("bio")
         mail_address = data.get("mailAddress")
         research_institute = data.get("researchInstitute")
-
+        email_regex = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
         if bio:
             user.bio = bio
         if mail_address:
+            mail_address = mail_address.strip()
+            if not re.match(email_regex, mail_address):
+                return jsonify({"error": "Invalid email format!"}), 400
+
+            # Check if email is already taken (excluding current user's email)
+            existing_user = User.query.filter(User.mail_address == mail_address, User.id != user.id).first()
+            if existing_user:
+                return jsonify({"error": "Mail address already registered!"}), 409
+
             user.mail_address = mail_address
         if research_institute:
             user.research_institute = research_institute
@@ -36,7 +46,7 @@ def update_user():
         db.session.commit()
 
         return jsonify({
-            "message": "User updated successfully",
+            "message": "User updated successfully!",
             "user": {
                 "id": user.id,
                 "username": user.username,
@@ -50,6 +60,6 @@ def update_user():
         # Handle unexpected errors
         db.session.rollback()
         return jsonify({
-            "error": "An error occurred while updating the user",
+            "error": "An error occurred while updating the user!",
             "details": str(e)
         }), 500

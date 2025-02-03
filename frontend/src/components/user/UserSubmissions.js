@@ -7,13 +7,15 @@ import {Stack, Box, Card, Divider, Typography, Button, Sheet, Table, CardOverflo
 import AddIcon from '@mui/icons-material/Add';
 import UserSubmissionsTableRow from "./UserSubmissionsTableRow";
 import UpdateSubmissionModal from "./UpdateSubmissionModal";
+import { useSnackbar } from "../../contexts/SnackbarProvider";
 
 const UserSubmissions = () => {
     const [submissions, setSubmissions] = useState([]);
-    const [error, setError] = useState(null);
     const [pendingSubmission, setPendingSubmission] = useState(null);
-    const [isModalOpen, setIsModalOpen] = useState(false)
-    const [submission, setSubmission] = useState(null)
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [submission, setSubmission] = useState(null);
+    const { showSnackbar } = useSnackbar();
+
 
     const fetchSubmissions = async () => {
         try {
@@ -23,12 +25,13 @@ const UserSubmissions = () => {
             const pending = data.submissions.find(submission => submission.status === "Pending");
             setPendingSubmission(pending);
         } catch (err) {
-            setError(err.message || 'Failed to fetch submissions');
+            showSnackbar(err.message || 'Failed to fetch submissions');
         }
     };
 
     useEffect(() => {
         fetchSubmissions();
+        // eslint-disable-next-line
     }, []);
 
     const onTogglePublic = async (submissionId, newVisibility) => {
@@ -96,7 +99,7 @@ const UserSubmissions = () => {
                                     aria-label="collapsible submissions table"
                                     sx={{
                                         '& > thead > tr > th:nth-child(n + 3), & > tbody > tr > td:nth-child(n + 3)': {
-                                            textAlign: 'right',
+                                            textAlign: 'left',
                                         },
                                     }}
                                 >
