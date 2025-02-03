@@ -40,11 +40,20 @@ const Upload = () => {
                 (sub) => sub.status === "pending"
             );
 
+            const inProgressSubmission = data.submissions.find(
+                (sub) => sub.status === "in_progress"
+            );
+
             if (pendingSubmission) {
                 setCurrentStep(2);
                 setMetadata(pendingSubmission.metadata);
                 setInitialMetadata(pendingSubmission.metadata);
                 setSubmissionId(pendingSubmission.id);
+            } else if (inProgressSubmission){
+                setCurrentStep(3);
+                setMetadata(inProgressSubmission.metadata);
+                setInitialMetadata(inProgressSubmission.metadata);
+                setSubmissionId(inProgressSubmission.id);
             } else {
                 setMetadata({});
                 setInitialMetadata({});

@@ -11,56 +11,66 @@ const FinalStep = () => {
     const [tasks, setTasks] = useState([]);
     const { showSnackbar } = useSnackbar();
 
+    // Load tasks from localStorage when component mounts
     useEffect(() => {
-        const startBenchmark = async () => {
-            try {
-                const response = await fetch("http://localhost:5000/run-benchmark", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    credentials: "include",
-                    signal: AbortSignal.timeout(30000)
-                });
+        const savedTasks = JSON.parse(localStorage.getItem("tasks"));
+        if (savedTasks) {
+            setTasks(savedTasks);
+        } else {
+            startBenchmark();
+        }
+    }, []);
 
-                if (response.status === 404) {
-                    showSnackbar("No submissions available for benchmarking. Please submit your data first.", "error");
-                    setLoading(false);
-                    return;
-                }
+    const startBenchmark = async () => {
+        try {
+            const response = await fetch("http://localhost:5000/run-benchmark", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                credentials: "include",
+                signal: AbortSignal.timeout(30000)
+            });
 
-                if (!response.ok) {
-                    let errorMessage;
-                    try {
-                        const errorData = await response.json();
-                        errorMessage = errorData.message;
-                    } catch {
-                        errorMessage = `HTTP error! status: ${response.status}`;
-                    }
-                    showSnackbar(`${errorMessage}`, 'error');
-                }
-
-                const data = await response.json();
-                setTasks(data.task_ids.map(task => ({
-                    ...task,
-                    progress: 0,
-                    processedRows: 0,
-                    totalRows: 0,
-                    status: 'Starting...',
-                    completed: false,
-                    score: null,
-                    error: null
-                })));
-
-            } catch (err) {
-                console.error("Benchmark error:", err);
-                showSnackbar(err.message, "error");
+            if (response.status === 404) {
+                showSnackbar("No submissions available for benchmarking. Please submit your data first.", "error");
                 setLoading(false);
+                return;
             }
-        };
 
-        startBenchmark();
-    }, [showSnackbar]);
+            if (!response.ok) {
+                let errorMessage;
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.message;
+                } catch {
+                    errorMessage = `HTTP error! status: ${response.status}`;
+                }
+                showSnackbar(`${errorMessage}`, 'error');
+            }
+
+            const data = await response.json();
+            const initialTasks = data.task_ids.map(task => ({
+                ...task,
+                progress: 0,
+                processedRows: 0,
+                totalRows: 0,
+                status: 'Starting...',
+                completed: false,
+                score: null,
+                error: null
+            }));
+
+            // Save tasks to localStorage
+            localStorage.setItem("tasks", JSON.stringify(initialTasks));
+            setTasks(initialTasks);
+
+        } catch (err) {
+            console.error("Benchmark error:", err);
+            showSnackbar(err.message, "error");
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
         if (tasks.length === 0) return;
@@ -141,6 +151,7 @@ const FinalStep = () => {
                     setAverageScore(
                         scores.reduce((sum, curr) => sum + curr.score, 0) / scores.length
                     );
+                    localStorage.removeItem("tasks");
                 }
             }
         };
@@ -149,7 +160,6 @@ const FinalStep = () => {
         return () => clearInterval(intervalId);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [tasks]);
-
 
     return (
         <Box  sx={{ width: "100%", maxWidth: 1000, mx: "auto", p: 3 }}>
@@ -171,3 +181,4 @@ const FinalStep = () => {
 };
 
 export default FinalStep;
+
