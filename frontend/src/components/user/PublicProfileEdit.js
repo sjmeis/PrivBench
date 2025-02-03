@@ -26,7 +26,7 @@ const PublicProfileEdit = ({user}) => {
     const updateUserInfo = async () => {
         try {
             await updateUser({ bio: formData.bio });
-            showSnackbar("Bio updated successfully", 'success');
+            showSnackbar("Bio updated successfully!", 'success');
             checkAuth();
         } catch (error) {
             showSnackbar(error.message, 'error');
