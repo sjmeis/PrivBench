@@ -14,22 +14,7 @@ const ScoreOverviewCard = ({ averageScore, moduleScores, oldModulesScores = [] }
         <>
             <Card variant="outlined" sx={{ p: 3, textAlign: "center" }}>
                 <Box sx={{ display: "flex", flexDirection: "column", gap: 2, textAlign: "left" }}>
-                    <Card
-                        variant="soft"
-                        sx={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            p: 2,
-                        }}
-                    >
-                        <Typography level="body1" sx={{ fontWeight: "bold" }}>
-                            Overall Score
-                        </Typography>
-                        <Typography level="body1" color="success">
-                            {averageScore?.toFixed(2)}%
-                        </Typography>
-                    </Card>
+                    <ModuleScoreCard moduleName={'Overall Score'} score={averageScore} isOverall={true}/>
 
                     {oldModulesScores.map((module, index) => (
                         <ModuleScoreCard
