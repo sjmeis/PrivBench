@@ -1,5 +1,5 @@
 import React from "react";
-import { Card, Box, Typography, Button } from "@mui/joy";
+import { Card, Box, Button } from "@mui/joy";
 import { RemoveRedEye } from "@mui/icons-material";
 import {useNavigate} from "react-router-dom";
 import ModuleScoreCard from "./ModuleScoreCard";

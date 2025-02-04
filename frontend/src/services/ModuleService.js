@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { API_BASE_URL } from '../config';
+import {API_BASE_URL} from '../config';
 
 
 const pollModuleStatus = async (taskId, onProgress) => {
@@ -7,24 +7,24 @@ const pollModuleStatus = async (taskId, onProgress) => {
         const response = await axios.get(`${API_BASE_URL}/modules/${taskId}/status`, {
             withCredentials: true
         });
-        
+
         if (response.data.status === 'pending') {
             // If it is still pending, call onProgress callback and continue polling
             if (onProgress) {
                 onProgress('Installing module dependencies...');
             }
-            return { status: 'pending' };
+            return {status: 'pending'};
         } else if (response.data.status === 'error') {
             throw new Error(response.data.message || 'Module installation failed');
         }
 
-        return { status: 'completed', data: response.data };
+        return {status: 'completed', data: response.data};
     } catch (error) {
         throw new Error('Failed to check module status: ' + error.message);
     }
 };
 
-export const createBenchmarkingModule = async (formData, onProgress) => {
+const createBenchmarkingModule = async (formData, onProgress) => {
     try {
         if (onProgress) {
             onProgress('Creating module...');
@@ -105,43 +105,52 @@ export const createBenchmarkingModule = async (formData, onProgress) => {
     }
 };
 
-export const fetchBenchmarkingModulesForSubmission = async (submissionId) => {
-  try {
-    const response = await axios.post(
-      `${API_BASE_URL}/modules/update/information`,
-      { id: submissionId },
-      { withCredentials: true }
-    );
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching benchmarking modules:', error);
-    throw error;
-  }
+const fetchBenchmarkingModulesForSubmission = async (submissionId) => {
+    try {
+        const response = await axios.post(
+            `${API_BASE_URL}/modules/update/information`,
+            {id: submissionId},
+            {withCredentials: true}
+        );
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching benchmarking modules:', error);
+        throw error;
+    }
 };
 
-export const deleteBenchmarkModule = async (moduleId) => {
-  try {
-    const response = await axios.delete(
-      `${API_BASE_URL}/modules/delete/${moduleId}`,
-      { withCredentials: true }
-    );
-    return response.data;
-  } catch (error) {
-    console.error('Error deleting benchmark module:', error);
-    throw error;
-  }
+const deleteBenchmarkModule = async (moduleId) => {
+    try {
+        const response = await axios.delete(
+            `${API_BASE_URL}/modules/delete/${moduleId}`,
+            {withCredentials: true}
+        );
+        return response.data;
+    } catch (error) {
+        console.error('Error deleting benchmark module:', error);
+        throw error;
+    }
 };
 
-export const updateBenchmarkModule = async (moduleId, updatedData) => {
-  try {
-    const response = await axios.put(
-      `${API_BASE_URL}/modules/update/${moduleId}`,
-      updatedData,
-      { withCredentials: true }
-    );
-    return response.data;
-  } catch (error) {
-    console.error('Error updating benchmark module:', error);
-    throw error;
-  }
+const updateBenchmarkModule = async (moduleId, updatedData) => {
+    try {
+        const response = await axios.put(
+            `${API_BASE_URL}/modules/update/${moduleId}`,
+            updatedData,
+            {withCredentials: true}
+        );
+        return response.data;
+    } catch (error) {
+        console.error('Error updating benchmark module:', error);
+        throw error;
+    }
+};
+
+
+export const ModuleService = {
+    updateBenchmarkModule,
+    deleteBenchmarkModule,
+    fetchBenchmarkingModulesForSubmission,
+    createBenchmarkingModule,
+    pollModuleStatus
 };

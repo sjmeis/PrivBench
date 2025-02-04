@@ -1,6 +1,5 @@
 import axios from 'axios';
-
-const API_BASE_URL = 'http://localhost:5000'; // Fixme: Consider centralizing the API base URL in a config file
+import { API_BASE_URL } from '../config';
 
 
 export const updateUser = async (userData) => {
@@ -23,3 +22,4 @@ export const updateUser = async (userData) => {
         }
     }
 };
+

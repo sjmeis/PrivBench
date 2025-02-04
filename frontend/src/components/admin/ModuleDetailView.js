@@ -18,7 +18,7 @@ import React, {useEffect, useState} from "react";
 import FileTableSmall from "./FileTableSmall";
 import {getDateString} from "../../utils/Date";
 import ModuleDeletionConfirmationDialog from "./ModuleDeletionConfirmationDialog";
-import {deleteBenchmarkModule, updateBenchmarkModule} from "../../services/ModuleService";
+import {ModuleService} from "../../services/ModuleService";
 import {useSnackbar} from "../../contexts/SnackbarProvider";
 
 const ModuleDetailView = ({selectedModule, onUpdateOrDelete, handleCloseDetailView}) => {
@@ -45,7 +45,7 @@ const ModuleDetailView = ({selectedModule, onUpdateOrDelete, handleCloseDetailVi
 
     const handleDeleteModule = async () => {
         try {
-            await deleteBenchmarkModule(selectedModule.id);
+            await ModuleService.deleteBenchmarkModule(selectedModule.id);
             handleCloseDialog();
             handleCloseDetailView();
             onUpdateOrDelete();
@@ -61,7 +61,7 @@ const ModuleDetailView = ({selectedModule, onUpdateOrDelete, handleCloseDetailVi
 
     const saveChanges = async () => {
         try {
-            await updateBenchmarkModule(selectedModule.id, formData);
+            await ModuleService.updateBenchmarkModule(selectedModule.id, formData);
             onUpdateOrDelete();
             showSnackbar("Benchmarking Module was Updated", "success");
         } catch (error) {
