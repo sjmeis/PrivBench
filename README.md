@@ -28,6 +28,14 @@ To start the application using Docker, follow these steps:
    - Frontend: Open [http://localhost:3000](http://localhost:3000) in your browser.
    - Backend API: Accessible at [http://localhost:5000](http://localhost:5000).
 
+## Using the Application
+
+### User and Admin User Manual
+
+   - **[User Manual](PrivBench_User_Manual_vF.pdf)**
+   - **[Admin Manual](PrivBench_User_Manual_vF.pdf)**
+
+
 ## Components
 
 ### Frontend
