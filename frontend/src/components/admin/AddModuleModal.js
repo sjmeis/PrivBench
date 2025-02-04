@@ -19,7 +19,7 @@ import {
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import AddDatasetsModal from "./AddDatasetsModal";
 import ModuleConfirmationDialog from "./ModuleConfirmationDialog";
-import {createBenchmarkingModule} from "../../services/ModuleService";
+import {ModuleService} from "../../services/ModuleService";
 import AddModuleDatasetTable from "./AddModuleDatasetTable";
 import {Add, Save} from "@mui/icons-material";
 
@@ -79,7 +79,7 @@ const AddModuleModal = ({isOpen, onClose, onSubmit, onError}) => {
 
     const handleSubmit = async () => {
         try {
-            const response = await createBenchmarkingModule(formData);
+            const response = await ModuleService.createBenchmarkingModule(formData);
             console.log(response)
             onSubmit()
         } catch (err) {

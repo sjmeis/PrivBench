@@ -34,7 +34,6 @@ export default function UserProfile() {
         }
     };
 
-    //todo: implement form logic if used
     return (
 
         <Box sx={{ display: 'flex', minHeight: "calc(100vh - 65.5px)", bgcolor: 'background.body', marginTop: '-10px', marginBottom: '-40px', marginLeft: '-40px', marginRight: '-40px' }}>

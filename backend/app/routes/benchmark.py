@@ -459,7 +459,6 @@ def benchmark_update():
         user_id = get_jwt_identity()
         logger.info(f"Retrieved user_id from JWT: {user_id}")
 
-        # Get submission and verify ownership
         logger.info(f"Fetching submission with ID {submission_id}")
 
         submission = Submission.query.get(submission_id)
@@ -468,11 +467,6 @@ def benchmark_update():
             return jsonify({"message": "Submission not found"}), 404, response_headers
 
         logger.info(f"Fetching submission with user id {submission.user_id}")
-
-
-        # if submission.user_id != user_id: //fixme: add this verificaiton
-        #     logger.warning(f"Unauthorized access attempt by user {user_id} for submission {submission_id}")
-        #     return jsonify({"message": "Unauthorized access to the submission"}), 403, response_headers
 
         # Get modules that don't have scores for this submission
         logger.info("Fetching completed module IDs")
