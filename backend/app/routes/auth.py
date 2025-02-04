@@ -20,8 +20,7 @@ def register():
             return jsonify({"message": "Missing JSON in request!"}), 400
             
         data = request.get_json()
-        
-        # Validate required fields
+
         if not all(k in data for k in ["username", "mailAddress", "password"]):
             return jsonify({"message": "All fields are required!"}), 400
         
@@ -43,8 +42,7 @@ def register():
         # Check if email address already in use
         if User.query.filter_by(mail_address=mail_address).first():
             return jsonify({"message": "Mail address already registered!"}), 409
-            
-        # Create new user
+
         new_user = User(
             username=username,
             mail_address=mail_address,
@@ -86,11 +84,9 @@ def login():
         user = User.query.filter_by(username=data["username"].strip()).first()
         if not user or not check_password_hash(user.password, data["password"]):
             return jsonify({"message": "Invalid username or password!"}), 401
-        
-        # Create access token
+
         access_token = create_access_token(identity=str(user.id))
-        
-        # Create response with token in cookie
+
         response = jsonify({
             "message": "Login successful!",
             "success": True,

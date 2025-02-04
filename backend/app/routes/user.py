@@ -57,7 +57,6 @@ def update_user():
         }), 200
 
     except Exception as e:
-        # Handle unexpected errors
         db.session.rollback()
         return jsonify({
             "error": "An error occurred while updating the user!",
