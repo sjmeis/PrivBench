@@ -21,7 +21,6 @@ def run_benchmark(module_path, module_id, module_name, dataset_path, priv_datase
     try:
         docker_client = docker.from_env()
         
-        #image_tag = f"module-{module_id}"
         image_tag = f"module-{module_name.lower()}"
         logger.info(f"Looking for Docker image: {image_tag}")
         
@@ -41,21 +40,19 @@ def run_benchmark(module_path, module_id, module_name, dataset_path, priv_datase
             shutil.copy2(dataset_path, temp_path / "dataset.csv")
             shutil.copy2(priv_dataset_path, temp_path / "privatized_dataset.csv")
             
-            # Create runner script with simple progress output
+            # Create runner script with reusable module initialization
             runner_script = f"""
 import pandas as pd
 import sys
-import json
 import importlib.util
 from pathlib import Path
 
 def run():
     try:
-        # Load module
+        # Load and initialize module
         module_path = Path('/app/{module_name}.py')
         spec = importlib.util.spec_from_file_location(module_path.stem, module_path)
         module = importlib.util.module_from_spec(spec)
-        sys.modules[module_path.stem] = module
         spec.loader.exec_module(module)
         
         # Create benchmark instance
@@ -89,6 +86,7 @@ def run():
             raise ValueError("Benchmark returned None score")
             
         print(f"SCORE:{{score}}")
+        sys.stdout.flush()
         
     except Exception as e:
         print(f"ERROR:{{str(e)}}", file=sys.stderr)
@@ -148,11 +146,11 @@ if __name__ == '__main__':
                     score = None
                     processed_rows = 0
                     logger.info("Starting to process container output...")
+                    
                     for line in result.output:
                         line = line.decode('utf-8').strip()
                         logger.debug(f"Raw output line: {repr(line)}")
                         
-                        # Skip tqdm progress bar lines
                         if "\r" in line or "%" in line or "it/s" in line:
                             continue
                         
@@ -166,26 +164,20 @@ if __name__ == '__main__':
                             except ValueError as e:
                                 logger.warning(f"Failed to parse progress value: {e}")
                         
-                        if 'SCORE:' in line:
-                            logger.info(f"Found score line: {repr(line)}")
+                        elif line.startswith('SCORE:'):
                             try:
-                                score_part = line[line.find('SCORE:') + 6:]
-                                score = float(score_part.strip())
+                                score_str = line.replace('SCORE:', '').strip()
+                                score = float(score_str)
                                 logger.info(f"Successfully parsed score: {score}")
                                 if progress_callback:
                                     progress_callback(processed_rows, score)
                             except ValueError as e:
-                                logger.error(f"Failed to parse score: {e} from line: {repr(line)}")
-                                continue
+                                logger.error(f"Failed to parse score value '{score_str}': {e}")
                         
                         elif line.startswith('ERROR:'):
                             error_msg = line.replace('ERROR:', '').strip()
                             raise Exception(error_msg)
-                    
-                    exit_code = result.exit_code
-                    if exit_code is not None and exit_code != 0:
-                        raise Exception(f"Benchmark failed with exit code {exit_code}")
-                        
+                            
                     if score is None:
                         raise ValueError("Benchmark did not produce a score")
                     
@@ -193,7 +185,6 @@ if __name__ == '__main__':
                     return score
                     
                 finally:
-                    # Cleanup
                     try:
                         container.stop()
                         container.remove(force=True)

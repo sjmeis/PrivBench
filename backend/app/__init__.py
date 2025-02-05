@@ -77,6 +77,11 @@ def create_app():
     app.register_blueprint(user_bp)
     app.register_blueprint(email_bp)
 
+    with app.app_context():
+        # Initialize benchmark modules
+        from .services.module_initializer import ModuleInitializer
+        ModuleInitializer.initialize_modules()
+
 
     return app
 
