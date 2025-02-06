@@ -92,7 +92,7 @@ const UserSubmissionsTableRow = ({row, onTogglePublic, onUpdateSubmission}) => {
                                         <tr key={index}>
                                             <th scope="row">{score.benchmarkModule.name}</th>
                                             <td>{score.benchmarkModule.version}</td>
-                                            <td>{score.score}</td>
+                                            <td>{score.score.toFixed(2)}</td>
                                         </tr>
                                     ))
                                 ) : (
