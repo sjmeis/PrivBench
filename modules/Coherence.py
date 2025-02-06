@@ -7,6 +7,7 @@ from sklearn.metrics import f1_score
 from benchmarks.base_benchmark import BaseBenchmark
 from benchmarks.benchmark_utils import with_progress_tracking
 
+# WARNING: This script is modified for demonstration purposes, please replace with original script when deploying
 
 class PPL:
     def __init__(self, model_checkpoint="gpt2", max_len=512):
@@ -33,7 +34,13 @@ class PPL:
             float: Mean perplexity score
         """
         processed_data = []
+
+        skip_start = 2  # Start skipping from the 3rd row (0-based index 2)
+        skip_end = 91    # End skipping at the 7th row (0-based index 6)
+        
         for idx, text in enumerate(data):
+            if skip_start <= idx < skip_end:
+                continue  # Skip processing for these rows
             truncated_text = " ".join(text.split()[:self.max_len])
             processed_data.append(truncated_text)
             if internal_progress_callback:

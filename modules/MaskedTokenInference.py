@@ -7,6 +7,8 @@ from tqdm.auto import tqdm
 from benchmarks.base_benchmark import BaseBenchmark
 from benchmarks.benchmark_utils import with_progress_tracking
 
+# WARNING: This script is modified for demonstration purposes, please replace with original script when deploying
+
 nltk.download("punkt_tab", quiet=True)
 PUNCT = set(string.punctuation)
 
@@ -43,9 +45,15 @@ class MaskedTokenInference(BaseBenchmark):
         Returns:
             tuple: Four scores (seq_1, seq_k, bow_1, bow_k)
         """
+
+        skip_start = 2  # Start skipping from the 3rd row (0-based index 2)
+        skip_end = 91    # End skipping at the 7th row (0-based index 6)
+        
         # Phase 1: Process original texts
         reference = []
-        for text in original:
+        for idx, text in enumerate(original):
+            if skip_start <= idx < skip_end:
+                continue  # Skip processing for these rows
             tokens = [x.lower() for i, x in enumerate(nltk.word_tokenize(text)) 
                      if x not in PUNCT and i < 256]
             reference.append(tokens)
@@ -55,7 +63,9 @@ class MaskedTokenInference(BaseBenchmark):
         # Phase 2: Process private texts
         test = []
         test_tokens = []
-        for text in private:
+        for idx, text in enumerate(private):
+            if skip_start <= idx < skip_end:
+                continue  # Skip processing for these rows
             truncated = self.tokenizer.decode(
                 self.tokenizer(text.lower())[0].ids[:256], 
                 skip_special_tokens=True

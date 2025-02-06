@@ -25,11 +25,20 @@ minio==7.1.1
 # Development and testing
 Faker==33.0.0
 
-# Dataset
-pandas
-
 #Module Management
 docker
 
 # Mail
 blinker==1.9.0
+
+# Core requirements for Flask app and ML/DL modules
+numpy==1.24.3
+pandas==1.5.3
+torch
+transformers
+spacy
+evaluate
+sentence-transformers
+tqdm
+nltk
+scikit-learn
