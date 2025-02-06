@@ -1,5 +1,6 @@
 import React from "react";
 import { Box, Button } from "@mui/joy";
+import { Upload} from "@mui/icons-material";
 
 const DatasetTableUpdate = ({ datasets, uploadedFiles, uploadingDatasetId, onFileSelect }) => {
     return (
@@ -35,6 +36,7 @@ const DatasetTableUpdate = ({ datasets, uploadedFiles, uploadingDatasetId, onFil
                             variant="outlined"
                             component="label"
                             disabled={uploadingDatasetId === dataset.id}
+                            endDecorator={<Upload />}
                         >
                             {uploadingDatasetId === dataset.id ? "Uploading..." : "Upload"}
                             <input

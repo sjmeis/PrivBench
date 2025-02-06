@@ -10,7 +10,7 @@ import {
     Stack,
     Typography
 } from "@mui/joy";
-import {DriveFileRenameOutline, InfoOutlined} from "@mui/icons-material";
+import {Cancel, DriveFileRenameOutline, InfoOutlined, Save} from "@mui/icons-material";
 import React from "react";
 import ModelCardTextPairs from "../shared/ModelCardTextPairs";
 import InsertDriveFileIcon from "@mui/icons-material/InsertDriveFile";
@@ -45,11 +45,11 @@ const ModuleConfirmationDialog = ({isConfirmationOpen, handleCloseConfirmation, 
                     </Stack>
                 </DialogContent>
                 <DialogActions sx={{marginTop: '10px'}}>
-                    <Button color="neutral" onClick={handleCloseConfirmation}>
-                        Cancel
-                    </Button>
-                    <Button color="success" onClick={handleSaveConfirmation}>
+                    <Button color="success" onClick={handleSaveConfirmation} endDecorator={<Save />}>
                         Confirm & Save
+                    </Button>
+                    <Button color="neutral" onClick={handleCloseConfirmation} startDecorator={<Cancel />}>
+                        Cancel
                     </Button>
                 </DialogActions>
             </ModalDialog>

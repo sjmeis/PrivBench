@@ -168,7 +168,7 @@ PrivBench Team
 """
 
                     try:
-                        send_email(user_email, subject, body, redirect_url=frontend_url)
+                        send_email(user_email, subject, body, redirect_url=f"{frontend_url}/profile?state=submissions")
                         logger.info(f"Email sent successfully to {user_email}")
                     except Exception as e:
                         logger.error(f"Failed to send email to {user_email}: {str(e)}")
