@@ -114,6 +114,8 @@ class Coherence(BaseBenchmark):
         p = self.ppl.score(private, internal_progress_callback=internal_progress_handler)
         
         ppl_score = (o / p)*100
+        if ppl_score > 100:
+            ppl_score = 100
 
         snips_score = self.snips.score(private)
 
