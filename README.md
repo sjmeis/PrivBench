@@ -33,7 +33,7 @@ To start the application using Docker, follow these steps:
 ### User and Admin User Manual
 
    - **[User Manual](PrivBench_User_Manual_vF.pdf)**
-   - **[Admin Manual](PrivBench_User_Manual_vF.pdf)**
+   - **[Admin Manual](PrivBench_Admin_Manual_vF.pdf)**
 
 
 ## Components
