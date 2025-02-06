@@ -27,7 +27,7 @@ def send_email(to, subject, body, redirect_url=None):
             <a href="{redirect_url}" style="display: inline-block; padding: 10px 20px; 
             font-size: 18px; font-weight: bold; background-color: #007bff; color: #fff; 
             text-decoration: none; border-radius: 8px; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-                See more
+                See submissions
             </a>
         </p>
         """
