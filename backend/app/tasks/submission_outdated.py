@@ -61,7 +61,7 @@ PrivBench Team
                     to=user.mail_address,
                     subject=email_subject,
                     body=email_body,
-                    redirect_url=f"{frontend_url}/profile"  # Pass the redirect URL
+                    redirect_url=f"{frontend_url}/profile?state=submissions"  # Pass the redirect URL
                 )
             except Exception as e:
                 current_app.logger.error(f"Failed to send email to {user.mail_address}: {e}")

@@ -20,6 +20,8 @@ import {getDateString} from "../../utils/Date";
 import ModuleDeletionConfirmationDialog from "./ModuleDeletionConfirmationDialog";
 import {ModuleService} from "../../services/ModuleService";
 import {useSnackbar} from "../../contexts/SnackbarProvider";
+import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
+import {Save} from "@mui/icons-material";
 
 const ModuleDetailView = ({selectedModule, onUpdateOrDelete, handleCloseDetailView}) => {
     const [formData, setFormData] = useState({})
@@ -176,8 +178,8 @@ const ModuleDetailView = ({selectedModule, onUpdateOrDelete, handleCloseDetailVi
 
                         >
                             <Stack spacing={2}>
-                                <Button disabled={disableSaveButton()} onClick={saveChanges} fullWidth>Save Updates</Button>
-                                <Button color='danger' onClick={() => handleOpenDialog()} fullWidth>Delete Module</Button>
+                                <Button disabled={disableSaveButton()} onClick={saveChanges} fullWidth endDecorator={<Save />}>Save Updates</Button>
+                                <Button color='danger' onClick={() => handleOpenDialog()} fullWidth endDecorator={<DeleteForeverIcon />}>Delete Module</Button>
                             </Stack>
 
                         </Box>

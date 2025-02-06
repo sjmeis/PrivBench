@@ -12,6 +12,7 @@ import {
     Divider
 } from "@mui/joy";
 import { useAuth } from '../contexts/AuthContext';
+import {Login, PersonAdd} from "@mui/icons-material";
 
 const Register = () => {
     const [formData, setFormData] = useState({
@@ -162,6 +163,7 @@ const Register = () => {
                         type="submit"
                         loading={isLoading}
                         loadingPosition="center"
+                        endDecorator={<PersonAdd />}
                     >
                         {isLoading ? 'Creating Account...' : 'Register'}
                     </Button>
@@ -172,8 +174,9 @@ const Register = () => {
                         variant="outlined"
                         color="neutral"
                         onClick={() => navigate('/login')}
+                        endDecorator={<Login />}
                     >
-                        Already have an account? Login
+                        Already have an account?
                     </Button>
                 </Stack>
             </form>

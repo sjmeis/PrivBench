@@ -10,7 +10,10 @@ import {useLocation} from "react-router-dom";
 
 
 export default function UserProfile() {
-    const {state} = useLocation();
+    const location = useLocation();
+    const queryParams = new URLSearchParams(location.search);
+    const stateFromQuery = queryParams.get("state");
+    const state = stateFromQuery || location.state;
     const [selectedItem, setSelectedItem] = useState('profile');
     const { user } = useAuth();
 

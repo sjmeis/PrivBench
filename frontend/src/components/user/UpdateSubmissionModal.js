@@ -10,7 +10,7 @@ import {
     ModalClose,
     ModalDialog, Typography
 } from "@mui/joy";
-import {InfoOutlined, CloudDownload} from "@mui/icons-material";
+import {InfoOutlined, CloudDownload, Update, Close} from "@mui/icons-material";
 import {useSnackbar} from "../../contexts/SnackbarProvider";
 import {DatasetService} from '../../services/DatasetService';
 import {TaskService} from '../../services/TaskService';
@@ -93,7 +93,6 @@ const UpdateSubmissionModal = ({isOpen, onClose, submission}) => {
     const isFormValid = () => {
         return Array.isArray(datasets) && datasets.every(dataset => uploadedFiles[dataset.id]);
     }
-
 
     const updateSubmission = async () => {
         if (!isFormValid()) {
@@ -179,8 +178,7 @@ const UpdateSubmissionModal = ({isOpen, onClose, submission}) => {
             .then(() => {
                 showSnackbar("All selected datasets were downloaded successfully!", "success");
             })
-            .catch((error) => {
-
+            .catch(() => {
                 showSnackbar("Error downloading datasets", "error");
             });
     };
@@ -250,7 +248,9 @@ const UpdateSubmissionModal = ({isOpen, onClose, submission}) => {
 
                     {tasks.length > 0 && (
                         moduleScores.length > 0 ? (
-                            <ScoreOverviewCard oldModulesScores={submission.benchmarkScores} moduleScores={moduleScores} averageScore={averageScore} />
+                            <ScoreOverviewCard oldModulesScores={submission.benchmarkScores}
+                                               moduleScores={moduleScores}
+                                               averageScore={averageScore}/>
                         ) : (
                             <TaskProgressCard tasks={tasks} />
                         )
@@ -263,11 +263,12 @@ const UpdateSubmissionModal = ({isOpen, onClose, submission}) => {
                         <Button
                             onClick={updateSubmission}
                             disabled={!isFormValid() || loading}
-                            color='primary'
+                            color={isFormValid() ? 'success' : 'primary'}
+                            endDecorator={<Update />}
                         >
                             Update Submission
                         </Button>
-                        <Button onClick={onClose} variant='soft' color='neutral' disabled={loading}>
+                        <Button onClick={onClose} variant='soft' color='neutral' disabled={loading} startDecorator={<Close />}>
                             {loading ? 'Please wait...' : 'Close'}
                         </Button>
                     </DialogActions>

@@ -8,6 +8,7 @@ import Switch from "@mui/joy/Switch";
 import Sheet from "@mui/joy/Sheet";
 import Table from "@mui/joy/Table";
 import {SubmissionStatus} from "../../enums/SubmissionStatus";
+import {Update} from "@mui/icons-material";
 
 const statusColor = (status) => {
     switch (status) {
@@ -47,7 +48,7 @@ const UserSubmissionsTableRow = ({row, onTogglePublic, onUpdateSubmission}) => {
                 <th scope="row">{row.name}</th>
                 <th scope="row">{getDateTimeString(row.submissionDate)}</th>
                 <td><Chip color={statusColor(row.status)}>{row.status}</Chip></td>
-                <td>{row.overallScore !== null ? row.overallScore : 'N/A'}</td>
+                <td>{row.overallScore !== null ? row.overallScore.toFixed(2) : 'N/A'}</td>
                 <td align="center">
                     {row.status === SubmissionStatus.COMPLETED &&
                         <Switch
@@ -61,6 +62,7 @@ const UserSubmissionsTableRow = ({row, onTogglePublic, onUpdateSubmission}) => {
                             color="success"
                             size='md'
                             onClick={() => onUpdateSubmissionClick(row)}
+                            endDecorator={<Update />}
                         >Update</Button>}
                 </td>
             </tr>
