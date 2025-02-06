@@ -1,66 +1,58 @@
 import axios from 'axios';
-import { API_BASE_URL } from '../config';
+import {API_BASE_URL} from '../config';
 
-// Helper function to poll status
+
 const pollModuleStatus = async (taskId, onProgress) => {
     try {
         const response = await axios.get(`${API_BASE_URL}/modules/${taskId}/status`, {
             withCredentials: true
         });
-        
+
         if (response.data.status === 'pending') {
-            // If it's still pending, call onProgress callback and continue polling
+            // If it is still pending, call onProgress callback and continue polling
             if (onProgress) {
                 onProgress('Installing module dependencies...');
             }
-            return { status: 'pending' };
+            return {status: 'pending'};
         } else if (response.data.status === 'error') {
             throw new Error(response.data.message || 'Module installation failed');
         }
-        // Installation completed successfully
-        return { status: 'completed', data: response.data };
+
+        return {status: 'completed', data: response.data};
     } catch (error) {
         throw new Error('Failed to check module status: ' + error.message);
     }
 };
 
-// Main module creation function
-export const createBenchmarkingModule = async (formData, onProgress) => {
+const createBenchmarkingModule = async (formData, onProgress) => {
     try {
-        // Show initial progress
         if (onProgress) {
             onProgress('Creating module...');
         }
 
         const form = new FormData();
-        
-        // Add basic text fields
+
         form.append('name', formData.name);
         form.append('description', formData.description);
-        
-        // Add the algorithm file
+
         if (formData.algorithmFile) {
             form.append('algorithmFile', formData.algorithmFile);
         }
-        
-        // Add the requirements file
+
         if (formData.requirementsFile) {
             form.append('requirementsFile', formData.requirementsFile);
         }
-        
-        // Add selected datasets
+
         if (formData.selectedDatasets && formData.selectedDatasets.length > 0) {
             form.append('selectedDatasets', JSON.stringify(formData.selectedDatasets));
         }
-        
-        // Add uploaded datasets
+
         if (formData.uploadedDatasets && formData.uploadedDatasets.length > 0) {
             formData.uploadedDatasets.forEach((dataset) => {
                 form.append('uploadedDatasets', dataset);
             });
         }
 
-        // Initial module creation request
         const response = await axios.post(`${API_BASE_URL}/modules/create`, form, {
             withCredentials: true,
             headers: {
@@ -113,16 +105,52 @@ export const createBenchmarkingModule = async (formData, onProgress) => {
     }
 };
 
-export const fetchBenchmarkingModulesForSubmission = async (submissionId) => {
-  try {
-    const response = await axios.post(
-      `${API_BASE_URL}/modules/update/information`,
-      { id: submissionId },
-      { withCredentials: true }
-    );
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching benchmarking modules:', error);
-    throw error;
-  }
+const fetchBenchmarkingModulesForSubmission = async (submissionId) => {
+    try {
+        const response = await axios.post(
+            `${API_BASE_URL}/modules/update/information`,
+            {id: submissionId},
+            {withCredentials: true}
+        );
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching benchmarking modules:', error);
+        throw error;
+    }
+};
+
+const deleteBenchmarkModule = async (moduleId) => {
+    try {
+        const response = await axios.delete(
+            `${API_BASE_URL}/modules/delete/${moduleId}`,
+            {withCredentials: true}
+        );
+        return response.data;
+    } catch (error) {
+        console.error('Error deleting benchmark module:', error);
+        throw error;
+    }
+};
+
+const updateBenchmarkModule = async (moduleId, updatedData) => {
+    try {
+        const response = await axios.put(
+            `${API_BASE_URL}/modules/update/${moduleId}`,
+            updatedData,
+            {withCredentials: true}
+        );
+        return response.data;
+    } catch (error) {
+        console.error('Error updating benchmark module:', error);
+        throw error;
+    }
+};
+
+
+export const ModuleService = {
+    updateBenchmarkModule,
+    deleteBenchmarkModule,
+    fetchBenchmarkingModulesForSubmission,
+    createBenchmarkingModule,
+    pollModuleStatus
 };

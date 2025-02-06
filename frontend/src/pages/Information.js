@@ -21,8 +21,6 @@ const stepVariants = {
 
 const Information = () => {
     const [modules, setModules] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -31,10 +29,7 @@ const Information = () => {
                 const response = await axios.get('http://localhost:5000/modules');
                 setModules(response.data);
             } catch (err) {
-                setError('Failed to load modules');
                 console.error(err);
-            } finally {
-                setLoading(false);
             }
         };
 
@@ -89,7 +84,7 @@ const Information = () => {
                         <Typography level="h3" sx={{ marginBottom: 2 }}>Privatization Benchmarking Modules</Typography>
                         <Grid container spacing={2}>
                             {modules.map((module) => (
-                                <Grid key={module.id} item xs={4}>
+                                <Grid sx={{maxHeight: '200px', maxWidth: '200px'}} key={module.id} item xs={3}>
                                     <BenchmarkCard title={module.title} description={module.description || 'No description available.'} />
                                 </Grid>
                             ))}

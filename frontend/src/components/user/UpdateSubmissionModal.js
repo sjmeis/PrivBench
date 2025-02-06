@@ -18,8 +18,6 @@ import {BenchmarkService} from '../../services/BenchmarkService';
 import DatasetTableUpdate from '../submission/DatasetTableUpdate';
 
 
-import sendEmail from "../../services/EmailService";
-import {useAuth} from "../../contexts/AuthContext";
 import ScoreOverviewCard from "../submission/ScoreOverviewCard";
 import TaskProgressCard from "../submission/TaskProgressCard";
 
@@ -32,7 +30,6 @@ const UpdateSubmissionModal = ({isOpen, onClose, submission}) => {
     const [moduleScores, setModuleScores] = useState([]);
     const [averageScore, setAverageScore] = useState(null);
     const {showSnackbar} = useSnackbar();
-    const { user } = useAuth();
 
     useEffect(() => {
         if (!submission) {
@@ -83,27 +80,6 @@ const UpdateSubmissionModal = ({isOpen, onClose, submission}) => {
                     setModuleScores(scores);
                     setAverageScore(
                         scores.reduce((sum, curr) => sum + curr.score, 0) / scores.length
-                    );
-                }
-
-                const allTasksSuccessful = updatedTasks.every(
-                    (task) =>
-                        task.completed && task.error === null && task.state === "SUCCESS"
-                );
-
-                if (allTasksSuccessful) {
-                    sendEmail(
-                        user.mailAddress,
-                        "Submission evaluated successfully",
-                        "Your submission has been evaluated! You can now view your results.",
-                        "http://localhost:3000/"
-                    );
-                } else {
-                    sendEmail(
-                        user.mailAddress,
-                        "Submission evaluated",
-                        "There was an error with the evaluation of your submission.",
-                        "http://localhost:3000/"
                     );
                 }
             }

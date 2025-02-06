@@ -1,0 +1,11 @@
+text,category,label
+Put Targeted in my Clapton Chronicles The Best of Eric Clapton playlist.,AddToPlaylist,LABEL_0
+Is the weather going to be colder in GU in 11 years,GetWeather,LABEL_2
+Play artist Vlada Divljan from something he did that is good,PlayMusic,LABEL_3
+I rate American History A Survey a 5,RateBook,LABEL_4
+Search for Informix Wingz,SearchCreativeWork,LABEL_5
+What is the weather nearby Bermuda a week from now,GetWeather,LABEL_2
+What time is The Bride from Hell playing at Malco Theatres,SearchScreeningEvent,LABEL_6
+"Make dinner reservation for 3 people on june 23rd, 2040 in Blodgett .",BookRestaurant,LABEL_1
+book a table in Alberton for me and my mother in law at a restaurant,BookRestaurant,LABEL_1
+Look up Applied Linguistics,SearchCreativeWork,LABEL_5

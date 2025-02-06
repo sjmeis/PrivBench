@@ -14,6 +14,7 @@ from ..extensions import db
 from datetime import datetime
 from app.tasks.submission_outdated import mark_submissions_outdated_and_notify
 from ..models.submission import Submission
+from ..enums import SubmissionStatus
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +65,7 @@ def get_all_benchmark_modules():
 @jwt_required()
 def create_benchmark_module():
     try:
-        # Authentication check
+
         user_id = get_jwt_identity()
         user = User.query.get(int(user_id))
         if not user:
@@ -72,7 +73,7 @@ def create_benchmark_module():
         if not user.admin:
             return jsonify({"message": "User doesn't possess the necessary permissions."}), 403
 
-        # Handle text fields
+
         name = request.form.get('name')
         description = request.form.get('description')
         
@@ -108,7 +109,7 @@ def create_benchmark_module():
 
             # TODO: handle requirements file
 
-            # Optional: Validate requirements file content
+
             try:
                 with open(requirements_path, 'r') as f:
                     requirements_content = f.read()
@@ -129,7 +130,7 @@ def create_benchmark_module():
                     file_path = os.path.join(DATASET_FOLDER, filename)
                     file.save(file_path)
                     uploaded_file_paths.append(file_path)
-                    # Create a new Dataset entry
+
                     new_dataset = Dataset(
                         name=filename,
                         file_path=file_path,
@@ -137,7 +138,7 @@ def create_benchmark_module():
                         is_active=True
                     )
 
-                    # Add and commit the new entry to the database
+
                     db.session.add(new_dataset)
                     db.session.flush()
 
@@ -168,7 +169,7 @@ def create_benchmark_module():
         logger.debug("Requirements File Path: %s", requirements_path)
         logger.debug("Uploaded Dataset File Paths: %s", uploaded_file_paths)
 
-        # Start module installation task
+
         install_task = install_and_load_module.delay(
             module_id=new_benchmark_module.id,
             module_name=name,
@@ -176,7 +177,7 @@ def create_benchmark_module():
             requirements_path=requirements_path if requirements_path else None
         )
 
-        # Start the notification task immediately
+
         notify_task = mark_submissions_outdated_and_notify.delay(name)
 
         return jsonify({
@@ -229,19 +230,19 @@ def get_benchmarking_modules_for_submission():
         if not submission_id:
             return jsonify({"message": "Submission ID is required"}), 400
 
-        # Fetch the submission to get its name
+
         submission = db.session.query(Submission).get(submission_id)
         if not submission:
             return jsonify({"message": "Submission not found"}), 404
 
-        # Fetch all active benchmarking modules
+
         active_modules = db.session.query(BenchmarkModule).filter_by(is_active=True).all()
 
-        # Fetch existing benchmark scores for the submission
+
         scores = db.session.query(BenchmarkScore).filter_by(submission_id=submission_id).all()
         score_map = {score.module_id: score.score for score in scores}
 
-        # Prepare the response data
+
         modules_data = []
         for module in active_modules:
             module_data = {
@@ -257,10 +258,96 @@ def get_benchmarking_modules_for_submission():
             modules_data.append(module_data)
 
         return jsonify({
-            "submissionName": submission.name,  # Include submission name
+            "submissionName": submission.name,
             "modules": modules_data
         }), 200
 
     except Exception as e:
         return jsonify({"message": "Internal server error", "error": str(e)}), 500
+
+
+@module_bp.route('/modules/delete/<int:module_id>', methods=['DELETE'])
+@jwt_required()
+def delete_benchmark_module(module_id):
+    try:
+        user_id = get_jwt_identity()
+        user = User.query.get(int(user_id))
+        if not user:
+            return jsonify({"message": "User not found"}), 404
+        if not user.admin:
+            return jsonify({"message": "User doesn't possess the necessary permissions."}), 403
+
+        module = BenchmarkModule.query.get(module_id)
+        if not module:
+            return jsonify({"message": "Benchmark module not found"}), 404
+
+        BenchmarkScore.query.filter_by(module_id=module_id).delete()
+
+        # Update overall scores for submissions with status COMPLETED
+        completed_submissions = Submission.query.filter_by(status=SubmissionStatus.COMPLETED).all()
+        for submission in completed_submissions:
+            remaining_scores = db.session.query(BenchmarkScore).filter_by(submission_id=submission.id).all()
+            
+            if remaining_scores:
+                overall_score = sum(score.score for score in remaining_scores) / len(remaining_scores)
+                submission.score = overall_score
+            else:
+                submission.score = None
+            
+            db.session.commit()
+            
+        db.session.delete(module)
+        db.session.commit()
+
+        return jsonify({"message": "Benchmark module and associated scores deleted successfully"}), 200
+
+    except Exception as e:
+        logger.error(f"Error deleting benchmark module: {e}")
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@module_bp.route('/modules/update/<int:module_id>', methods=['PUT'])
+@jwt_required()
+def update_benchmark_module(module_id):
+    try:
+        user_id = get_jwt_identity()
+        user = User.query.get(int(user_id))
+        if not user:
+            return jsonify({"message": "User not found"}), 404
+        if not user.admin:
+            return jsonify({"message": "User doesn't possess the necessary permissions."}), 403
+
+        module = BenchmarkModule.query.get(module_id)
+        if not module:
+            return jsonify({"message": "Benchmark module not found"}), 404
+
+        data = request.get_json()
+        new_name = data.get('name')
+        new_description = data.get('description')
+
+        if new_name:
+            module.name = new_name
+        if new_description:
+            module.description = new_description
+
+        db.session.commit()
+
+        # Return the updated module as JSON
+        updated_module = {
+            "id": module.id,
+            "name": module.name,
+            "description": module.description,
+            "title": module.title,
+            "version": module.version,
+            "isActive": module.is_active,
+            "createdAt": module.created_at.isoformat() if module.created_at else None
+        }
+
+        return jsonify(updated_module), 200
+
+    except Exception as e:
+        logger.error(f"Error updating benchmark module: {e}")
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
 

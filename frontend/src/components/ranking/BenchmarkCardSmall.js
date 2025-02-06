@@ -9,10 +9,10 @@ import {
     ModalClose,
     Divider, Button
 } from '@mui/joy';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import ViewModuleIcon from '@mui/icons-material/ViewModule';
 import InfoIcon from '@mui/icons-material/Info';
 
-const BenchmarkCard = ({ title, description }) => {
+const BenchmarkCardSmall = ({ title, description }) => {
     const [modalOpen, setModalOpen] = useState(false);
 
     return (
@@ -22,8 +22,6 @@ const BenchmarkCard = ({ title, description }) => {
                 sx={{
                     width: '100%',
                     height: '100%',
-                    minWidth: 120,
-                    minHeight: 120,
                     aspectRatio: '1 / 1',
                 }}
             >
@@ -41,13 +39,13 @@ const BenchmarkCard = ({ title, description }) => {
                         display: 'flex',
                         flexDirection: 'column',
                         justifyContent: 'space-between',
-                        gap: 2,
-                        padding: 2,
+                        gap: 1,
+                        padding: 1,
                     }}
                 >
                     <Typography
-                        level="h4"
                         sx={{
+                            fontWeight: 'bold',
                             textAlign: 'center',
                             display: '-webkit-box',
                             WebkitLineClamp: 2,
@@ -93,7 +91,7 @@ const BenchmarkCard = ({ title, description }) => {
                     <Typography
                         id="modal-title"
                         level="h2"
-                        startDecorator={<CheckCircleIcon />}
+                        startDecorator={<ViewModuleIcon />}
                         sx={{ mb: 2, paddingRight: 2 }}
                     >
                         {title}
@@ -114,4 +112,4 @@ const BenchmarkCard = ({ title, description }) => {
     );
 };
 
-export default BenchmarkCard;
+export default BenchmarkCardSmall;

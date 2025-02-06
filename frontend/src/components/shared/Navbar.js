@@ -27,6 +27,7 @@ import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import {getGravatarUrl} from "../../utils/Gravatar";
 import ViewModuleIcon from "@mui/icons-material/ViewModule";
 import InsertDriveFileIcon from "@mui/icons-material/InsertDriveFile";
+import { useSnackbar } from "../../contexts/SnackbarProvider";
 
 
 
@@ -35,6 +36,8 @@ const Navbar = () => {
     const navigate = useNavigate();
     const {mode, setMode} = useColorScheme();
     const {user, logout} = useAuth();
+    const { showSnackbar } = useSnackbar();
+
 
     const navButtonStyle = {
         textTransform: "none",
@@ -57,6 +60,7 @@ const Navbar = () => {
     const handleLogout = async () => {
         await logout();
         navigate('/');
+        showSnackbar("Successfully logged out!", "success");
     };
 
     const handleSubmissionClick = async () => {

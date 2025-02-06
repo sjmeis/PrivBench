@@ -5,7 +5,7 @@ const TaskProgressCard = ({ tasks }) => {
     return (
         <Card variant="outlined" sx={{ width: "100%", mt: 3 }}>
             {tasks.map((task, index) => (
-                <Box key={index} sx={{ mb: 2, mt: 2 }}>
+                <Box key={index} sx={{ mb: 1, mt: 1 }}>
                     <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
                         <Typography level="body1" fontWeight="bold">
                             {task.module_name}
@@ -15,8 +15,11 @@ const TaskProgressCard = ({ tasks }) => {
                     <LinearProgress
                         determinate
                         value={task.progress}
-                        sx={{ mb: 1 }}
-                        color={task.error ? "error" : "success"}
+                        sx={{
+                            '--LinearProgress-thickness': '10px',
+                            mb: 1
+                        }}
+                        color={task.error ? "danger" : "success"}
                     />
                     <Box sx={{ display: "flex", justifyContent: "space-between", mt: 1 }}>
                         <Typography
@@ -26,7 +29,7 @@ const TaskProgressCard = ({ tasks }) => {
                                 fontSize: "0.875rem",
                             }}
                         >
-                            {task.error || task.status}
+                            {task.status}
                         </Typography>
                         {task.totalRows > 0 && (
                             <Typography level="body2" sx={{ fontSize: "0.875rem" }}>

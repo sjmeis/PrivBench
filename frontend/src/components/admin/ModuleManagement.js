@@ -40,6 +40,10 @@ const ModuleManagement = () => {
         fetchModules();
     }, []);
 
+    const handleUpdateOrDelete = () => {
+        fetchModules();
+    }
+
     const handleAddModuleClick = () => {
         setIsModalOpen(true);
     };
@@ -115,7 +119,7 @@ const ModuleManagement = () => {
             </Box>
 
             {selectedModule && (
-                <ModuleDetailView handleCloseDetailView={handleCloseDetailView} selectedModule={selectedModule}></ModuleDetailView>
+                <ModuleDetailView onUpdateOrDelete={handleUpdateOrDelete} handleCloseDetailView={handleCloseDetailView} selectedModule={selectedModule}></ModuleDetailView>
             )}
             <AddModuleModal
                 isOpen={isModalOpen}

@@ -27,14 +27,15 @@ import {getDateString, isNewDate} from "../utils/Date";
 import {formatToTwoDecimals} from "../utils/FormatUtils";
 import {useAuth} from "../contexts/AuthContext";
 import {SubmissionStatus} from "../enums/SubmissionStatus";
+import {Visibility} from "@mui/icons-material";
 
 const headCells = [
     {id: "status", numeric: false, label: "", width: "8%"},
     {id: "score", numeric: true, label: "Privacy Score", width: "12%"},
     {id: "name", numeric: false, label: "Privatization Method", width: "20%"},
-    {id: "submissionDate", numeric: false, label: "Submission Date", width: "20%"},
+    {id: "submissionDate", numeric: false, label: "Submission Date", width: "15%"},
     {id: "username", numeric: false, label: "Submitted By", width: "18%"},
-    {id: "badges", numeric: false, label: "User Badges", width: "10%"},
+    {id: "badges", numeric: false, label: "Research Institute", width: "15%"},
     {id: "button", numeric: false, label: "", width: "12%"},
 ];
 
@@ -215,7 +216,8 @@ const Rankings = () => {
                     </thead>
                     <tbody>
                     {rankings.map((row) => (
-                        <tr style={{ backgroundColor: isCurrentUser(row.user.id) ? 'var(--joy-palette-background-level1)': 'inherit'}}  key={row.id}>
+                        <tr style={{backgroundColor: isCurrentUser(row.user.id) ? 'var(--joy-palette-background-level1)' : 'inherit'}}
+                            key={row.id}>
                             <td>
                                 {isNewDate(row.submissionDate) && !isSubmissionOutdated(row.status) && (
                                     <Chip color="success" variant="soft">
@@ -238,19 +240,14 @@ const Rankings = () => {
                                     <Typography noWrap>{row.user.username}</Typography>
                                 </Box>
                             </td>
-                            <td>
-                                {row.user.badges.map((item, index) => (
-                                    <Chip key={index} variant="outlined" color="primary" sx={{marginRight: 1}}>
-                                        {item}
-                                    </Chip>
-                                ))}
-                            </td>
+                            <td>{row.user.researchInstitute}</td>
                             <td>
                                 <Stack justifyContent='end' direction='row' spacing={1}>
                                     {isCurrentUser(row.user.id) &&
-                                        <Button size="sm" variant="outlined" color="neutral" onClick={() => navigate("/profile", { state: 'submissions' })}>Edit </Button>
+                                        <Button size="sm" variant="outlined" color="neutral"
+                                                onClick={() => navigate("/profile", {state: 'submissions'})}>Edit </Button>
                                     }
-                                    <Button size="sm" variant="soft" color="primary" onClick={() => onViewClick(row)}>
+                                    <Button size="sm" variant="soft" color="primary" startDecorator={<Visibility />}   onClick={() => onViewClick(row)}>
                                         View
                                     </Button>
                                 </Stack>
