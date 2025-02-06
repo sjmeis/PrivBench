@@ -7,6 +7,8 @@ from sklearn.metrics import f1_score
 from benchmarks.base_benchmark import BaseBenchmark
 from benchmarks.benchmark_utils import with_progress_tracking
 
+# WARNING: This module script was modified for demonstration purposes, please replace with original script for deployment
+
 class PPL:
     def __init__(self, model_checkpoint="gpt2", max_len=512):
         self.ppl = evaluate.load("perplexity", module_type="metric")

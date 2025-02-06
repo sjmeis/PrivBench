@@ -7,6 +7,8 @@ from tqdm.auto import tqdm
 from benchmarks.base_benchmark import BaseBenchmark
 from benchmarks.benchmark_utils import with_progress_tracking
 
+# WARNING: This module script was modified for demonstration purposes, please replace with original script for deployment
+
 nltk.download("punkt_tab", quiet=True)
 PUNCT = set(string.punctuation)
 

@@ -38,6 +38,13 @@ with app.app_context():
         'nearest-neighbor-reqs.txt', 'similarity-reqs.txt',
         'masked-token-reqs.txt'
     ]
+    dataset_names = [
+        'demo_nerpriv.csv',
+        'demo_coherence.csv',
+        'demo_nearestneighbor.csv',
+        'demo_similarity.csv',
+        'demo_maskedtokeninf.csv'
+    ]
 
     module_titles = [
         'NER Evaluation', 'Text Coherence',
@@ -52,60 +59,63 @@ with app.app_context():
         "Text similarity measures the likeness between two pieces of text, commonly used in search engines, clustering, and recommendation tasks.",
         "In this module, we test for a privatization method's ability to defend against masked token prediction. Here, an attacker is simulated who attempts to infer tokens from the original text by leveraging the surrounding context. An effective privatization method should therefore not divulge information about the original content given the private context.",
     ]
-    dataset_name = 'test_original.csv'
+
+    # Create a dictionary to store datasets
+    datasets = {}
 
     # Iterate over all files in the dataset folder
     if os.path.exists(DATASET_FOLDER) and os.path.exists(MODULE_FOLDER):
+        # First create all datasets
+        for dataset_name in dataset_names:
+            file_path = os.path.join(DATASET_FOLDER, dataset_name)
+            if os.path.isfile(file_path):
+                logger.info(f"Adding dataset: {dataset_name} at path: {file_path}")
 
-        file_path = os.path.join(DATASET_FOLDER, dataset_name)
-        if os.path.isfile(file_path):
-            logger.info(f"Adding dataset: {dataset_name} at path: {file_path}")
+                new_dataset = Dataset(
+                    name=dataset_name,
+                    file_path=file_path,
+                    created_at=datetime.utcnow(),
+                    is_active=True
+                )
 
-            # Create a new Dataset entry
-            new_dataset = Dataset(
-                name=dataset_name,
-                file_path=file_path,
-                created_at=datetime.utcnow(),
-                is_active=True
-            )
+                db.session.add(new_dataset)
+                db.session.flush()
+                datasets[dataset_name] = new_dataset
 
-            # Add and commit the new entry to the database
-            db.session.add(new_dataset)
-            db.session.flush()
-
+        # Then create all modules
         for i, module_name in enumerate(module_names):
-
-            module_name = module_names[i % len(module_names)]
-            module_title = module_titles[i % len(module_titles)]
-            module_file_name = module_file_names[i % len(module_file_names)]
+            module_title = module_titles[i]
+            module_file_name = module_file_names[i]
             module_path = os.path.join(MODULE_FOLDER, module_file_name)
-            module_description = module_descriptions[i % len(module_descriptions)]
-            requirements_file_name = module_requirement_file_names[i % len(module_requirement_file_names)]
+            module_description = module_descriptions[i]
+            requirements_file_name = module_requirement_file_names[i]
             requirements_path = os.path.join(MODULE_FOLDER, requirements_file_name)
+            corresponding_dataset = dataset_names[i]
 
             logger.info(f"Adding module: {module_name} at path: {module_path}")
 
+            if corresponding_dataset in datasets:
+                new_benchmark_module = BenchmarkModule(
+                    name=module_name,
+                    title=module_title,
+                    description=module_description,
+                    version="1.0.0",
+                    is_active=True,
+                    path=module_path,
+                    dataset_id=datasets[corresponding_dataset].id
+                )
 
-            new_benchmark_module = BenchmarkModule(
-                name=module_name,
-                title=module_title,
-                description=module_description,
-                version="1.0.0",
-                is_active=True,
-                path=module_path,
-                dataset_id=new_dataset.id
-            )
+                install_task = install_and_load_module.delay(
+                    module_id=new_benchmark_module.id,
+                    module_name=module_name,
+                    module_path=module_path,
+                    requirements_path=requirements_path
+                )
 
-            install_task = install_and_load_module.delay(
-                module_id=new_benchmark_module.id,
-                module_name=module_name,
-                module_path=module_path,
-                requirements_path=requirements_path
-            )
-
-            db.session.add(new_benchmark_module)
-
-            logger.info(f"Module {module_name} installed successfully")
+                db.session.add(new_benchmark_module)
+                logger.info(f"Module {module_name} installed successfully")
+            else:
+                logger.error(f"Dataset {corresponding_dataset} not found for module {module_name}")
 
         db.session.commit()
         logger.info("All datasets and modules have been added to the database.")
