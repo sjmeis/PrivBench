@@ -7,42 +7,45 @@ from datetime import datetime
 from app.tasks.run_benchmark import run_benchmark
 from app.utils.dataset_loader import load_dataset
 from app.utils.module_loader import load_benchmark_module
+from app.utils.email_sender import send_email
 from celery.utils.log import get_task_logger
 from pathlib import Path
 from datetime import datetime
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy import select, func, cast, Numeric
+from ..config import Config
 
 logger = get_task_logger(__name__)
 
 # //fixme: put this in dedicated service
 @celery.task(bind=True)
 def run_benchmark_task(self, module_path, module_name, dataset_path, priv_dataset_path, privatized_dataset_id,
-                       submission_id, module_id):
+                       submission_id, module_id, user_id):
     """Run a benchmark module as a Celery task."""
     logger.info(f"Starting benchmark task for module {module_name}")
+
     try:
         total_steps = 100
         total_rows = None
-        
+
         # Stage 1: Initialization (10%)
         logger.info(f"Module {module_name}: Initialization stage")
         self.update_state(state='PROGRESS',
-                         meta={'current': 10,
-                               'total': total_steps,
-                               'status': 'Initializing benchmark environment...',
-                               'processedRows': 0,
-                               'totalRows': 0})
-        
+                          meta={'current': 10,
+                                'total': total_steps,
+                                'status': 'Initializing benchmark environment...',
+                                'processedRows': 0,
+                                'totalRows': 0})
+
         # Stage 2: Loading Module (30%)
         logger.info(f"Loading benchmark module from {module_path}")
         self.update_state(state='PROGRESS',
-                         meta={'current': 15,
-                               'total': total_steps,
-                               'status': 'Loading benchmark module...',
-                               'processedRows': 0,
-                               'totalRows': 0})
-        
+                          meta={'current': 15,
+                                'total': total_steps,
+                                'status': 'Loading benchmark module...',
+                                'processedRows': 0,
+                                'totalRows': 0})
+
         # Load datasets to get total row count
         dataset = load_dataset(dataset_path)
         total_rows = len(dataset)
@@ -50,20 +53,20 @@ def run_benchmark_task(self, module_path, module_name, dataset_path, priv_datase
         # Stage 3: Loading Datasets (50%)
         logger.info(f"Loading datasets from {dataset_path} and {priv_dataset_path}")
         self.update_state(state='PROGRESS',
-                         meta={'current': 20,
-                               'total': total_steps,
-                               'status': f'Loading datasets (0/{total_rows} rows)...',
-                               'processedRows': 0,
-                               'totalRows': total_rows})
+                          meta={'current': 20,
+                                'total': total_steps,
+                                'status': f'Loading datasets (0/{total_rows} rows)...',
+                                'processedRows': 0,
+                                'totalRows': total_rows})
 
         # Stage 4: Running Benchmark (80%)
         logger.info(f"Starting benchmark execution")
         self.update_state(state='PROGRESS',
-                         meta={'current': 30,
-                               'total': total_steps,
-                               'status': f'Processing 0/{total_rows} rows...',
-                               'processedRows': 0,
-                               'totalRows': total_rows})
+                          meta={'current': 30,
+                                'total': total_steps,
+                                'status': f'Processing 0/{total_rows} rows...',
+                                'processedRows': 0,
+                                'totalRows': total_rows})
 
         # Create a progress callback for the benchmark
         def progress_callback(processed_rows, score=None):
@@ -80,7 +83,7 @@ def run_benchmark_task(self, module_path, module_name, dataset_path, priv_datase
                 meta=current_meta
             )
 
-        # After getting the score:
+        # Run benchmark and get score
         score = run_benchmark(
             module_path,
             module_id,
@@ -104,7 +107,7 @@ def run_benchmark_task(self, module_path, module_name, dataset_path, priv_datase
         )
 
         logger.info(f"Benchmark completed with score: {score}")
-        
+
         if score is None:
             raise ValueError("Benchmark returned None score")
 
@@ -127,13 +130,15 @@ def run_benchmark_task(self, module_path, module_name, dataset_path, priv_datase
         db.session.commit()
         logger.info(f"Benchmark score upserted to the database for submission {submission_id}, module {module_id}")
 
-        # Check if all modules for the submission have completed// fixme: make this more efficient
+        # Check if all modules for the submission have completed
         total_modules = db.session.query(BenchmarkModule).filter_by(is_active=True).count()
         completed_scores = db.session.query(BenchmarkScore).filter_by(submission_id=submission_id).count()
 
-        if total_modules == completed_scores:
-            submission = db.session.query(Submission).filter_by(id=submission_id).one_or_none()
-            if submission:
+        submission = db.session.query(Submission).filter_by(id=submission_id).one_or_none()
+        if total_modules == completed_scores and submission and submission.status == SubmissionStatus.COMPLETED:
+            logger.info(f"All modules completed and submission {submission_id} is already marked as COMPLETED. Skipping further steps.")
+        else:
+            if total_modules == completed_scores:
                 query = select(func.round(cast(func.avg(BenchmarkScore.score), Numeric(10, 2)), 2)).where(
                     BenchmarkScore.submission_id == submission_id
                 )
@@ -145,6 +150,28 @@ def run_benchmark_task(self, module_path, module_name, dataset_path, priv_datase
                 submission.status = SubmissionStatus.COMPLETED
                 db.session.commit()
                 logger.info(f"Submission {submission_id} marked as Completed")
+
+                user = User.query.get(user_id)
+                if user and user.mail_address:
+                    user_email = user.mail_address
+                    subject = "Benchmark Completed"
+                    frontend_url = Config.FRONTEND_URL
+                    body = f"""
+Dear {user.username},<br><br>
+
+Your latest submission has been evaluated successfully.<br>
+
+You can now visit the platform and see how your model performed.<br><br>
+
+Best regards,<br>
+PrivBench Team
+"""
+
+                    try:
+                        send_email(user_email, subject, body, redirect_url=frontend_url)
+                        logger.info(f"Email sent successfully to {user_email}")
+                    except Exception as e:
+                        logger.error(f"Failed to send email to {user_email}: {str(e)}")
 
         # Stage 5: Completion (100%)
         result = {
@@ -194,6 +221,7 @@ def benchmark():
             return ('', 204, response_headers)
 
         user_id = get_jwt_identity()
+        user = User.query.get(user_id)
         logger.info(f"Starting benchmark for user {user_id}")
         
         # Print Celery configuration for debugging
@@ -259,7 +287,8 @@ def benchmark():
                 str(privatized_dataset.file_path),
                 privatized_dataset.id,
                 submission.id,
-                module.id
+                module.id,
+                user_id
             )
             
             tasks.append({
@@ -273,6 +302,24 @@ def benchmark():
             submission.status = SubmissionStatus.FAILED
             db.session.commit()
             logger.error("No benchmark tasks could be started")
+            if user and user.mail_address:
+                user_email = user.mail_address
+                subject = "Benchmark failed"
+                frontend_url = Config.FRONTEND_URL
+                body = f"""
+Dear {user.username},<br><br>
+
+Unfortunately, your latest submission has failed.<br><br>
+
+Best regards,<br>
+PrivBench Team
+"""
+
+                try:
+                    send_email(user_email, subject, body, redirect_url=frontend_url)
+                    logger.info(f"Email sent successfully to {user_email}")
+                except Exception as e:
+                    logger.error(f"Failed to send email to {user_email}: {str(e)}")
             return jsonify({"message": "No benchmark tasks could be started"}), 400
             
         logger.info(f"Successfully started {len(tasks)} tasks")
@@ -284,6 +331,24 @@ def benchmark():
         if submission:
             submission.status = SubmissionStatus.FAILED
             db.session.commit()
+            if user and user.mail_address:
+                user_email = user.mail_address
+                subject = "Benchmark failed"
+                frontend_url = Config.FRONTEND_URL
+                body = f"""
+Dear {user.username},<br><br>
+
+Unfortunately, your latest submission has failed.<br><br>
+
+Best regards,<br>
+PrivBench Team
+"""
+
+                try:
+                    send_email(user_email, subject, body, redirect_url=frontend_url)
+                    logger.info(f"Email sent successfully to {user_email}")
+                except Exception as e:
+                    logger.error(f"Failed to send email to {user_email}: {str(e)}")
         return jsonify({"message": str(e)}), 500
 
 @benchmark_bp.route('/task-status/<task_id>', methods=['GET'])
@@ -394,7 +459,6 @@ def benchmark_update():
         user_id = get_jwt_identity()
         logger.info(f"Retrieved user_id from JWT: {user_id}")
 
-        # Get submission and verify ownership
         logger.info(f"Fetching submission with ID {submission_id}")
 
         submission = Submission.query.get(submission_id)
@@ -403,11 +467,6 @@ def benchmark_update():
             return jsonify({"message": "Submission not found"}), 404, response_headers
 
         logger.info(f"Fetching submission with user id {submission.user_id}")
-
-
-        # if submission.user_id != user_id: //fixme: add this verificaiton
-        #     logger.warning(f"Unauthorized access attempt by user {user_id} for submission {submission_id}")
-        #     return jsonify({"message": "Unauthorized access to the submission"}), 403, response_headers
 
         # Get modules that don't have scores for this submission
         logger.info("Fetching completed module IDs")
@@ -450,7 +509,8 @@ def benchmark_update():
                 str(privatized_dataset.file_path),
                 privatized_dataset.id,
                 submission_id,
-                module.id
+                module.id,
+                user_id
             )
 
             tasks.append({

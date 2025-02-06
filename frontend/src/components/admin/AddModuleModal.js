@@ -19,8 +19,9 @@ import {
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import AddDatasetsModal from "./AddDatasetsModal";
 import ModuleConfirmationDialog from "./ModuleConfirmationDialog";
-import {createBenchmarkingModule} from "../../services/ModuleService";
+import {ModuleService} from "../../services/ModuleService";
 import AddModuleDatasetTable from "./AddModuleDatasetTable";
+import {Add, Save} from "@mui/icons-material";
 
 const AddModuleModal = ({isOpen, onClose, onSubmit, onError}) => {
     const [isDSModalOpen, setIsDSModalOpen] = useState(false);
@@ -78,7 +79,7 @@ const AddModuleModal = ({isOpen, onClose, onSubmit, onError}) => {
 
     const handleSubmit = async () => {
         try {
-            const response = await createBenchmarkingModule(formData);
+            const response = await ModuleService.createBenchmarkingModule(formData);
             console.log(response)
             onSubmit()
         } catch (err) {
@@ -214,6 +215,7 @@ const AddModuleModal = ({isOpen, onClose, onSubmit, onError}) => {
                                 variant="soft"
                                 onClick={() => setIsDSModalOpen(true)}
                                 fullWidth
+                                endDecorator={<Add />}
                             >
                                 Add Datasets
                             </Button>
@@ -221,7 +223,7 @@ const AddModuleModal = ({isOpen, onClose, onSubmit, onError}) => {
                     </Box>
                 </DialogContent>
                 <DialogActions>
-                    <Button disabled={!isFormValid()} color="success" onClick={handleOpenConfirmation}>
+                    <Button disabled={!isFormValid()} color="success" onClick={handleOpenConfirmation} endDecorator={<Save />}>
                         Save Module
                     </Button>
                 </DialogActions>

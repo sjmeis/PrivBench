@@ -306,7 +306,6 @@ def update_submission_detail():
         if not submission_id:
             return jsonify({"message": "Submission ID is required"}), 400
 
-        # Fetch the existing submission to update
         submission = (
             db.session.query(Submission)
             .filter(Submission.id == submission_id)
@@ -316,16 +315,16 @@ def update_submission_detail():
         if not submission:
             return jsonify({"message": "Submission not found"}), 404
 
-        # Update the submission fields from the request data
+
         submission.name = data.get('name', submission.name)
         submission.status = data.get('status', submission.status)
         submission.is_public = data.get('isPublic', submission.is_public)
         submission.submission_date = data.get('submissionDate', submission.submission_date)
 
-        # Assuming the submission metadata might be updated, handle that if present
+
         metadata_data = data.get('metadata', {})
         if metadata_data:
-            # Assuming submission_metadata relationship exists in the model
+
             submission_metadata = submission.submission_metadata or SubmissionMetadata()
             submission_metadata.model_name = metadata_data.get('modelName', submission_metadata.model_name)
             submission_metadata.model_description = metadata_data.get('modelDescription', submission_metadata.model_description)
@@ -338,14 +337,14 @@ def update_submission_detail():
             submission_metadata.github_url = metadata_data.get('githubUrl', submission_metadata.github_url)
             submission_metadata.bibtex_citation = metadata_data.get('bibtexCitation', submission_metadata.bibtex_citation)
 
-            # Save or update the submission metadata
+
             db.session.add(submission_metadata)
             submission.submission_metadata = submission_metadata
 
-        # Commit the changes to the database
+
         db.session.commit()
 
-        # Prepare the response with the updated submission details
+
         updated_submission_detail = {
             "id": submission.id,
             "name": submission.name,
@@ -376,7 +375,7 @@ def update_submission_detail():
                 "bibtexCitation": submission.submission_metadata.bibtex_citation,
             }
 
-        # Return the updated submission details
+
         return jsonify({"submission": updated_submission_detail}), 200
 
     except Exception as e:

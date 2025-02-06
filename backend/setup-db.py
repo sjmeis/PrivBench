@@ -31,23 +31,26 @@ with app.app_context():
     db.drop_all()
     db.create_all()
 
-    module_names = ['NERpriv', 'Coherence', 'NearestNeighbor', 'Similarity']
-    module_file_names = ['NERpriv.py', 'Coherence.py',  'NearestNeighbor.py', 'Similarity.py']
+    module_names = ['NERpriv', 'Coherence', 'NearestNeighbor', 'Similarity', 'MaskedTokenInference']
+    module_file_names = ['NERpriv.py', 'Coherence.py',  'NearestNeighbor.py', 'Similarity.py', 'MaskedTokenInference.py']
     module_requirement_file_names = [
         'ner_requirements.txt', 'coh-reqs.txt',
-        'nearest-neighbor-reqs.txt', 'similarity-reqs.txt'
+        'nearest-neighbor-reqs.txt', 'similarity-reqs.txt',
+        'masked-token-reqs.txt'
     ]
 
     module_titles = [
         'NER Evaluation', 'Text Coherence',
-        'Nearest Neighbor Search', 'Text Similarity'
+        'Nearest Neighbor Search', 'Text Similarity',
+        'Masked Token Inference'
     ]
     module_descriptions = [
         "On the surface, text privatization should pay particular attention to named entities, or words or groups of words that point to some real-world object, person, organization, etc. Ensuring that such entities are not leaked into the privatized text, while also balancing the preservation of semantics, is the mark of an effective privatization method.",
         "This module evaluates the coherence of text, ensuring logical flow and semantic connectivity between sentences and paragraphs.",
         "The nearest neighbor module enables efficient searching for the closest data points, useful in "
         "classification and recommendation systems.",
-        "Text similarity measures the likeness between two pieces of text, commonly used in search engines, clustering, and recommendation tasks."
+        "Text similarity measures the likeness between two pieces of text, commonly used in search engines, clustering, and recommendation tasks.",
+        "In this module, we test for a privatization method's ability to defend against masked token prediction. Here, an attacker is simulated who attempts to infer tokens from the original text by leveraging the surrounding context. An effective privatization method should therefore not divulge information about the original content given the private context.",
     ]
     dataset_name = 'test_original.csv'
 

@@ -1,11 +1,8 @@
 import { useState, useEffect } from "react";
-import { Typography, Box, } from "@mui/joy";
+import { Typography, Box } from "@mui/joy";
 import { useSnackbar } from "../../contexts/SnackbarProvider";
-import { useAuth } from "../../contexts/AuthContext";
-import  sendEmail from "../../services/EmailService"
 import TaskProgressCard from "./TaskProgressCard";
 import ScoreOverviewCard from "./ScoreOverviewCard";
-
 
 const FinalStep = () => {
     const [loading, setLoading] = useState(true);
@@ -13,59 +10,67 @@ const FinalStep = () => {
     const [moduleScores, setModuleScores] = useState([]);
     const [tasks, setTasks] = useState([]);
     const { showSnackbar } = useSnackbar();
-    const { user } = useAuth();
 
-
+    // Load tasks from localStorage when component mounts
     useEffect(() => {
-        const startBenchmark = async () => {
-            try {
-                const response = await fetch("http://localhost:5000/run-benchmark", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    credentials: "include",
-                    signal: AbortSignal.timeout(30000)
-                });
+        const savedTasks = JSON.parse(localStorage.getItem("tasks"));
+        if (savedTasks) {
+            setTasks(savedTasks);
+        } else {
+            startBenchmark();
+        }
+    }, []);
 
-                if (response.status === 404) {
-                    showSnackbar("No submissions available for benchmarking. Please submit your data first.", "error");
-                    setLoading(false);
-                    return;
-                }
+    const startBenchmark = async () => {
+        try {
+            const response = await fetch("http://localhost:5000/run-benchmark", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                credentials: "include",
+                signal: AbortSignal.timeout(30000)
+            });
 
-                if (!response.ok) {
-                    let errorMessage;
-                    try {
-                        const errorData = await response.json();
-                        errorMessage = errorData.message;
-                    } catch {
-                        errorMessage = `HTTP error! status: ${response.status}`;
-                    }
-                    showSnackbar(`${errorMessage}`, 'error');
-                }
-
-                const data = await response.json();
-                setTasks(data.task_ids.map(task => ({
-                    ...task,
-                    progress: 0,
-                    processedRows: 0,
-                    totalRows: 0,
-                    status: 'Starting...',
-                    completed: false,
-                    score: null,
-                    error: null
-                })));
-
-            } catch (err) {
-                console.error("Benchmark error:", err);
-                showSnackbar(err.message, "error");
+            if (response.status === 404) {
+                showSnackbar("No submissions available for benchmarking. Please submit your data first.", "error");
                 setLoading(false);
+                return;
             }
-        };
 
-        startBenchmark();
-    }, [showSnackbar]);
+            if (!response.ok) {
+                let errorMessage;
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.message;
+                } catch {
+                    errorMessage = `HTTP error! status: ${response.status}`;
+                }
+                showSnackbar(`${errorMessage}`, 'error');
+            }
+
+            const data = await response.json();
+            const initialTasks = data.task_ids.map(task => ({
+                ...task,
+                progress: 0,
+                processedRows: 0,
+                totalRows: 0,
+                status: 'Starting...',
+                completed: false,
+                score: null,
+                error: null
+            }));
+
+            // Save tasks to localStorage
+            localStorage.setItem("tasks", JSON.stringify(initialTasks));
+            setTasks(initialTasks);
+
+        } catch (err) {
+            console.error("Benchmark error:", err);
+            showSnackbar(err.message, "error");
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
         if (tasks.length === 0) return;
@@ -73,6 +78,8 @@ const FinalStep = () => {
         const pollTasks = async () => {
             const updatedTasks = await Promise.all(
                 tasks.map(async (task) => {
+                    if (task.completed) return task; // Skip tasks that are already completed
+
                     try {
                         const response = await fetch(
                             `http://localhost:5000/task-status/${task.task_id}`,
@@ -144,23 +151,7 @@ const FinalStep = () => {
                     setAverageScore(
                         scores.reduce((sum, curr) => sum + curr.score, 0) / scores.length
                     );
-                }
-                const allTasksSuccessful = updatedTasks.every(
-                    task => task.completed && task.error === null && task.state === 'SUCCESS'
-                );
-
-                if (allTasksSuccessful) {
-                    sendEmail(
-                        user.mailAddress,
-                        "Submission evaluated successfully",
-                        "Your submission has been evaluated! You can now view your results.",
-                        "http://localhost:3000/"
-                    );
-                } else {
-                    sendEmail( user.mailAddress,
-                        "Submission evaluated",
-                        "There was an error with the evaluation of your submission.",
-                        "http://localhost:3000/")
+                    localStorage.removeItem("tasks");
                 }
             }
         };
@@ -168,9 +159,7 @@ const FinalStep = () => {
         const intervalId = setInterval(pollTasks, 1000);
         return () => clearInterval(intervalId);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [tasks.length]);
-
-
+    }, [tasks]);
 
     return (
         <Box  sx={{ width: "100%", maxWidth: 1000, mx: "auto", p: 3 }}>
@@ -192,3 +181,4 @@ const FinalStep = () => {
 };
 
 export default FinalStep;
+

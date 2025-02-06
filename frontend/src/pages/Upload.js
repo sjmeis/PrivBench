@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Box, Button } from "@mui/joy";
-import { Done, East, West } from "@mui/icons-material";
+import {Done, East, Save, West} from "@mui/icons-material";
 import { useLocation } from "react-router-dom";
 import { useSnackbar } from "../contexts/SnackbarProvider";
 import DownloadStep from "../components/submission/DownloadStep";
@@ -30,6 +30,7 @@ const Upload = () => {
         bibtexCitation: "",
     });
     const [isMetadataValid, setIsMetadataValid] = useState(false);
+    const [initialMetadata, setInitialMetadata] = useState({});
     const { showSnackbar } = useSnackbar();
 
     const fetchUserSubmission = async () => {
@@ -39,12 +40,23 @@ const Upload = () => {
                 (sub) => sub.status === "pending"
             );
 
+            const inProgressSubmission = data.submissions.find(
+                (sub) => sub.status === "in_progress"
+            );
+
             if (pendingSubmission) {
                 setCurrentStep(2);
                 setMetadata(pendingSubmission.metadata);
+                setInitialMetadata(pendingSubmission.metadata);
                 setSubmissionId(pendingSubmission.id);
+            } else if (inProgressSubmission){
+                setCurrentStep(3);
+                setMetadata(inProgressSubmission.metadata);
+                setInitialMetadata(inProgressSubmission.metadata);
+                setSubmissionId(inProgressSubmission.id);
             } else {
                 setMetadata({});
+                setInitialMetadata({});
             }
         } catch (error) {
             console.error("An error occurred while fetching user submission:", error);
@@ -137,6 +149,11 @@ const Upload = () => {
 
     const handleSaveMetadata = async () => {
         try {
+            // Check if metadata has changed
+            if (JSON.stringify(metadata) === JSON.stringify(initialMetadata)) {
+                setCurrentStep((prev) => prev + 1);
+                return; // Skip saving if no changes
+            }
             const isUpdate = Boolean(submissionId);
             const endpoint = "http://localhost:5000/metadata";
             const method = isUpdate ? "PUT" : "POST";
@@ -243,11 +260,26 @@ const Upload = () => {
                             variant="solid"
                             color={currentStep === 2 ? "success" : "primary"}
                             onClick={handleNext}
-                            endDecorator={currentStep === 2 ? <Done /> : <East />}
+                            endDecorator={
+                                currentStep === 1 && JSON.stringify(metadata) !== JSON.stringify(initialMetadata)
+                                    ? <Save /> // "Save" if metadata has changed at step 1
+                                    : currentStep === 1 && JSON.stringify(metadata) === JSON.stringify(initialMetadata)
+                                        ? <East /> // Arrow if metadata has not changed at step 1
+                                        : currentStep === 2
+                                            ? <Done />
+                                            : <East />
+                            }
                             size="lg"
-                            disabled={(currentStep === 1 && !isMetadataValid) || (currentStep === 2 && !datasets.every(dataset => uploadedFiles[dataset.id]))}
+                            disabled={
+                                (currentStep === 1 && !isMetadataValid) ||
+                                (currentStep === 2 && !datasets.every(dataset => uploadedFiles[dataset.id]))
+                            }
                         >
-                            {currentStep === 2 ? "Submit" : "Next"}
+                            {currentStep === 1 && JSON.stringify(metadata) !== JSON.stringify(initialMetadata)
+                                ? "Save" // "Save" if metadata has not changed at step 1
+                                : currentStep === 2
+                                    ? "Submit" // "Submit" if step 2
+                                    : "Next"}
                         </Button>
                     </Box>
                 )}

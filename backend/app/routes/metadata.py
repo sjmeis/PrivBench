@@ -14,24 +14,21 @@ def save_metadata():
         data = request.get_json()
         user_id = get_jwt_identity()
 
-        # Validate user
         user = User.query.get(user_id)
         if not user:
             return jsonify({"message": "User not found"}), 404
 
-        # Create a new submission
         new_submission = Submission(
             name=data.get("modelName", "Unnamed Submission"),
             submission_date=datetime.utcnow(),
             user_id=user.id,
-            status="PENDING",  # Assuming initial status is PENDING
+            status="PENDING",
             score=0,
-            is_public=True,  # Adjust based on requirements
+            is_public=True,
         )
         db.session.add(new_submission)
         db.session.flush()  # Flush to get the submission ID
 
-        # Map the license string to the enum value
         license_str = data.get("license")
         try:
             transformed_license = (
@@ -42,7 +39,6 @@ def save_metadata():
             return jsonify({"message": f"Invalid license type: {license_str}"}), 400
 
 
-        # Create metadata
         metadata = SubmissionMetadata(
             submission_id=new_submission.id,
             model_name=data["modelName"],
@@ -75,7 +71,6 @@ def update_submission_detail():
         if not submission_id:
             return jsonify({"message": "Submission ID is required"}), 400
 
-        # Fetch the existing submission to update
         submission = (
             db.session.query(Submission)
             .filter(Submission.id == submission_id)
@@ -85,21 +80,17 @@ def update_submission_detail():
         if not submission:
             return jsonify({"message": "Submission not found"}), 404
 
-        # Update the submission fields from the request data
         submission.name = data.get('name', submission.name)
         submission.status = data.get('status', submission.status)
         submission.is_public = data.get('isPublic', submission.is_public)
         submission.submission_date = data.get('submissionDate', submission.submission_date)
 
-        # Assuming the submission metadata might be updated, handle that if present
         metadata_data = data.get('metadata', {})
         if metadata_data:
-            # Assuming submission_metadata relationship exists in the model
             submission_metadata = submission.submission_metadata or SubmissionMetadata()
             submission_metadata.model_name = metadata_data.get('modelName', submission_metadata.model_name)
             submission_metadata.model_description = metadata_data.get('modelDescription', submission_metadata.model_description)
 
-            # Map the license string to the enum value (same as save_metadata function)
             license_str = metadata_data.get('license')
             if license_str:
                 try:
@@ -114,14 +105,11 @@ def update_submission_detail():
             submission_metadata.github_url = metadata_data.get('githubUrl', submission_metadata.github_url)
             submission_metadata.bibtex_citation = metadata_data.get('bibtexCitation', submission_metadata.bibtex_citation)
 
-            # Save or update the submission metadata
             db.session.add(submission_metadata)
             submission.submission_metadata = submission_metadata
 
-        # Commit the changes to the database
         db.session.commit()
 
-        # Prepare the response with the updated submission details
         updated_submission_detail = {
             "id": submission.id,
             "name": submission.name,
@@ -152,7 +140,6 @@ def update_submission_detail():
                 "bibtexCitation": submission.submission_metadata.bibtex_citation,
             }
 
-        # Return the updated submission details
         return jsonify({"submission": updated_submission_detail}), 200
 
     except Exception as e:
