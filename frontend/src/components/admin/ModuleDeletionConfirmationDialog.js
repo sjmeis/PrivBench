@@ -10,7 +10,8 @@ import {
     Stack,
     Typography,
 } from "@mui/joy";
-import {InfoOutlined} from "@mui/icons-material";
+import {Cancel, InfoOutlined} from "@mui/icons-material";
+import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
 
 const ModuleDeletionConfirmationDialog = ({
                                               isOpen,
@@ -55,15 +56,16 @@ const ModuleDeletionConfirmationDialog = ({
                     </Stack>
                 </DialogContent>
                 <DialogActions sx={{marginTop: "10px"}}>
-                    <Button color="neutral" onClick={handleClose}>
-                        Cancel
-                    </Button>
                     <Button
                         color="danger"
                         onClick={handleDelete}
                         disabled={!isConfirmEnabled}
+                        endDecorator={<DeleteForeverIcon />}
                     >
                         Confirm & Delete
+                    </Button>
+                    <Button color="neutral" onClick={handleClose} startDecorator={<Cancel />}>
+                        Cancel
                     </Button>
                 </DialogActions>
             </ModalDialog>

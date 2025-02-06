@@ -4,11 +4,18 @@ import { RemoveRedEye } from "@mui/icons-material";
 import {useNavigate} from "react-router-dom";
 import ModuleScoreCard from "./ModuleScoreCard";
 
-const ScoreOverviewCard = ({ averageScore, moduleScores, oldModulesScores = [] }) => {
+const ScoreOverviewCard = ({ averageScore, moduleScores, oldModulesScores = []}) => {
     const navigate = useNavigate();
+
+    const hasNewModules = moduleScores.some(() =>
+        oldModulesScores.length > 0);
 
     const handleViewSubmissions = () => {
         navigate("/profile", { state: "submissions" });
+        console.log(hasNewModules);
+        if (hasNewModules) {
+            window.location.reload();
+        }
     };
     return (
         <>

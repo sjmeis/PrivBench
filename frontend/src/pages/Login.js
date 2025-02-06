@@ -11,6 +11,7 @@ import {
     Stack,
     Divider
 } from "@mui/joy";
+import {Login as LoginIcon, PersonAdd} from "@mui/icons-material";
 import { useAuth } from '../contexts/AuthContext';
 
 const Login = () => {
@@ -108,6 +109,7 @@ const Login = () => {
                         type="submit"
                         loading={isLoading}
                         loadingPosition="center"
+                        endDecorator={<LoginIcon />}
                     >
                         {isLoading ? 'Logging in...' : 'Login'}
                     </Button>
@@ -118,6 +120,7 @@ const Login = () => {
                         variant="outlined"
                         color="neutral"
                         onClick={() => navigate('/register')}
+                        endDecorator={<PersonAdd />}
                     >
                         Create new account
                     </Button>
