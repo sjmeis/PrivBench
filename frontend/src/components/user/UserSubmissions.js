@@ -53,7 +53,7 @@ const UserSubmissions = () => {
 
     const onClose = () => {
         setIsModalOpen(false)
-        setSubmission(null)
+        window.location.reload()
     }
 
     const handleAddClick = () => {
