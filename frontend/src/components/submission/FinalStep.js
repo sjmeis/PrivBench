@@ -13,6 +13,10 @@ const FinalStep = () => {
 
     // Load tasks from localStorage when component mounts
     useEffect(() => {
+        if (!loading) {
+            localStorage.removeItem("tasks");
+            return;
+        }
         const savedTasks = JSON.parse(localStorage.getItem("tasks"));
         if (savedTasks) {
             setTasks(savedTasks);
