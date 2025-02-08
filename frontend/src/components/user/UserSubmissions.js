@@ -52,8 +52,9 @@ const UserSubmissions = () => {
     }
 
     const onClose = () => {
+        fetchSubmissions()
         setIsModalOpen(false)
-        window.location.reload()
+        setSubmission(null)
     }
 
     const handleAddClick = () => {
@@ -76,69 +77,71 @@ const UserSubmissions = () => {
         <>
             <Stack spacing={4} sx={{maxWidth: '1100px', mx: 'auto'}}>
                 <Typography level="h4">Submissions</Typography>
-                <Box sx={{flex: 1, width: '100%'}}>
-                    <Stack
-                        spacing={4}
-                        sx={{
-                            display: 'flex',
-                            mx: 'auto',
-                            px: {xs: 2, md: 6},
-                            py: {xs: 2, md: 3},
-                        }}
-                    >
-                        <Card>
-                            <Box sx={{mb: 1}}>
-                                <Typography level="title-md">Overview of submissions</Typography>
-                                <Typography level="body-sm">
-                                    Make Submission Public to visualize them on the leaderboard and earn badges
-                                </Typography>
-                            </Box>
-                            <Divider/>
-                            <Sheet>
-                                <Table
-                                    aria-label="collapsible submissions table"
-                                    sx={{
-                                        '& > thead > tr > th:nth-child(n + 3), & > tbody > tr > td:nth-child(n + 3)': {
-                                            textAlign: 'left',
-                                        },
-                                    }}
-                                >
-                                    <thead>
-                                    <tr>
-                                        <th style={{width: 5}} aria-label="empty"/>
-                                        <th style={{width: 20}}>Name</th>
-                                        <th style={{width: 20}}>Timestamp</th>
-                                        <th style={{width: 20}}>Status</th>
-                                        <th style={{width: 20}}>Score</th>
-                                        <th style={{width: 15}} align="center">Public/Private</th>
-                                    </tr>
-                                    </thead>
-                                    <tbody>
-                                    {submissions.map((submission) => (
-                                        <UserSubmissionsTableRow key={submission.id} row={submission}
-                                                                 onUpdateSubmission={onUpdateSubmissionClick}
-                                                                 onTogglePublic={onTogglePublic}/>
-                                    ))}
-                                    </tbody>
-                                </Table>
-                            </Sheet>
-                            <CardOverflow sx={{borderTop: '1px solid', borderColor: 'divider'}}>
-                                <CardActions sx={{alignSelf: 'flex-end', pt: 2}}>
-                                    <Button
-                                        onClick={handleAddClick}
-                                        endDecorator={<AddIcon/>}
-                                        size="sm"
-                                        color="success"
-                                        variant="soft"
-                                        disabled={!pendingSubmission} // Disable if no pending submission
+                {submissions.length > 0 &&
+                    <Box sx={{flex: 1, width: '100%'}}>
+                        <Stack
+                            spacing={4}
+                            sx={{
+                                display: 'flex',
+                                mx: 'auto',
+                                px: {xs: 2, md: 6},
+                                py: {xs: 2, md: 3},
+                            }}
+                        >
+                            <Card>
+                                <Box sx={{mb: 1}}>
+                                    <Typography level="title-md">Overview of submissions</Typography>
+                                    <Typography level="body-sm">
+                                        Make Submission Public to visualize them on the leaderboard and earn badges
+                                    </Typography>
+                                </Box>
+                                <Divider/>
+                                <Sheet>
+                                    <Table
+                                        aria-label="collapsible submissions table"
+                                        sx={{
+                                            '& > thead > tr > th:nth-child(n + 3), & > tbody > tr > td:nth-child(n + 3)': {
+                                                textAlign: 'left',
+                                            },
+                                        }}
                                     >
-                                        Add
-                                    </Button>
-                                </CardActions>
-                            </CardOverflow>
-                        </Card>
-                    </Stack>
-                </Box>
+                                        <thead>
+                                        <tr>
+                                            <th style={{width: 5}} aria-label="empty"/>
+                                            <th style={{width: 20}}>Name</th>
+                                            <th style={{width: 20}}>Timestamp</th>
+                                            <th style={{width: 20}}>Status</th>
+                                            <th style={{width: 20}}>Score</th>
+                                            <th style={{width: 15}} align="center">Public/Private</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        {submissions.map((submission) => (
+                                            <UserSubmissionsTableRow key={submission.id} row={submission}
+                                                                     onUpdateSubmission={onUpdateSubmissionClick}
+                                                                     onTogglePublic={onTogglePublic}/>
+                                        ))}
+                                        </tbody>
+                                    </Table>
+                                </Sheet>
+                                <CardOverflow sx={{borderTop: '1px solid', borderColor: 'divider'}}>
+                                    <CardActions sx={{alignSelf: 'flex-end', pt: 2}}>
+                                        <Button
+                                            onClick={handleAddClick}
+                                            endDecorator={<AddIcon/>}
+                                            size="sm"
+                                            color="success"
+                                            variant="soft"
+                                            disabled={!pendingSubmission} // Disable if no pending submission
+                                        >
+                                            Add
+                                        </Button>
+                                    </CardActions>
+                                </CardOverflow>
+                            </Card>
+                        </Stack>
+                    </Box>
+                }
             </Stack>
             <UpdateSubmissionModal isOpen={isModalOpen} submission={submission} onClose={onClose}/>
 
