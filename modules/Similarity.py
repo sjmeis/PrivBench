@@ -86,4 +86,7 @@ class Similarity(BaseBenchmark):
         # Calculate Cosine Similarity score
         c = self.cs.score(original, private, internal_progress_callback=internal_progress_handler)
         
-        return round(((b + c) * 100) / 2, 3)
+        sim_score = round(((b + c) * 100) / 2, 3)
+        if sim_score > 100:
+            sim_score = 100
+        return sim_score

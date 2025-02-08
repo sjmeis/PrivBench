@@ -24,8 +24,14 @@ RUN mkdir -p /data/privatized_datasets && chown -R celeryuser:celeryuser /data
 
 # Install Python packages globally before switching to non-root user
 COPY requirements.txt .
+
+# Combine all module requirements into one file
+RUN cat /modules/*-reqs.txt >> requirements.txt || true
+
+# Install all requirements including ML/DL dependencies
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+    pip install --no-cache-dir -r requirements.txt && \
+    pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.5.0/en_core_web_sm-3.5.0-py3-none-any.whl
 
 
 # Switch to non-root user
