@@ -10,14 +10,12 @@ import {
     ModalClose,
     ModalDialog, Typography
 } from "@mui/joy";
-import {InfoOutlined, CloudDownload, Update, Close} from "@mui/icons-material";
+import {InfoOutlined, CloudDownload, RemoveRedEye} from "@mui/icons-material";
 import {useSnackbar} from "../../contexts/SnackbarProvider";
 import {DatasetService} from '../../services/DatasetService';
 import {TaskService} from '../../services/TaskService';
 import {BenchmarkService} from '../../services/BenchmarkService';
 import DatasetTableUpdate from '../submission/DatasetTableUpdate';
-
-
 import ScoreOverviewCard from "../submission/ScoreOverviewCard";
 import TaskProgressCard from "../submission/TaskProgressCard";
 
@@ -246,13 +244,32 @@ const UpdateSubmissionModal = ({isOpen, onClose, submission}) => {
                     )
                     }
 
-                    {tasks.length > 0 && (
+                    {tasks.length > 0 && submission && (
                         moduleScores.length > 0 ? (
-                            <ScoreOverviewCard oldModulesScores={submission.benchmarkScores}
-                                               moduleScores={moduleScores}
-                                               averageScore={averageScore}/>
+                            <>
+                                <Typography level="h3" mb={2}>
+                                   Updated Results
+                                </Typography>
+                                <ScoreOverviewCard oldModulesScores={submission.benchmarkScores} moduleScores={moduleScores} averageScore={averageScore} />
+                                <Button
+                                    fullWidth
+                                    variant="solid"
+                                    color="primary"
+                                    sx={{ mt: 3 }}
+                                    onClick={() => onClose()}
+                                    endDecorator={<RemoveRedEye />}
+                                >
+                                    View My Submissions
+                                </Button>
+                            </>
                         ) : (
-                            <TaskProgressCard tasks={tasks} />
+                            <>
+                                <Typography level="h3">
+                                    Evaluation in Progress
+                                </Typography>
+                                <TaskProgressCard tasks={tasks} />
+                            </>
+
                         )
                     )}
 
@@ -264,11 +281,10 @@ const UpdateSubmissionModal = ({isOpen, onClose, submission}) => {
                             onClick={updateSubmission}
                             disabled={!isFormValid() || loading}
                             color={isFormValid() ? 'success' : 'primary'}
-                            endDecorator={<Update />}
                         >
                             Update Submission
                         </Button>
-                        <Button onClick={onClose} variant='soft' color='neutral' disabled={loading} startDecorator={<Close />}>
+                        <Button onClick={onClose} variant='soft' color='neutral' disabled={loading}>
                             {loading ? 'Please wait...' : 'Close'}
                         </Button>
                     </DialogActions>

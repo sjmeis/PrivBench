@@ -25,7 +25,7 @@ const ModuleScoreCard = ({moduleName, score, isNew = false, isOverall = false}) 
 
                     {isNew && (
                         <Chip
-                            variant="outlined"
+                            variant="soft"
                             color="success"
                             size="sm"
                             sx={{fontWeight: "bold"}}
