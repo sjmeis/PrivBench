@@ -16,7 +16,6 @@ const Upload = () => {
 
     const [currentStep, setCurrentStep] = useState(state?.currentStep || 0);
     const [submissionId, setSubmissionId] = useState(state?.submissionId || null);
-    const [downloadedDatasets, setDownloadedDatasets] = useState([]);
     const [datasets, setDatasets] = useState([]);
     const [uploadedFiles, setUploadedFiles] = useState({});
     const [metadata, setMetadata] = useState({
@@ -294,13 +293,7 @@ const Upload = () => {
                 >
                     {currentStep === 0 && (
                         <DownloadStep
-                            onDatasetDownloaded={(datasetName) => {
-                                setDownloadedDatasets((prev) => [...prev, datasetName]);
-                            }}
-                            onDatasetsFetched={(fetchedDatasets) => {
-                                setDatasets(fetchedDatasets);
-                            }}
-                            downloadedDatasets={downloadedDatasets}
+                            datasets={datasets}
                         />
                     )}
 
