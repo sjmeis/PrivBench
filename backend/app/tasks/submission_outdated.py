@@ -35,7 +35,7 @@ def mark_submissions_outdated_and_notify(self, module_name):
 
             # Create submission list for email
             submission_list = "<br>".join([
-                f"- {sub.name} (Current Score: {sub.score})"
+                f"- {sub.name} (Current Score: {round(sub.score, 2)})"
                 for sub in submissions
             ])
 
