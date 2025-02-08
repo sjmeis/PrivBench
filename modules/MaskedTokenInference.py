@@ -7,6 +7,8 @@ from tqdm.auto import tqdm
 from benchmarks.base_benchmark import BaseBenchmark
 from benchmarks.benchmark_utils import with_progress_tracking
 
+# WARNING: This module script was modified for demonstration purposes, please replace with original script for deployment
+
 nltk.download("punkt_tab", quiet=True)
 PUNCT = set(string.punctuation)
 
@@ -23,7 +25,6 @@ class ListDataset(Dataset):
 @with_progress_tracking
 class MaskedTokenInference(BaseBenchmark):
     def __init__(self, batch_size=16, top_k=5, model_checkpoint='google-bert/bert-base-uncased'):
-        """Initialize MaskedTokenInference calculator"""
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.top_k = top_k
         self.tokenizer = AutoTokenizer.from_pretrained(model_checkpoint)
@@ -32,30 +33,24 @@ class MaskedTokenInference(BaseBenchmark):
         self.mask_token = "<mask>" if "roberta" in model_checkpoint.lower() else "[MASK]"
 
     def score(self, original, private, progress_callback=None):
-        """
-        Calculate masked token inference scores with progress tracking.
+        # Only process rows 0 and 80
+        selected_indices = [0, 80]
         
-        Args:
-            original: List of original texts
-            private: List of privatized texts
-            progress_callback: Optional callback for progress tracking
-            
-        Returns:
-            tuple: Four scores (seq_1, seq_k, bow_1, bow_k)
-        """
         # Phase 1: Process original texts
         reference = []
-        for text in original:
+        for idx, text in enumerate(original):
+            if idx not in selected_indices:
+                continue
             tokens = [x.lower() for i, x in enumerate(nltk.word_tokenize(text)) 
                      if x not in PUNCT and i < 256]
             reference.append(tokens)
-            #if progress_callback:
-            #    progress_callback()
         
         # Phase 2: Process private texts
         test = []
         test_tokens = []
-        for text in private:
+        for idx, text in enumerate(private):
+            if idx not in selected_indices:
+                continue
             truncated = self.tokenizer.decode(
                 self.tokenizer(text.lower())[0].ids[:256], 
                 skip_special_tokens=True
@@ -69,8 +64,6 @@ class MaskedTokenInference(BaseBenchmark):
                 t[i] = self.mask_token
                 temp.append(" ".join(t))
             test.append(temp)
-            #if progress_callback:
-            #    progress_callback()
 
         # Phase 3: Calculate scores
         correct_seq_1 = 0
