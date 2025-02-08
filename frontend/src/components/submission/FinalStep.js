@@ -1,8 +1,10 @@
-import { useState, useEffect } from "react";
-import { Typography, Box } from "@mui/joy";
+import React, { useState, useEffect } from "react";
+import {Typography, Box, Button} from "@mui/joy";
 import { useSnackbar } from "../../contexts/SnackbarProvider";
 import TaskProgressCard from "./TaskProgressCard";
 import ScoreOverviewCard from "./ScoreOverviewCard";
+import {RemoveRedEye} from "@mui/icons-material";
+import {useNavigate} from "react-router-dom";
 
 const FinalStep = () => {
     const [loading, setLoading] = useState(true);
@@ -10,6 +12,7 @@ const FinalStep = () => {
     const [moduleScores, setModuleScores] = useState([]);
     const [tasks, setTasks] = useState([]);
     const { showSnackbar } = useSnackbar();
+    const navigate = useNavigate();
 
     // Load tasks from localStorage when component mounts
     useEffect(() => {
@@ -24,6 +27,10 @@ const FinalStep = () => {
             startBenchmark();
         }
     }, []);
+
+    const handleViewSubmissions = () => {
+        navigate("/profile", { state: "submissions" });
+    };
 
     const startBenchmark = async () => {
         try {
@@ -174,7 +181,20 @@ const FinalStep = () => {
             {loading ? (
                 <TaskProgressCard tasks={tasks} />
             ) : moduleScores.length > 0 ? (
-                <ScoreOverviewCard averageScore={averageScore} moduleScores={moduleScores}/>
+                <>
+                    <ScoreOverviewCard averageScore={averageScore} moduleScores={moduleScores}/>
+                    <Button
+                        fullWidth
+                        variant="solid"
+                        color="primary"
+                        sx={{ mt: 3 }}
+                        onClick={handleViewSubmissions}
+                        endDecorator={<RemoveRedEye />}
+                    >
+                        View My Submissions
+                    </Button>
+                </>
+
             ) : (
                 <Typography level="h2" mb={2} color="danger">
                     Evaluation Failed

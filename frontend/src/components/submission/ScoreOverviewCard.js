@@ -1,22 +1,11 @@
 import React from "react";
-import { Card, Box, Button } from "@mui/joy";
-import { RemoveRedEye } from "@mui/icons-material";
-import {useNavigate} from "react-router-dom";
+import { Card, Box } from "@mui/joy";
 import ModuleScoreCard from "./ModuleScoreCard";
 
-const ScoreOverviewCard = ({ averageScore, moduleScores, oldModulesScores = []}) => {
-    const navigate = useNavigate();
+const ScoreOverviewCard = ({ averageScore, moduleScores, oldModulesScores = [] }) => {
 
-    const hasNewModules = moduleScores.some(() =>
-        oldModulesScores.length > 0);
 
-    const handleViewSubmissions = () => {
-        navigate("/profile", { state: "submissions" });
-        console.log(hasNewModules);
-        if (hasNewModules) {
-            window.location.reload();
-        }
-    };
+
     return (
         <>
             <Card variant="outlined" sx={{ p: 3, textAlign: "center" }}>
@@ -41,16 +30,7 @@ const ScoreOverviewCard = ({ averageScore, moduleScores, oldModulesScores = []})
                 </Box>
             </Card>
 
-            <Button
-                fullWidth
-                variant="solid"
-                color="primary"
-                sx={{ mt: 3 }}
-                onClick={handleViewSubmissions}
-                endDecorator={<RemoveRedEye />}
-            >
-                View My Submissions
-            </Button>
+
         </>
     );
 };
