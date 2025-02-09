@@ -27,7 +27,7 @@ const ChartCard = ({cardStyle, benchmarkScores, overallScore}) => {
                 {benchmarkScores ? (
                     <BarChart
                         margin={{
-                            left: 100,
+                            left: 140,
                             right: 15,
                             top: 20,
                             bottom: 20,
