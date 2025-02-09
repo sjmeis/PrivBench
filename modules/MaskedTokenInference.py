@@ -33,8 +33,8 @@ class MaskedTokenInference(BaseBenchmark):
         self.mask_token = "<mask>" if "roberta" in model_checkpoint.lower() else "[MASK]"
 
     def score(self, original, private, progress_callback=None):
-        # Only process rows 0 and 80
-        selected_indices = [0, 80]
+        # Only process rows 0
+        selected_indices = [0]
         
         # Phase 1: Process original texts
         reference = []
