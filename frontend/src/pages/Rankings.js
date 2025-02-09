@@ -27,7 +27,7 @@ import {getDateString, isNewDate} from "../utils/Date";
 import {formatToTwoDecimals} from "../utils/FormatUtils";
 import {useAuth} from "../contexts/AuthContext";
 import {SubmissionStatus} from "../enums/SubmissionStatus";
-import {Visibility} from "@mui/icons-material";
+import {Edit, Visibility} from "@mui/icons-material";
 
 const headCells = [
     {id: "status", numeric: false, label: "", width: "8%"},
@@ -164,7 +164,7 @@ const Rankings = () => {
                     <FormLabel>Search</FormLabel>
                     <Input
                         variant="outlined"
-                        placeholder="Search for username, privatization method or badges"
+                        placeholder="Search for username or privatization method"
                         name="searchTerm"
                         value={searchValue}
                         onChange={handleSearchInputChange}
@@ -244,7 +244,7 @@ const Rankings = () => {
                             <td>
                                 <Stack justifyContent='end' direction='row' spacing={1}>
                                     {isCurrentUser(row.user.id) &&
-                                        <Button size="sm" variant="outlined" color="neutral"
+                                        <Button size="sm" variant="outlined" color="neutral" startDecorator={<Edit />}
                                                 onClick={() => navigate("/profile", {state: 'submissions'})}>Edit </Button>
                                     }
                                     <Button size="sm" variant="soft" color="primary" startDecorator={<Visibility />}   onClick={() => onViewClick(row)}>

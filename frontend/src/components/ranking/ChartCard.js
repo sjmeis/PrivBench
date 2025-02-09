@@ -49,7 +49,7 @@ const ChartCard = ({cardStyle, benchmarkScores, overallScore}) => {
                             {
                                 id: 'benchmark-series',
                                 type: 'bar',
-                                data: chartData.map(item => item.x),
+                                data: chartData.map(item => parseFloat(item.x.toFixed(2))),
                             },
                         ]}
                         layout="horizontal"
