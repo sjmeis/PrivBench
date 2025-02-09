@@ -10,7 +10,7 @@ import {
     ModalClose,
     ModalDialog, Typography
 } from "@mui/joy";
-import {InfoOutlined, CloudDownload, RemoveRedEye} from "@mui/icons-material";
+import {InfoOutlined, CloudDownload, RemoveRedEye, Close, Update} from "@mui/icons-material";
 import {useSnackbar} from "../../contexts/SnackbarProvider";
 import {DatasetService} from '../../services/DatasetService';
 import {TaskService} from '../../services/TaskService';
@@ -281,10 +281,11 @@ const UpdateSubmissionModal = ({isOpen, onClose, submission}) => {
                             onClick={updateSubmission}
                             disabled={!isFormValid() || loading}
                             color={isFormValid() ? 'success' : 'primary'}
+                            endDecorator={<Update />}
                         >
                             Update Submission
                         </Button>
-                        <Button onClick={onClose} variant='soft' color='neutral' disabled={loading}>
+                        <Button onClick={onClose} variant='soft' color='neutral' disabled={loading} startDecorator={<Close />}>
                             {loading ? 'Please wait...' : 'Close'}
                         </Button>
                     </DialogActions>

@@ -80,7 +80,10 @@ def load_dataset():
 @data_bp.route('/datasets/list', methods=['GET'])
 def get_dataset_list():
     try:
-        files = [f for f in os.listdir(DATASET_FOLDER) if os.path.isfile(os.path.join(DATASET_FOLDER, f))]
+        files = [
+            f for f in os.listdir(DATASET_FOLDER)
+            if os.path.isfile(os.path.join(DATASET_FOLDER, f)) and f.lower().endswith('.csv')
+        ]
         if not files:
             return jsonify({'error': 'No files found in the dataset folder'}), 404
 

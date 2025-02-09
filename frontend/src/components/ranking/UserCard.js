@@ -3,11 +3,9 @@ import Box from '@mui/joy/Box';
 import Typography from '@mui/joy/Typography';
 import Avatar from '@mui/joy/Avatar';
 import Divider from '@mui/joy/Divider';
-import Chip from '@mui/joy/Chip';
 import Card from '@mui/joy/Card';
 import {getGravatarUrl} from "../../utils/Gravatar";
 import {Stack} from "@mui/joy";
-import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 
 const UserCard = ({user, cardStyle}) => {
     return (
@@ -54,14 +52,7 @@ const UserCard = ({user, cardStyle}) => {
                                 gap: 1,
                             }}
                         >
-                            <EmojiEventsIcon/>
-                            Achievements
                         </Typography>
-                        {user.badges.map((achievement, index) => (
-                            <Chip key={index} variant='soft' color="primary" sx={{marginRight: 1}}>
-                                {achievement}
-                            </Chip>
-                        ))}
                     </Box>
                 </Stack>
 
