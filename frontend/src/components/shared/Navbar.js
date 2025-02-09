@@ -21,7 +21,6 @@ import {
 } from "@mui/icons-material";
 import {useAuth} from '../../contexts/AuthContext';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
-import OpenInNewRoundedIcon from '@mui/icons-material/OpenInNewRounded';
 import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import {getGravatarUrl} from "../../utils/Gravatar";
@@ -213,19 +212,7 @@ const Navbar = () => {
                                             </>
                                         )
                                     }
-
                                     <ListDivider/>
-                                <MenuItem component="a">
-                                    First look at tbd
-                                    <OpenInNewRoundedIcon/>
-                                </MenuItem>
-                                <MenuItem
-                                    component="a"
-                                >
-                                    Sourcecode
-                                    <OpenInNewRoundedIcon/>
-                                </MenuItem>
-                                <ListDivider/>
                                 <MenuItem onClick={handleLogout}>
                                     <LogoutRoundedIcon/>
                                     Log out
