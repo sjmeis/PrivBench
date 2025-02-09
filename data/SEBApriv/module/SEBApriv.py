@@ -7,7 +7,7 @@ from benchmarks.benchmark_utils import with_progress_tracking
 
 
 @with_progress_tracking
-class DemoNewModule(BaseBenchmark):
+class SEBApriv(BaseBenchmark):
     def __init__(self):
         self.nlp = spacy.load("en_core_web_sm")
     
