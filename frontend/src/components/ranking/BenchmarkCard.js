@@ -7,7 +7,7 @@ import {
     Modal,
     ModalDialog,
     ModalClose,
-    Divider, Button
+    Divider
 } from '@mui/joy';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import InfoIcon from '@mui/icons-material/Info';
@@ -106,8 +106,6 @@ const BenchmarkCard = ({ title, description }) => {
                     >
                         {description}
                     </Typography>
-                    <Divider/>
-                    <Button color='neutral' variant='soft'>More Information</Button>
                 </ModalDialog>
             </Modal>
         </>
