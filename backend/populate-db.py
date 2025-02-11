@@ -145,9 +145,15 @@ with app.app_context():
                     license=random.choice(list(License)),
                     tags = random.sample(sample_tags, 2),
                     authors=fake.name(),
-                    research_paper_url=fake.url(),
-                    github_url=fake.url(),
-                    bibtex_citation=fake.text()
+                    research_paper_url="https://arxiv.org/abs/2306.01457",
+                    github_url="https://github.com/github/dependency-submission-toolkit",
+                    bibtex_citation="@article{Arnold_Yesilbas_Weinzierl_2023, "
+                                    "title={Driving context into text-to-text privatization}, "
+                                    "DOI={10.18653/v1/2023.trustnlp-1.2}, "
+                                    "journal={Proceedings of the 3rd Workshop on Trustworthy Natural Language Processing (TrustNLP 2023)}, "
+                                    "author={Arnold, Stefan and Yesilbas, Dilara and Weinzierl, Sven}, "
+                                    "year={2023}, "
+                                    "pages={15–25}} "
                 )
                 db.session.add(submission_metadata)
                 db.session.commit()
