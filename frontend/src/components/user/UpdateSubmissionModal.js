@@ -76,8 +76,9 @@ const UpdateSubmissionModal = ({isOpen, onClose, submission}) => {
                         score: t.score,
                     }));
                     setModuleScores(scores);
+                    const s = scores.concat(submission.benchmarkScores)
                     setAverageScore(
-                        scores.reduce((sum, curr) => sum + curr.score, 0) / scores.length
+                        s.reduce((sum, curr) => sum + curr.score, 0) / s.length
                     );
                 }
             }
@@ -135,7 +136,10 @@ const UpdateSubmissionModal = ({isOpen, onClose, submission}) => {
                     setLoading(false);
                     if (result.scores) {
                         setModuleScores(result.scores);
-                        setAverageScore(result.averageScore);
+                        const scores = result.scores.concat(submission.benchmarkScores)
+                        setAverageScore(
+                            scores.reduce((sum, curr) => sum + curr.score, 0) / scores.length
+                        );
                     }
                     onClose();
                 }
