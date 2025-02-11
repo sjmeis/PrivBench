@@ -1,89 +1,49 @@
-import evaluate
-from transformers import pipeline
-import torch
 import pandas as pd
-import json
-from sklearn.metrics import f1_score
+import spacy
+from collections import Counter
+from tqdm.auto import tqdm
 from benchmarks.base_benchmark import BaseBenchmark
 from benchmarks.benchmark_utils import with_progress_tracking
 
-# WARNING: This module script was modified for demonstration purposes, please replace with original script for deployment
-
-class PPL:
-    def __init__(self, model_checkpoint="gpt2", max_len=512):
-        self.ppl = evaluate.load("perplexity", module_type="metric")
-        self.model_checkpoint = model_checkpoint
-        self.max_len = max_len
-    
-    def score(self, data, internal_progress_callback=None):
-        processed_data = []
-        
-        # Only process rows 0 and 80
-        selected_indices = [0, 80]  
-        
-        for idx, text in enumerate(data):
-            if idx in selected_indices:
-                truncated_text = " ".join(text.split()[:self.max_len])
-                processed_data.append(truncated_text)
-                if internal_progress_callback:
-                    internal_progress_callback()
-                    
-        score = self.ppl.compute(
-            predictions=processed_data, 
-            model_id=self.model_checkpoint
-        )["mean_perplexity"]
-        
-        return round(score, 3)
-    
-class SNIPS:
-    def __init__(self, model_checkpoint="benayas/roberta-full-finetuned-snips_100pct_v2"):
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.clf = pipeline("text-classification", model=model_checkpoint, device=self.device)
-
-        with open("benchmarks/baselines.json", 'r') as f:
-            self.baseline = json.load(f)["snips"]
-        self.labels = pd.read_csv("benchmarks/snips_copy.csv")["label"].to_list()
-
-    def score(self, data, internal_progress_callback=None):
-        """
-        Calculate F1 score on SNIPS with internal progress tracking.
-        """                
-        # Only process first row since we only have 10 labels
-        selected_indices = [0]  # Changed to only use first row
-        selected_data = [text for idx, text in enumerate(data) if idx in selected_indices]
-        
-        predictions = self.clf(selected_data)
-        predictions = [x["label"] for x in predictions]
-        # Also need to filter labels to match the selected indices
-        selected_labels = [self.labels[idx] for idx in selected_indices]
-        f1 = f1_score(selected_labels, predictions, average="micro")
-
-        return round((f1 / self.baseline)*100, 3)
+# WARNING This is not the Coherence script, please exchange with the original module.
 
 @with_progress_tracking
 class Coherence(BaseBenchmark):
     def __init__(self):
-        self.ppl = PPL()
-        self.snips = SNIPS()
+        self.nlp = spacy.load("en_core_web_sm")
     
     def score(self, original, private, progress_callback=None):
-        total_steps = len(original) + len(private)
-        steps_completed = 0
+        """
+        Calculate NER privacy score with progress tracking.
+        """
+        removed = 0
+        total = 0
         
-        def internal_progress_handler():
-            nonlocal steps_completed
-            steps_completed += 1
-            if progress_callback and (steps_completed % 100 == 0 or steps_completed == total_steps):
+        for x, y in zip(original, private):
+            o_doc = self.nlp(x)
+            
+            if pd.isnull(y):
+                total += len([x.text for x in o_doc.ents])
+                if progress_callback:
+                    progress_callback()
+                continue
+                
+            p_doc = self.nlp(y)
+            counts = Counter()
+            
+            for ent in o_doc.ents:
+                counts[ent.text] += 1
+                
+            priv_ents = set()
+            for ent in p_doc.ents:
+                priv_ents.add(ent.text)
+                
+            for ent in counts:
+                if ent not in priv_ents and ent.lower() not in priv_ents:
+                    removed += counts[ent]
+                total += counts[ent]
+                
+            if progress_callback:
                 progress_callback()
         
-        o = self.ppl.score(original, internal_progress_callback=internal_progress_handler)
-        
-        p = self.ppl.score(private, internal_progress_callback=internal_progress_handler)
-        
-        ppl_score = (o / p)*100
-        if ppl_score > 100:
-            ppl_score = 100
-
-        snips_score = self.snips.score(private)
-
-        return round((ppl_score + snips_score) / 2, 3)
+        return round((removed / total) * 100)-12 if total > 0 else 0.0
