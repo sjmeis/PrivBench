@@ -1,10 +1,11 @@
-from importlib import metadata
 from flask import Flask
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from flask_migrate import Migrate
 from flask_mail import Mail
 from celery import Celery
+
+from .utils.container_manager import container_manager
 from .config import Config
 from .extensions import db
 import logging
@@ -13,11 +14,12 @@ jwt = JWTManager()
 migrate = Migrate()
 mail = Mail()
 
+
 def make_celery(app):
     celery = Celery(
         app.import_name,
-        backend=app.config['CELERY_RESULT_BACKEND'],
-        broker=app.config['CELERY_BROKER_URL']
+        backend=app.config["CELERY_RESULT_BACKEND"],
+        broker=app.config["CELERY_BROKER_URL"],
     )
     celery.conf.update(app.config)
 
@@ -29,35 +31,40 @@ def make_celery(app):
     celery.Task = ContextTask
     return celery
 
+
 def create_app():
     app = Flask(__name__)
 
     # Set up logging
     logging.basicConfig(
         level=logging.DEBUG,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
-    CORS(app,
-        resources={r"/*": {
+    CORS(
+        app,
+        resources={
+            r"/*": {
                 "origins": ["http://localhost:3000"],
                 "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
                 "allow_headers": ["Content-Type", "Authorization"],
                 "supports_credentials": True,
-                "expose_headers": ["Content-Range", "X-Content-Range"]
-            }})
-    
+                "expose_headers": ["Content-Range", "X-Content-Range"],
+            }
+        },
+    )
+
     app.config.from_object(Config)
     app.config.update(
-        CELERY_BROKER_URL='redis://redis:6379/0',
-        CELERY_RESULT_BACKEND='redis://redis:6379/0'
+        CELERY_BROKER_URL="redis://redis:6379/0",
+        CELERY_RESULT_BACKEND="redis://redis:6379/0",
     )
-    
+
     db.init_app(app)
     jwt.init_app(app)
     migrate.init_app(app, db)
     mail.init_app(app)
-    
+
     from .routes.auth import auth_bp
     from .routes.main import main_bp
     from .routes.data import data_bp
@@ -67,6 +74,7 @@ def create_app():
     from .routes.module import module_bp
     from .routes.user import user_bp
     from .routes.email import email_bp
+
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
     app.register_blueprint(data_bp)
@@ -77,8 +85,41 @@ def create_app():
     app.register_blueprint(user_bp)
     app.register_blueprint(email_bp)
 
+    @app.cli.command("start-containers")
+    def start_containers():
+        """Start all module containers"""
+        logger = logging.getLogger(__name__)
+        try:
+            logger.info("Starting module containers from CLI...")
+            with app.app_context():
+                container_manager.start_all_module_containers()
+            logger.info("Module containers started successfully")
+        except Exception as e:
+            error_msg = f"Error starting module containers: {e}"
+            logger.error(error_msg)
+            raise Exception(error_msg) from e
+
+    # Cleanup containers on app shutdown
+    @app.cli.command("stop-containers")
+    def stop_containers():
+        """Stop all module containers"""
+        logger = logging.getLogger(__name__)
+        try:
+            logger.info("Stopping module containers from CLI...")
+            container_manager.stop_all_containers()
+            logger.info("Module containers stopped successfully")
+        except Exception as e:
+            error_msg = f"Error stopping module containers: {e}"
+            logger.error(error_msg)
+            raise Exception(error_msg) from e
+
+    # Add health check endpoint
+    @app.route("/health")
+    def health_check():
+        return {"status": "healthy"}, 200
 
     return app
+
 
 # Create the Flask app
 app = create_app()

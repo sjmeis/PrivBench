@@ -53,6 +53,7 @@ ENV FLASK_DEBUG=1
 ENV C_FORCE_ROOT=true
 ENV PYTHONPATH=/app
 ENV PATH="/home/celeryuser/.local/bin:${PATH}"
+ENV PYTHONUNBUFFERED=1
 
 # Expose port 5000 for Flask
 EXPOSE 5000
