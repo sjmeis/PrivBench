@@ -1,80 +1,89 @@
 import docker
 import tempfile
-import os
 from pathlib import Path
 import json
-from celery import shared_task
 import logging
 import shutil
 
 logger = logging.getLogger(__name__)
 
+
 class ModuleManager:
     def __init__(self):
         self.docker_client = docker.from_env()
         self.base_image = "python:3.9-slim"
-        
+
     def create_dockerfile(self, requirements_path):
         """Create a Dockerfile for the module container"""
         return f"""
         FROM {self.base_image}
         WORKDIR /app
+        ENV PYTHONPATH=/app
         COPY requirements.txt /app/requirements.txt
         RUN pip install --no-cache-dir -r requirements.txt
         COPY . /app
         """
 
-    def build_module_container(self, module_id, module_path, module_name, requirements_path):
+    def build_module_container(
+        self, module_id, module_path, module_name, requirements_path
+    ):
         """Build a Docker container for the module"""
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
             module_dest = temp_path / f"{module_name}.py"
             requirements_dest = temp_path / "requirements.txt"
-            
+
             # Copy and log module file
             shutil.copy2(module_path, module_dest)
             logger.debug(f"Module file copied to: {module_dest}")
             logger.debug(f"Module contents: {module_dest.read_text()}")
 
             # Copy files from benchmarks folder
-            benchmarks_path = Path("/benchmarks")  # This is the mounted path in the container
+            benchmarks_path = Path(
+                "../benchmarks"
+            )  # This is the mounted path in the container
+            logger.debug(f"Benchmarks path: {benchmarks_path}")
             if benchmarks_path.exists():
+                logger.debug(f"Source benchmarks directory exists: {benchmarks_path}")
+                logger.debug(
+                    f"Source benchmarks contents: {list(benchmarks_path.glob('*'))}"
+                )
                 # Create a benchmarks directory in the temp folder
                 benchmark_dest = temp_path / "benchmarks"
                 benchmark_dest.mkdir(exist_ok=True)
-                
+
                 # Copy all files from benchmarks directory
                 for benchmark_file in benchmarks_path.glob("*"):
                     if benchmark_file.is_file():
-                        shutil.copy2(benchmark_file, benchmark_dest / benchmark_file.name)
+                        shutil.copy2(
+                            benchmark_file, benchmark_dest / benchmark_file.name
+                        )
                         logger.debug(f"Benchmark file copied: {benchmark_file.name}")
-            
+
             logger.debug(f"Temp directory contents: {list(temp_path.glob('**/*'))}")
-            
+
             if requirements_path:
                 shutil.copy2(requirements_path, requirements_dest)
                 logger.debug(f"Requirements contents: {requirements_dest.read_text()}")
             else:
                 requirements_dest.write_text("")
-            
+
             dockerfile_content = self.create_dockerfile(requirements_dest.name)
             (temp_path / "Dockerfile").write_text(dockerfile_content)
-            
+
             logger.debug(f"Temp directory contents: {list(temp_path.glob('*'))}")
-            
-            #tag = f"module-{module_id}"
+
+            # tag = f"module-{module_id}"
             tag = f"module-{module_name.lower()}"
             _, build_logs = self.docker_client.images.build(
-                path=str(temp_path),
-                tag=tag,
-                rm=True
+                path=str(temp_path), tag=tag, rm=True
             )
-            
+
             # Log build output
             for log in build_logs:
-                if 'stream' in log:
+                if "stream" in log:
                     logger.debug(f"Build log: {log['stream'].strip()}")
-                    
+
             return tag
 
     def test_module(self, image_tag, module_name):
@@ -124,26 +133,24 @@ except Exception as e:
 """
         try:
             container = self.docker_client.containers.run(
-                image_tag,
-                command=["python", "-c", test_script],
-                remove=True
+                image_tag, command=["python", "-c", test_script], remove=True
             )
-            
-            output = container.decode('utf-8')
+
+            output = container.decode("utf-8")
             logger.debug(f"Container output: {output}")
-            
+
             # Try to parse JSON from the last line of output
             try:
-                output_lines = output.strip().split('\n')
+                output_lines = output.strip().split("\n")
                 json_line = output_lines[-1]
                 return json.loads(json_line)
             except json.JSONDecodeError:
                 logger.error(f"Failed to parse JSON from output: {output}")
                 return {
                     "success": False,
-                    "error": f"Invalid container output: {output}"
+                    "error": f"Invalid container output: {output}",
                 }
-                
+
         except docker.errors.ContainerError as e:
             logger.error(f"Container error: {str(e)}")
             return {"success": False, "error": f"Container error: {str(e)}"}
