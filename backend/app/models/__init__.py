@@ -6,6 +6,7 @@ from .submission_metadata import SubmissionMetadata
 from .template_metadata import TemplateMetadata
 from .benchmark_module import BenchmarkModule
 from .benchmark_score import BenchmarkScore
+from .benchmark_queue import BenchmarkQueue, QueueStatus
 from .task import Task
 
 __all__ = [
@@ -17,5 +18,7 @@ __all__ = [
     "TemplateMetadata",
     "BenchmarkModule",
     "BenchmarkScore",
+    "BenchmarkQueue",
+    "QueueStatus",
     "Task",
 ]

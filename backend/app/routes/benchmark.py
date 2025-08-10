@@ -1,4 +1,6 @@
 from flask import Blueprint, jsonify, request
+
+from ..services.queue_service import QueueService
 from ..extensions import db, celery
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from ..models import (
@@ -8,15 +10,15 @@ from ..models import (
     Dataset,
     PrivatizedDataset,
     BenchmarkScore,
+    BenchmarkQueue,
+    QueueStatus,
 )
 from ..enums import SubmissionStatus
 from datetime import datetime
 from app.tasks.run_benchmark import run_benchmark
 from app.utils.dataset_loader import load_dataset
-from app.utils.module_loader import load_benchmark_module
 from app.utils.email_sender import send_email
 from celery.utils.log import get_task_logger
-from pathlib import Path
 from datetime import datetime
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy import select, func, cast, Numeric
@@ -37,9 +39,12 @@ def run_benchmark_task(
     submission_id,
     module_id,
     user_id,
+    queue_entry_id=None,  # Add queue entry ID parameter
 ):
-    """Run a benchmark module as a Celery task."""
-    logger.info(f"Starting benchmark task for module {module_name}")
+    """Run a benchmark module as a Celery task with queue support."""
+    logger.info(
+        f"Starting benchmark task for module {module_name}, queue_entry: {queue_entry_id}"
+    )
 
     try:
         total_steps = 100
@@ -166,6 +171,18 @@ def run_benchmark_task(
             f"Benchmark score upserted to the database for submission {submission_id}, module {module_id}"
         )
 
+        # Mark queue entry as completed and process next in queue
+        if queue_entry_id:
+            QueueService.complete_processing(queue_entry_id, success=True)
+            logger.info(f"Queue entry {queue_entry_id} marked as completed")
+
+            # Process next in queue for this module
+            next_result = process_next_in_queue(module_id)
+            if next_result:
+                logger.info(f"Started next task in queue: {next_result['task_id']}")
+            else:
+                logger.info(f"No more entries in queue for module {module_id}")
+
         # Check if all modules for the submission have completed
         total_modules = (
             db.session.query(BenchmarkModule).filter_by(is_active=True).count()
@@ -246,6 +263,19 @@ PrivBench Team
         logger.error(
             f"Benchmark task failed for module {module_name}: {str(e)}", exc_info=True
         )
+
+        # Mark queue entry as failed and still process next in queue
+        if queue_entry_id:
+            QueueService.complete_processing(queue_entry_id, success=False)
+            logger.info(f"Queue entry {queue_entry_id} marked as failed")
+
+            # Still process next in queue even if this one failed
+            next_result = process_next_in_queue(module_id)
+            if next_result:
+                logger.info(
+                    f"Started next task in queue after failure: {next_result['task_id']}"
+                )
+
         result = {
             "current": 0,
             "total": total_steps,
@@ -255,6 +285,97 @@ PrivBench Team
             "state": "FAILURE",
         }
         raise Exception(str(e))
+
+
+def process_module_queue_entry(queue_entry, module, dataset, privatized_dataset):
+    """Process a specific queue entry by starting the benchmark task"""
+    try:
+        logger.info(
+            f"Starting task for module {module.name} (queue entry {queue_entry.id})"
+        )
+
+        # Start the benchmark task with queue entry ID
+        task = run_benchmark_task.delay(
+            str(module.path),
+            module.name,
+            str(dataset.file_path),
+            str(privatized_dataset.file_path),
+            privatized_dataset.id,
+            queue_entry.submission_id,
+            module.id,
+            queue_entry.user_id,
+            queue_entry_id=queue_entry.id,  # Pass queue entry ID
+        )
+
+        # Mark as processing in queue
+        QueueService.start_processing(queue_entry.id, task.id)
+
+        logger.info(f"Task created for module {module.name}: {task.id}")
+
+        return {
+            "task_id": task.id,
+            "module_id": module.id,
+            "module_name": module.name,
+            "queue_entry_id": queue_entry.id,
+        }
+
+    except Exception as e:
+        logger.error(f"Error starting task for module {module.name}: {e}")
+        # Mark queue entry as failed
+        QueueService.complete_processing(queue_entry.id, success=False)
+        return None
+
+
+def process_next_in_queue(module_id):
+    """Process the next entry in queue for a specific module"""
+    try:
+        next_entry = QueueService.get_next_in_queue(module_id)
+        if not next_entry:
+            logger.info(f"No more entries in queue for module {module_id}")
+            return None
+
+        # Get the module and related data
+        module = db.session.query(BenchmarkModule).get(module_id)
+        dataset = db.session.query(Dataset).filter_by(id=module.dataset_id).first()
+
+        if not dataset:
+            logger.error(f"Dataset not found for module {module.name}")
+            QueueService.complete_processing(next_entry.id, success=False)
+            return None
+
+        privatized_dataset = (
+            db.session.query(PrivatizedDataset)
+            .filter_by(
+                submission_id=next_entry.submission_id,
+                original_dataset_id=module.dataset_id,
+            )
+            .first()
+        )
+
+        if not privatized_dataset:
+            logger.error(
+                f"Privatized dataset not found for submission {next_entry.submission_id}"
+            )
+            QueueService.complete_processing(next_entry.id, success=False)
+            return None
+
+        # Process this queue entry
+        result = process_module_queue_entry(
+            next_entry, module, dataset, privatized_dataset
+        )
+
+        if result:
+            logger.info(
+                f"Started processing next queue entry {next_entry.id} for module {module.name}"
+            )
+        else:
+            logger.error(f"Failed to start processing next queue entry {next_entry.id}")
+
+        return result
+
+    except Exception as e:
+        logger.error(f"Error processing next in queue for module {module_id}: {e}")
+        return None
 
 
 benchmark_bp = Blueprint("benchmark", __name__)
@@ -322,8 +443,9 @@ def benchmark():
         else:
             logger.info(f"Submission {submission.id} already in progress")
 
-        # Start tasks for each module
-        tasks = []
+        # Instead of starting tasks immediately, add to queue for each module
+        queue_entries = []
+        immediate_tasks = []
         benchmark_modules = (
             db.session.query(BenchmarkModule).filter_by(is_active=True).all()
         )
@@ -346,31 +468,48 @@ def benchmark():
                 logger.error(f"Privatized dataset not found for module {module.name}")
                 continue
 
-            # Log absolute paths for debugging
-            logger.info(f"Module path: {Path(module.path).absolute()}")
-            logger.info(f"Dataset path: {Path(dataset.file_path).absolute()}")
-            logger.info(
-                f"Privatized dataset path: {Path(privatized_dataset.file_path).absolute()}"
+            # Add submission to queue for this module
+            queue_entry = QueueService.add_to_queue(
+                submission_id=submission.id, module_id=module.id, user_id=user_id
             )
 
-            logger.info(f"Starting task for module {module.name}")
-            task = run_benchmark_task.delay(
-                str(module.path),
-                module.name,
-                str(dataset.file_path),
-                str(privatized_dataset.file_path),
-                privatized_dataset.id,
-                submission.id,
-                module.id,
-                user_id,
-            )
+            if queue_entry:
+                # Get current position in queue
+                position_info = QueueService.get_queue_position(
+                    submission.id, module.id
+                )
 
-            tasks.append(
-                {"task_id": task.id, "module_id": module.id, "module_name": module.name}
-            )
-            logger.info(f"Task created for module {module.name}: {task.id}")
+                queue_entries.append(
+                    {
+                        "module_id": module.id,
+                        "module_name": module.name,
+                        "queue_entry_id": queue_entry.id,
+                        "position": (
+                            position_info["position"] if position_info else None
+                        ),
+                        "status": (
+                            position_info["status"] if position_info else "waiting"
+                        ),
+                    }
+                )
 
-        if not tasks:
+                # Check if this entry should start processing immediately (position 1)
+                if position_info and position_info["position"] == 1:
+                    logger.info(
+                        f"Starting immediate processing for module {module.name} at position 1"
+                    )
+                    task_result = process_module_queue_entry(
+                        queue_entry, module, dataset, privatized_dataset
+                    )
+                    if task_result:
+                        immediate_tasks.append(task_result)
+                        # Update the queue entry status in our response
+                        for queue_item in queue_entries:
+                            if queue_item["queue_entry_id"] == queue_entry.id:
+                                queue_item["status"] = "processing"
+                                break
+
+        if not queue_entries:
             submission.status = SubmissionStatus.FAILED
             db.session.commit()
             logger.error("No benchmark tasks could be started")
@@ -392,14 +531,24 @@ PrivBench Team
                     logger.info(f"Email sent successfully to {user_email}")
                 except Exception as e:
                     logger.error(f"Failed to send email to {user_email}: {str(e)}")
-            return jsonify({"message": "No benchmark tasks could be started"}), 400
+            return jsonify({"message": "No modules could be queued"}), 400
 
-        logger.info(f"Successfully started {len(tasks)} tasks")
-        return (
-            jsonify({"task_ids": tasks, "submission_id": submission.id}),
-            202,
-            response_headers,
+        # Prepare response
+        response_data = {
+            "submission_id": submission.id,
+            "queue_entries": queue_entries,
+            "immediate_tasks": immediate_tasks,
+            "message": f"Added to queue for {len(queue_entries)} modules",
+        }
+
+        # If some tasks started immediately, include their task IDs
+        if immediate_tasks:
+            response_data["task_ids"] = immediate_tasks
+
+        logger.info(
+            f"Successfully queued {len(queue_entries)} modules, {len(immediate_tasks)} started immediately"
         )
+        return jsonify(response_data), 202, response_headers
 
     except Exception as e:
         logger.error(f"Error in benchmark endpoint: {str(e)}", exc_info=True)
@@ -425,6 +574,97 @@ PrivBench Team
                     logger.info(f"Email sent successfully to {user_email}")
                 except Exception as e:
                     logger.error(f"Failed to send email to {user_email}: {str(e)}")
+        return jsonify({"message": str(e)}), 500
+
+
+@benchmark_bp.route(
+    "/queue-status/<int:submission_id>/<int:module_id>", methods=["GET"]
+)
+@jwt_required()
+def get_queue_status(submission_id, module_id):
+    """Get queue status for a specific submission and module."""
+    try:
+        user_id = get_jwt_identity()
+
+        # Verify the submission belongs to the user
+        submission = (
+            db.session.query(Submission)
+            .filter_by(id=submission_id, user_id=user_id)
+            .first()
+        )
+
+        if not submission:
+            return jsonify({"message": "Submission not found"}), 404
+
+        position_info = QueueService.get_queue_position(submission_id, module_id)
+        if not position_info:
+            return jsonify({"message": "Not in queue"}), 404
+
+        module_status = QueueService.get_module_queue_status(module_id)
+
+        # Get the queue entry to include task_id
+        queue_entry = BenchmarkQueue.query.filter_by(
+            submission_id=submission_id, module_id=module_id
+        ).first()
+
+        # Add task_id to position_info
+        position_info["task_id"] = queue_entry.task_id if queue_entry else None
+
+        return (
+            jsonify(
+                {"queue_position": position_info, "module_queue_status": module_status}
+            ),
+            200,
+        )
+
+    except Exception as e:
+        logger.error(f"Error getting queue status: {e}")
+        return jsonify({"message": str(e)}), 500
+
+
+@benchmark_bp.route("/module/<int:module_id>/queue", methods=["GET"])
+@jwt_required()
+def get_module_queue(module_id):
+    """Get the current queue for a specific module."""
+    try:
+        queue_entries = (
+            db.session.query(BenchmarkQueue)
+            .filter_by(module_id=module_id)
+            .filter(
+                BenchmarkQueue.status.in_([QueueStatus.WAITING, QueueStatus.PROCESSING])
+            )
+            .order_by(BenchmarkQueue.position.asc())
+            .all()
+        )
+
+        queue_data = []
+        for entry in queue_entries:
+            queue_data.append(
+                {
+                    "position": entry.position,
+                    "status": entry.status.value,
+                    "user_id": entry.user_id,
+                    "submission_id": entry.submission_id,
+                    "created_at": entry.created_at.isoformat(),
+                    "started_at": (
+                        entry.started_at.isoformat() if entry.started_at else None
+                    ),
+                }
+            )
+
+        return (
+            jsonify(
+                {
+                    "module_id": module_id,
+                    "queue": queue_data,
+                    "total_in_queue": len(queue_data),
+                }
+            ),
+            200,
+        )
+
+    except Exception as e:
+        logger.error(f"Error getting module queue: {e}")
         return jsonify({"message": str(e)}), 500
 
 
@@ -651,17 +891,70 @@ def cancel_benchmark(submission_id):
         submission.status = SubmissionStatus.CANCELLED
         db.session.commit()
 
+        # Cancel all queue entries for this submission
+        from ..models.benchmark_queue import BenchmarkQueue, QueueStatus
+
+        queue_entries = (
+            db.session.query(BenchmarkQueue)
+            .filter_by(submission_id=submission_id)
+            .filter(
+                BenchmarkQueue.status.in_([QueueStatus.WAITING, QueueStatus.PROCESSING])
+            )
+            .all()
+        )
+
+        cancelled_tasks = []
+        for entry in queue_entries:
+            # Mark queue entry as cancelled
+            entry.status = QueueStatus.CANCELLED
+            entry.completed_at = datetime.utcnow()
+
+            # If the entry has a task_id, try to revoke it
+            if entry.task_id:
+                try:
+                    celery.control.revoke(entry.task_id, terminate=True)
+                    cancelled_tasks.append(entry.task_id)
+                    logger.info(
+                        f"Revoked task {entry.task_id} for queue entry {entry.id}"
+                    )
+                except Exception as e:
+                    logger.warning(f"Could not revoke task {entry.task_id}: {e}")
+
+            logger.info(f"Cancelled queue entry {entry.id}")
+
+        db.session.commit()
+
+        # Process next entries in queue for each affected module
+        affected_modules = set(
+            entry.module_id
+            for entry in queue_entries
+            if entry.status == QueueStatus.PROCESSING
+        )
+        for module_id in affected_modules:
+            next_result = process_next_in_queue(module_id)
+            if next_result:
+                logger.info(
+                    f"Started next task in queue for module {module_id}: {next_result['task_id']}"
+                )
+
         # Delete all benchmark scores for this submission
         BenchmarkScore.query.filter_by(submission_id=submission_id).delete()
         db.session.commit()
 
-        # Revoke all tasks in Celery
-        celery.control.purge()
-
-        return jsonify({"message": "Benchmark cancelled successfully"}), 200
+        return (
+            jsonify(
+                {
+                    "message": "Benchmark cancelled successfully",
+                    "cancelled_queue_entries": len(queue_entries),
+                    "cancelled_tasks": cancelled_tasks,
+                }
+            ),
+            200,
+        )
 
     except Exception as e:
         logger.error(f"Error cancelling benchmark: {str(e)}")
+        db.session.rollback()
         return jsonify({"message": str(e)}), 500
 
 
