@@ -186,6 +186,20 @@ def save_template_metadata():
         data = request.get_json()
         user_id = get_jwt_identity()
 
+        template_name = data.get("templateName")
+        if not template_name:
+            return jsonify({"message": "Template name is required"}), 400
+
+        # Check if a template with the same name already exists for this user
+        existing_template = TemplateMetadata.query.filter_by(
+            user_id=user_id, template_name=template_name
+        ).first()
+        if existing_template:
+            return (
+                jsonify({"message": "A template with this name already exists."}),
+                409,  # HTTP 409 Conflict
+            )
+
         license_str = data.get("license")
         try:
             transformed_license = (
@@ -197,6 +211,7 @@ def save_template_metadata():
 
         template_metadata = TemplateMetadata(
             user_id=user_id,
+            template_name=template_name,
             model_name=data["modelName"],
             model_description=data["modelDescription"],
             license=license_enum,
@@ -223,6 +238,106 @@ def save_template_metadata():
     except Exception as e:
         db.session.rollback()
         return jsonify({"message": str(e)}), 500
+
+
+@metadata_bp.route("/metadata/templates/<int:template_id>", methods=["PUT"])
+@jwt_required()
+def update_template(template_id):
+    try:
+        user_id = get_jwt_identity()
+        template = TemplateMetadata.query.filter_by(
+            id=template_id, user_id=user_id
+        ).first()
+
+        if not template:
+            return jsonify({"message": "Template not found or access denied"}), 404
+
+        data = request.get_json()
+
+        # Check for name conflict if template name is being changed
+        new_template_name = data.get("templateName")
+        if new_template_name and new_template_name != template.template_name:
+            existing = TemplateMetadata.query.filter_by(
+                user_id=user_id, template_name=new_template_name
+            ).first()
+            if existing:
+                return (
+                    jsonify({"message": "A template with this name already exists."}),
+                    409,
+                )
+
+        license_str = data.get("license")
+        try:
+            transformed_license = (
+                license_str.replace(" ", "_").replace(".", "_").upper()
+            )
+            license_enum = License[transformed_license]
+        except KeyError:
+            return jsonify({"message": f"Invalid license type: {license_str}"}), 400
+
+        template.template_name = new_template_name or template.template_name
+        template.model_name = data["modelName"]
+        template.model_description = data["modelDescription"]
+        template.license = license_enum
+        template.tags = data.get("tags")
+        template.authors = data.get("authors")
+        template.research_paper_url = data.get("researchPaperUrl")
+        template.github_url = data.get("githubUrl")
+        template.bibtex_citation = data.get("bibtexCitation")
+
+        db.session.commit()
+        return jsonify({"message": "Template updated successfully"}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": str(e)}), 500
+
+
+@metadata_bp.route("/metadata/templates/<int:template_id>", methods=["DELETE"])
+@jwt_required()
+def delete_template(template_id):
+    try:
+        user_id = get_jwt_identity()
+        template = TemplateMetadata.query.filter_by(
+            id=template_id, user_id=user_id
+        ).first()
+
+        if not template:
+            return jsonify({"message": "Template not found or access denied"}), 404
+
+        db.session.delete(template)
+        db.session.commit()
+        return jsonify({"message": "Template deleted successfully"}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": str(e)}), 500
+
+
+@metadata_bp.route("/metadata/templates", methods=["GET"])
+@jwt_required()
+def get_templates():
+    try:
+        user_id = get_jwt_identity()
+        templates = TemplateMetadata.query.filter_by(user_id=user_id).all()
+        templates_data = [
+            {
+                "id": template.id,
+                "templateName": template.template_name,
+                "modelName": template.model_name,
+                "modelDescription": template.model_description,
+                "license": template.license.value,
+                "tags": template.tags,
+                "authors": template.authors,
+                "researchPaperUrl": template.research_paper_url,
+                "githubUrl": template.github_url,
+                "bibtexCitation": template.bibtex_citation,
+            }
+            for template in templates
+        ]
+        return jsonify(templates_data)
+    except Exception as e:
+        return jsonify({"message": "Internal server error", "error": str(e)}), 500
 
 
 @metadata_bp.route("/licenses", methods=["GET"])

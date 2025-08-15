@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   FormControl,
   Input,
@@ -9,8 +9,18 @@ import {
   Box,
 } from "@mui/joy";
 import axios from "axios";
+import MetadataTemplateSelector from "./MetadataTemplateSelector";
 
-const MetadataStep = ({ metadata, setMetadata }) => {
+const MetadataStep = ({
+  metadata,
+  setMetadata,
+  templates,
+  onLoadTemplate,
+  onDeleteTemplate,
+  onClearTemplate,
+  selectedTemplateId,
+  disabled,
+}) => {
   const [licenseOptions, setLicenseOptions] = useState([]);
 
   // Fetch the license options from the backend
@@ -34,9 +44,21 @@ const MetadataStep = ({ metadata, setMetadata }) => {
 
   return (
     <Box>
-      <Typography level="h2" mb={2}>
-        Privatization Method
-      </Typography>
+      <Box display="flex" justifyContent="space-between" alignItems="center">
+        <Typography level="h2" mb={2}>
+          Privatization Method
+        </Typography>
+        {templates.length > 0 && (
+          <MetadataTemplateSelector
+            templates={templates}
+            selectedTemplateId={selectedTemplateId}
+            onLoadTemplate={onLoadTemplate}
+            onDeleteTemplate={onDeleteTemplate}
+            onClearTemplate={onClearTemplate}
+            disabled={disabled}
+          />
+        )}
+      </Box>
       <FormControl>
         <Box
           sx={{
