@@ -13,32 +13,40 @@ const FinalStep = () => {
   const [moduleScores, setModuleScores] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [queueEntries, setQueueEntries] = useState([]);
-  const [isAnyTaskFailed, setIsAnyTaskFailed] = useState(false);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [submissionId, setSubmissionId] = useState(null);
   const { showSnackbar } = useSnackbar();
   const navigate = useNavigate();
-  const intervalRef = useRef(null);
 
-  // Load tasks from localStorage when component mounts
+  useEffect(() => {
+    const initializeComponent = () => {
+      const savedTasks = JSON.parse(localStorage.getItem("tasks"));
+      const savedQueueEntries = JSON.parse(
+        localStorage.getItem("queueEntries")
+      );
+      const savedSubmissionId = localStorage.getItem("submission_id");
+
+      // If resuming a previous session
+      if (savedTasks && savedSubmissionId) {
+        setTasks(savedTasks);
+        setQueueEntries(savedQueueEntries || []);
+        setSubmissionId(savedSubmissionId);
+      } else {
+        startBenchmark();
+      }
+    };
+
+    initializeComponent();
+  }, []);
+
   useEffect(() => {
     if (!loading) {
+      // Clean up localStorage when evaluation is complete
       localStorage.removeItem("tasks");
       localStorage.removeItem("queueEntries");
       localStorage.removeItem("submission_id");
-      return;
     }
-    const savedTasks = JSON.parse(localStorage.getItem("tasks"));
-    const savedQueueEntries = JSON.parse(localStorage.getItem("queueEntries"));
-
-    if (savedTasks) {
-      setTasks(savedTasks);
-      if (savedQueueEntries) {
-        setQueueEntries(savedQueueEntries);
-      }
-    } else {
-      startBenchmark();
-    }
-  }, []);
+  }, [loading]);
 
   const handleViewSubmissions = () => {
     navigate("/profile", { state: "submissions" });
@@ -77,14 +85,10 @@ const FinalStep = () => {
       }
 
       const data = await response.json();
-
       // Handle queue entries and immediate tasks
       const allQueueEntries = data.queue_entries || [];
       const immediateTasks = data.immediate_tasks || [];
-      console.log("data:", data);
-      // Create initial tasks array combining queue info and immediate tasks
       const initialTasks = allQueueEntries.map((queueEntry) => {
-        // Find if this module has an immediate task
         const immediateTask = immediateTasks.find(
           (task) => task.module_id === queueEntry.module_id
         );
@@ -104,13 +108,13 @@ const FinalStep = () => {
         };
       });
 
+      setTasks(initialTasks);
+      setQueueEntries(allQueueEntries);
+      setSubmissionId(data.submission_id);
       // Save data to localStorage
       localStorage.setItem("tasks", JSON.stringify(initialTasks));
       localStorage.setItem("queueEntries", JSON.stringify(allQueueEntries));
       localStorage.setItem("submission_id", data.submission_id);
-
-      setTasks(initialTasks);
-      setQueueEntries(allQueueEntries);
     } catch (err) {
       console.error("Benchmark error:", err);
       showSnackbar(err.message, "error");
@@ -127,10 +131,8 @@ const FinalStep = () => {
           credentials: "include",
         }
       );
-
       if (response.ok) {
-        const data = await response.json();
-        return data.queue_position;
+        return await response.json();
       }
     } catch (error) {
       console.error(
@@ -142,207 +144,144 @@ const FinalStep = () => {
   };
 
   useEffect(() => {
-    if (tasks.length === 0) return;
+    if (!loading || !submissionId) {
+      return;
+    }
 
-    const submissionId = localStorage.getItem("submission_id");
-    const pollTasks = async () => {
-      const updatedTasks = await Promise.all(
-        tasks.map(async (task) => {
-          if (task.completed) return task; // Skip tasks that are already completed
+    const pollStatus = async () => {
+      try {
+        if (tasks.length === 0) return; // Don't poll if tasks aren't loaded yet
 
-          // If task has a task_id, poll the task status
-          if (task.task_id) {
-            try {
-              const response = await fetch(
-                `http://localhost:5000/task-status/${task.task_id}`,
-                {
-                  credentials: "include",
-                }
-              );
+        // Use current tasks state directly
+        if (tasks.every((t) => t.completed || t.error)) {
+          setLoading(false);
+          return;
+        }
 
-              if (!response.ok) {
-                showSnackbar("Failed to fetch submission status", "error");
-              }
+        const queuePositionInfos = new Map(); // To store updated position info
+        const moduleQueueStatuses = new Map(); // Collect module queue status information for all modules
 
-              const data = await response.json();
-
-              // Extract processed and total rows from status message if available
-              let processedRows = 0;
-              let totalRows = 0;
-              if (data.status && data.status.includes("|")) {
-                const match = data.status.match(/(\d+)\/(\d+)/);
-                if (match) {
-                  processedRows = parseInt(match[1]);
-                  totalRows = parseInt(match[2]);
-                }
-              }
-
-              return {
-                ...task,
-                progress: Math.round((data.current / data.total) * 100),
-                processedRows,
-                totalRows,
-                status: data.status,
-                completed: data.state === "SUCCESS",
-                error: data.state === "FAILURE" ? data.status : null,
-                score: data.score,
-                state: data.state,
-              };
-            } catch (error) {
-              console.error(`Error polling task ${task.task_id}:`, error);
-              return {
-                ...task,
-                error: error.message,
-              };
+        // Process all tasks in parallel
+        const updatedTasks = await Promise.all(
+          tasks.map(async (task) => {
+            if (task.completed || task.error) {
+              return task; // Skip finished tasks
             }
-          } else {
-            // No task_id, check queue status
-            const queueStatus = await fetchQueueStatus(
+
+            // Get the latest queue status for the module
+            const queueStatusResponse = await fetchQueueStatus(
               submissionId,
               task.module_id
             );
-            if (queueStatus) {
-              return {
-                ...task,
-                status: `Waiting in queue (Position ${queueStatus.position})`,
-              };
+
+            if (!queueStatusResponse) {
+              return task; // Keep existing task if can't get status
             }
-            return task;
-          }
-        })
-      );
 
-      // Update queue entries based on current task status
-      const updatedQueueEntries = await Promise.all(
-        queueEntries.map(async (entry) => {
-          const task = updatedTasks.find(
-            (t) => t.module_id === entry.module_id
-          );
+            const queuePositionInfo = queueStatusResponse.queue_position_info;
+            const moduleQueueStatus = queueStatusResponse.module_queue_status;
 
-          // If task is completed, mark queue entry as completed
-          if (task && task.completed) {
-            return { ...entry, status: "completed" };
-          }
+            // Store the module queue status and queue position info for use in TaskProgressCard
+            moduleQueueStatuses.set(task.module_id, moduleQueueStatus);
+            if (queuePositionInfo) {
+              queuePositionInfos.set(task.module_id, queuePositionInfo);
+            }
 
-          // If task has task_id and is processing, mark as processing
-          if (task && task.task_id && !task.completed && !task.error) {
-            return { ...entry, status: "processing" };
-          }
+            // If task is processing, get detailed status
+            if (queuePositionInfo.task_id) {
+              try {
+                const response = await fetch(
+                  `http://localhost:5000/task-status/${queuePositionInfo.task_id}`,
+                  {
+                    credentials: "include",
+                  }
+                );
+                const data = await response.json();
 
-          // If task failed, mark as failed
-          if (task && task.error) {
-            return { ...entry, status: "failed" };
-          }
+                return {
+                  ...task,
+                  progress: Math.round((data.current / data.total) * 100),
+                  processedRows: data.processedRows,
+                  totalRows: data.totalRows,
+                  status: data.status,
+                  completed: data.state === "SUCCESS",
+                  error: data.state === "FAILURE" ? data.status : null,
+                  score: data.score,
+                };
+              } catch (error) {
+                return { ...task, error: "Failed to fetch task status." };
+              }
+            }
 
-          // Fetch current queue status for non-completed entries
-          // This will catch when waiting tasks get assigned task_ids
-          const queueStatus = await fetchQueueStatus(
-            submissionId,
-            entry.module_id
-          );
-          if (queueStatus) {
-            // Add debug logging
-            if (entry.status !== queueStatus.status) {
-              console.log(
-                `Queue status changed for module ${entry.module_id}: ${entry.status} → ${queueStatus.status}`
-              );
+            // Task is waiting
+            return {
+              ...task,
+              status: `In queue (Position: ${queuePositionInfo.position})`,
+            };
+          })
+        );
+
+        setTasks(updatedTasks);
+
+        // Update queue entries based on new task states
+        setQueueEntries((currentQueueEntries) =>
+          currentQueueEntries.map((entry) => {
+            const correspondingTask = updatedTasks.find(
+              (t) => t.module_id === entry.module_id
+            );
+            const moduleStatus = moduleQueueStatuses.get(entry.module_id);
+            const newPositionInfo = queuePositionInfos.get(entry.module_id);
+
+            if (!correspondingTask) return entry;
+
+            let newStatus = "waiting";
+            if (correspondingTask.completed) {
+              newStatus = "completed";
+            } else if (correspondingTask.error) {
+              newStatus = "failed";
+            } else if (correspondingTask.task_id) {
+              newStatus = "processing";
             }
             return {
               ...entry,
-              status: queueStatus.status,
-              position: queueStatus.position,
+              ...(newPositionInfo || {}), // Overwrite with fresh data (position, etc.)
+              status: newStatus,
+              moduleQueueStatus: moduleStatus,
             };
-          }
-
-          return entry;
-        })
-      );
-
-      // Update tasks to get new task_ids
-      const updatedTasksWithNewIds = await Promise.all(
-        updatedTasks.map(async (task) => {
-          // If task doesn't have task_id but queue shows it's processing, get the task_id
-          const queueInfo = updatedQueueEntries.find(
-            (q) => q.module_id === task.module_id
-          );
-
-          if (!task.task_id && queueInfo?.status === "processing") {
-            // Task just started processing - we need to get the task_id
-            const queueStatus = await fetchQueueStatus(
-              submissionId,
-              task.module_id
-            );
-            if (queueStatus && queueStatus.task_id) {
-              return {
-                ...task,
-                task_id: queueStatus.task_id,
-                status: "Starting...",
-              };
-            }
-          }
-
-          return task;
-        })
-      );
-      setTasks(updatedTasksWithNewIds);
-      setQueueEntries(updatedQueueEntries);
-
-      const allTasksFinished = updatedTasks.every(
-        (task) => task.completed || task.error || task.state === "FAILURE"
-      );
-
-      const hasFailedTasks = updatedTasks.some(
-        (task) => task.error || task.state === "FAILURE"
-      );
-      if (hasFailedTasks) {
-        setIsAnyTaskFailed(true);
-      }
-
-      if (allTasksFinished) {
-        if (intervalRef.current) {
-          clearInterval(intervalRef.current);
-          intervalRef.current = null;
-        }
-        setLoading(false);
-        const successfulTasks = updatedTasks.filter(
-          (task) => task.completed && task.score !== null
+          })
         );
 
-        if (successfulTasks.length > 0) {
-          const scores = successfulTasks.map((t) => ({
-            module_name: t.module_name,
-            score: t.score,
-          }));
-          setModuleScores(scores);
-          setAverageScore(
-            scores.reduce((sum, curr) => sum + curr.score, 0) / scores.length
-          );
-          localStorage.removeItem("tasks");
-          localStorage.removeItem("queueEntries");
+        // Check for completion
+        const allFinished = updatedTasks.every((t) => t.completed || t.error);
+        if (allFinished) {
+          setLoading(false);
+          // Final score calculation
+          const successfulTasks = updatedTasks.filter((t) => t.completed);
+          if (successfulTasks.length > 0) {
+            const scores = successfulTasks.map((t) => ({
+              module_name: t.module_name,
+              score: t.score,
+            }));
+            setModuleScores(scores);
+            setAverageScore(
+              scores.reduce((sum, curr) => sum + curr.score, 0) / scores.length
+            );
+          }
         }
+      } catch (error) {
+        console.error("Error in pollStatus:", error);
       }
     };
 
-    // Clear any existing interval
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-    }
+    const intervalId = setInterval(pollStatus, 2000);
 
-    // Start new interval
-    intervalRef.current = setInterval(pollTasks, 1000);
-
-    // Cleanup function
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
+      clearInterval(intervalId);
     };
-  }, [tasks, queueEntries, loading]);
+  }, [loading, submissionId]);
 
   const handleCancel = async () => {
     try {
-      const submissionId = localStorage.getItem("submission_id");
       console.log("Attempting to cancel submission:", submissionId);
 
       if (!submissionId) {
@@ -395,7 +334,7 @@ const FinalStep = () => {
           {loading ? "Evaluation in Progress" : "Evaluation Summary"}
         </Typography>
 
-        {loading || isAnyTaskFailed ? (
+        {loading ? (
           <>
             <TaskProgressCard tasks={tasks} queueEntries={queueEntries} />
             <Button
