@@ -602,17 +602,12 @@ def get_queue_status(submission_id, module_id):
 
         module_status = QueueService.get_module_queue_status(module_id)
 
-        # Get the queue entry to include task_id
-        queue_entry = BenchmarkQueue.query.filter_by(
-            submission_id=submission_id, module_id=module_id
-        ).first()
-
-        # Add task_id to position_info
-        position_info["task_id"] = queue_entry.task_id if queue_entry else None
-
         return (
             jsonify(
-                {"queue_position": position_info, "module_queue_status": module_status}
+                {
+                    "queue_position_info": position_info,
+                    "module_queue_status": module_status,
+                }
             ),
             200,
         )
@@ -903,12 +898,15 @@ def cancel_benchmark(submission_id):
             .all()
         )
 
+        # Collect affected modules BEFORE changing the status
+        affected_modules = set(
+            entry.module_id
+            for entry in queue_entries
+            if entry.status == QueueStatus.PROCESSING
+        )
+
         cancelled_tasks = []
         for entry in queue_entries:
-            # Mark queue entry as cancelled
-            entry.status = QueueStatus.CANCELLED
-            entry.completed_at = datetime.utcnow()
-
             # If the entry has a task_id, try to revoke it
             if entry.task_id:
                 try:
@@ -920,21 +918,26 @@ def cancel_benchmark(submission_id):
                 except Exception as e:
                     logger.warning(f"Could not revoke task {entry.task_id}: {e}")
 
+            # Mark queue entry as cancelled
+            entry.status = QueueStatus.CANCELLED
+            entry.completed_at = datetime.utcnow()
             logger.info(f"Cancelled queue entry {entry.id}")
 
         db.session.commit()
 
         # Process next entries in queue for each affected module
-        affected_modules = set(
-            entry.module_id
-            for entry in queue_entries
-            if entry.status == QueueStatus.PROCESSING
-        )
         for module_id in affected_modules:
-            next_result = process_next_in_queue(module_id)
-            if next_result:
-                logger.info(
-                    f"Started next task in queue for module {module_id}: {next_result['task_id']}"
+            try:
+                next_result = process_next_in_queue(module_id)
+                if next_result:
+                    logger.info(
+                        f"Started next task in queue for module {module_id}: {next_result['task_id']}"
+                    )
+                else:
+                    logger.info(f"No more tasks in queue for module {module_id}")
+            except Exception as e:
+                logger.error(
+                    f"Error processing next in queue for module {module_id}: {e}"
                 )
 
         # Delete all benchmark scores for this submission
@@ -947,6 +950,7 @@ def cancel_benchmark(submission_id):
                     "message": "Benchmark cancelled successfully",
                     "cancelled_queue_entries": len(queue_entries),
                     "cancelled_tasks": cancelled_tasks,
+                    "affected_modules": list(affected_modules),
                 }
             ),
             200,
