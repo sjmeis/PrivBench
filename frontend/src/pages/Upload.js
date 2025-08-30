@@ -198,8 +198,12 @@ const Upload = () => {
 
   const handleSaveMetadata = async () => {
     try {
-      // Check if metadata has changed
-      if (JSON.stringify(metadata) === JSON.stringify(initialMetadata)) {
+      // Skip if a submission already exists AND the metadata is unchanged.
+      // If no submission exists, we must proceed to create one.
+      if (
+        submissionId &&
+        JSON.stringify(metadata) === JSON.stringify(initialMetadata)
+      ) {
         setCurrentStep((prev) => prev + 1);
         return; // Skip saving if no changes
       }
@@ -512,7 +516,8 @@ const Upload = () => {
                 }
               >
                 {currentStep === 1 &&
-                JSON.stringify(metadata) !== JSON.stringify(initialMetadata)
+                (selectedTemplateId ||
+                  JSON.stringify(metadata) !== JSON.stringify(initialMetadata))
                   ? "Save & Continue"
                   : currentStep === 2
                   ? "Submit" // "Submit" if step 2

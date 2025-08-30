@@ -1,7 +1,23 @@
 import React from "react";
-import { Card, Box, Typography, LinearProgress, Chip } from "@mui/joy";
+import { Card, Box, Typography } from "@mui/joy";
+import { CheckCircle, Error, Sync, HourglassEmpty } from "@mui/icons-material";
+import { keyframes, LinearProgress } from "@mui/material";
+
+// Define a spinning animation for the "processing" icon
+const spin = keyframes`
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+`;
 
 const TaskProgressCard = ({ tasks, queueEntries = [] }) => {
+  const isAnyTaskProcessing = queueEntries.some(
+    (entry) => entry.moduleQueueStatus?.processing > 0
+  );
+
   const getQueueInfo = (moduleId) => {
     return queueEntries.find((entry) => entry.module_id === moduleId);
   };
@@ -17,11 +33,49 @@ const TaskProgressCard = ({ tasks, queueEntries = [] }) => {
   const getStatusText = (task, queueInfo) => {
     if (task.error) return task.status;
     if (task.completed) return "Completed";
-    if (queueInfo?.status === "processing")
-      return task.status || "Processing...";
-    if (queueInfo?.status === "waiting")
-      return `Waiting in queue (Position ${queueInfo.position})`;
-    return task.status || "Initializing...";
+    if (queueInfo?.status === "processing") return "Processing...";
+    if (queueInfo?.status === "waiting") {
+      // Calculate and display the relative position in the waiting queue.
+      return isAnyTaskProcessing
+        ? `In queue (Position: ${queueInfo.position - 1})`
+        : "In queue";
+    }
+    return "Initializing...";
+  };
+
+  // Helper function to render the correct icon based on status
+  const renderStatusIcon = (task, queueInfo) => {
+    const color = getStatusColor(task, queueInfo);
+    const status = queueInfo?.status;
+
+    if (task.error) {
+      return <Error sx={{ color: `${color}.main` }} />;
+    }
+    if (task.completed) {
+      return <CheckCircle sx={{ color: `${color}.main` }} />;
+    }
+    if (status === "processing") {
+      return (
+        <Sync
+          sx={{
+            color: `${color}.main`,
+            animation: `${spin} 2s linear infinite`,
+          }}
+        />
+      );
+    }
+    if (status === "waiting") {
+      return <HourglassEmpty sx={{ color: `${color}.main` }} />;
+    }
+    // Default icon for initializing state
+    return <HourglassEmpty sx={{ color: "neutral.main" }} />;
+  };
+
+  const getProgressPercentage = (task) => {
+    if (task.progress && task.progress > 0) {
+      return task.progress;
+    }
+    return 0;
   };
 
   return (
@@ -29,105 +83,92 @@ const TaskProgressCard = ({ tasks, queueEntries = [] }) => {
       {tasks.map((task, index) => {
         const queueInfo = getQueueInfo(task.module_id);
         const isWaiting = queueInfo?.status === "waiting";
+        const isProcessing = queueInfo?.status === "processing";
+        const displayPosition =
+          isWaiting && isAnyTaskProcessing
+            ? queueInfo.position - 1
+            : queueInfo?.position || 0;
+        const progressPercentage = getProgressPercentage(task);
 
         return (
-          <Box key={index} sx={{ mb: 2, mt: 2, p: 1 }}>
-            {/* Module name and progress/queue status */}
+          <Box
+            key={index}
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 1,
+              p: 1.5,
+              // Add a divider between tasks, but not after the last one
+              borderBottom: index < tasks.length - 1 ? "1px solid" : "none",
+              borderColor: "divider",
+            }}
+          >
+            {/* Main row with icon, text, and right-aligned content */}
             <Box
               sx={{
                 display: "flex",
-                justifyContent: "space-between",
                 alignItems: "center",
-                mb: 1,
+                gap: 2,
               }}
             >
-              <Typography level="body1" fontWeight="bold">
-                {task.module_name}
-              </Typography>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                {queueInfo && (
-                  <Chip
-                    size="sm"
-                    color={getStatusColor(task, queueInfo)}
-                    variant="soft"
-                  >
-                    {queueInfo.status === "waiting"
-                      ? `Queue #${queueInfo.position}`
-                      : queueInfo.status === "processing"
-                      ? "Processing"
-                      : queueInfo.status}
-                  </Chip>
-                )}
+              {/* Status Icon */}
+              <Box sx={{ display: "flex", alignItems: "center" }}>
+                {renderStatusIcon(task, queueInfo)}
+              </Box>
+
+              {/* Module Name and Status Text */}
+              <Box sx={{ flexGrow: 1 }}>
                 <Typography level="body1" fontWeight="bold">
-                  {isWaiting ? "0%" : `${task.progress}%`}
+                  {task.module_name}
+                </Typography>
+                <Typography
+                  level="body2"
+                  sx={{
+                    color: task.error ? "danger.main" : "text.secondary",
+                    fontSize: "0.875rem",
+                  }}
+                >
+                  {getStatusText(task, queueInfo)}
                 </Typography>
               </Box>
-            </Box>
-            <LinearProgress
-              determinate
-              value={isWaiting ? 0 : task.progress}
-              sx={{
-                "--LinearProgress-thickness": "10px",
-                mb: 1,
-              }}
-              color={getStatusColor(task, queueInfo)}
-            />
 
-            {/* Status and row information */}
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                mt: 1,
-              }}
-            >
-              <Typography
-                level="body2"
-                sx={{
-                  color: task.error ? "danger.main" : "text.secondary",
-                  fontSize: "0.875rem",
-                  flex: 1,
-                }}
-              >
-                {getStatusText(task, queueInfo)}
-              </Typography>
-
-              {/* Show row progress only when processing */}
-              {!isWaiting && task.totalRows > 0 && (
-                <Typography level="body2" sx={{ fontSize: "0.875rem" }}>
-                  {task.processedRows.toLocaleString()} /{" "}
-                  {task.totalRows.toLocaleString()} rows
-                </Typography>
-              )}
-
-              {/* Show estimated time or queue position for waiting tasks */}
-              {isWaiting && queueInfo.position > 1 && (
-                <Typography
-                  level="body2"
-                  sx={{ fontSize: "0.875rem", color: "warning.main" }}
-                >
-                  {queueInfo.position - 1} ahead of you
-                </Typography>
-              )}
+              {/* Right-aligned content: Queue position or Score */}
+              <Box sx={{ textAlign: "right" }}>
+                {isWaiting && isAnyTaskProcessing && displayPosition > 1 && (
+                  <Typography
+                    level="body2"
+                    sx={{ fontSize: "0.875rem", color: "warning.main" }}
+                  >
+                    {displayPosition - 1} ahead of you
+                  </Typography>
+                )}
+                {task.completed && task.score !== null && (
+                  <Typography
+                    level="body1"
+                    sx={{ color: "success.main", fontWeight: "bold" }}
+                  >
+                    Score: {task.score.toFixed(2)}
+                  </Typography>
+                )}
+              </Box>
             </Box>
 
-            {/* Score display for completed tasks */}
-            {task.completed && task.score !== null && (
-              <Box
-                sx={{
-                  mt: 1,
-                  p: 1,
-                  bgcolor: "success.softBg",
-                  borderRadius: "sm",
-                }}
-              >
-                <Typography
-                  level="body2"
-                  sx={{ color: "success.main", fontWeight: "bold" }}
-                >
-                  Score: {task.score.toFixed(2)}
-                </Typography>
+            {/* Progress bar for processing tasks */}
+            {isProcessing && progressPercentage > 0 && (
+              <Box sx={{ width: "100%" }}>
+                <LinearProgress
+                  variant="determinate"
+                  value={progressPercentage}
+                  sx={{
+                    height: 6,
+                    borderRadius: 3,
+                    backgroundColor: "#e0e0e0",
+                    "& .MuiLinearProgress-bar": {
+                      backgroundColor: "#1976d2",
+                      borderRadius: 3,
+                    },
+                  }}
+                />
               </Box>
             )}
           </Box>
