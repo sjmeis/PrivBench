@@ -65,6 +65,7 @@ class QueueService:
                 "queue_id": queue_entry.id,
                 "position": queue_entry.position,
                 "status": queue_entry.status.value,
+                "task_id": queue_entry.task_id,
                 "created_at": queue_entry.created_at.isoformat(),
                 "started_at": (
                     queue_entry.started_at.isoformat()
@@ -118,6 +119,9 @@ class QueueService:
                     QueueStatus.COMPLETED if success else QueueStatus.FAILED
                 )
                 queue_entry.completed_at = datetime.utcnow()
+                # After completing, re-rank the remaining waiting entries for this module
+                QueueService.rerank_waiting_queue(queue_entry.module_id)
+
                 db.session.commit()
                 logger.info(
                     f"Completed processing queue entry {queue_entry_id} with success={success}"
@@ -127,6 +131,36 @@ class QueueService:
             db.session.rollback()
             logger.error(f"Error completing processing: {e}")
             return None
+
+    @staticmethod
+    def rerank_waiting_queue(module_id):
+        """Re-calculates the position for all waiting entries in a module's queue."""
+        try:
+            waiting_entries = (
+                db.session.query(BenchmarkQueue)
+                .filter_by(module_id=module_id, status=QueueStatus.WAITING)
+                .order_by(BenchmarkQueue.created_at.asc())
+                .all()
+            )
+
+            # The new position starts after any processing tasks.
+            processing_count = (
+                db.session.query(BenchmarkQueue)
+                .filter_by(module_id=module_id, status=QueueStatus.PROCESSING)
+                .count()
+            )
+
+            for index, entry in enumerate(waiting_entries):
+                entry.position = processing_count + index + 1
+
+            logger.info(
+                f"Re-ranked {len(waiting_entries)} waiting entries for module {module_id}."
+            )
+            # The db commit will be handled by the calling function (e.g., complete_processing)
+
+        except Exception as e:
+            logger.error(f"Error re-ranking queue for module {module_id}: {e}")
+            # Let the calling function handle rollback.
 
     @staticmethod
     def get_module_queue_status(module_id):
