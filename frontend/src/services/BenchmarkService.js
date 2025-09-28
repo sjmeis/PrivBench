@@ -65,6 +65,20 @@ const startBenchmarkUpdate = async (submissionId) => {
   }
 };
 
+const finalizeBenchmarkUpdate = async (submissionId) => {
+  try {
+    const response = await axios.post(
+      `${API_BASE_URL}/submission/finalize-update`,
+      { submissionId: submissionId },
+      { withCredentials: true }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error finalizing benchmark update:", error);
+    throw error;
+  }
+};
+
 const deleteLatestSubmission = async () => {
   try {
     const response = await axios.post(
@@ -83,4 +97,5 @@ export const BenchmarkService = {
   startBenchmarkUpdate,
   pollTasks,
   deleteLatestSubmission,
+  finalizeBenchmarkUpdate,
 };

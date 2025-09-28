@@ -8,6 +8,8 @@ from .benchmark_module import BenchmarkModule
 from .benchmark_score import BenchmarkScore
 from .benchmark_queue import BenchmarkQueue, QueueStatus
 from .task import Task
+from .app_version import AppVersion
+from .submission_version_score import SubmissionVersionScore
 
 __all__ = [
     "User",
@@ -21,4 +23,6 @@ __all__ = [
     "BenchmarkQueue",
     "QueueStatus",
     "Task",
+    "AppVersion",
+    "SubmissionVersionScore",
 ]

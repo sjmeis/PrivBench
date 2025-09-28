@@ -11,6 +11,7 @@ import { getUserSubmissions } from "../services/RankingsService";
 import { SideNaveSubmission } from "../components/submission/SideNaveSubmission";
 import MetadataTemplateDialog from "../components/submission/MetadataTemplateDialog";
 import { SubmissionStatus } from "src/enums/SubmissionStatus";
+import { API_BASE_URL } from "../config";
 
 const Upload = () => {
   const location = useLocation();
@@ -88,7 +89,7 @@ const Upload = () => {
 
   const fetchTemplates = async () => {
     try {
-      const response = await fetch("http://localhost:5000/metadata/templates", {
+      const response = await fetch(`${API_BASE_URL}/metadata/templates`, {
         credentials: "include",
       });
       if (response.ok) {
@@ -110,13 +111,10 @@ const Upload = () => {
   useEffect(() => {
     const fetchDatasets = async () => {
       try {
-        const listResponse = await fetch(
-          "http://localhost:5000/datasets/list",
-          {
-            credentials: "include",
-            cache: "no-cache",
-          }
-        );
+        const listResponse = await fetch(`${API_BASE_URL}/datasets/list`, {
+          credentials: "include",
+          cache: "no-cache",
+        });
         if (!listResponse.ok) {
           const errorData = await listResponse.json();
           console.error("Failed to fetch datasets:", errorData.error);
@@ -129,9 +127,7 @@ const Upload = () => {
           data.datasets.map(async (dataset) => {
             try {
               const contentResponse = await fetch(
-                `http://localhost:5000/datasets/${encodeURIComponent(
-                  dataset.name
-                )}`,
+                `${API_BASE_URL}/datasets/${encodeURIComponent(dataset.name)}`,
                 {
                   credentials: "include",
                   cache: "no-cache",
@@ -208,7 +204,7 @@ const Upload = () => {
         return; // Skip saving if no changes
       }
       const isUpdate = Boolean(submissionId);
-      const endpoint = "http://localhost:5000/metadata";
+      const endpoint = `${API_BASE_URL}/metadata`;
       const method = isUpdate ? "PUT" : "POST";
 
       const body = isUpdate
@@ -280,7 +276,7 @@ const Upload = () => {
         return;
       }
 
-      const response = await fetch("http://localhost:5000/metadata/templates", {
+      const response = await fetch(`${API_BASE_URL}/metadata/templates`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -333,7 +329,7 @@ const Upload = () => {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/metadata/templates/${selectedTemplateId}`,
+        `${API_BASE_URL}/metadata/templates/${selectedTemplateId}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -367,7 +363,7 @@ const Upload = () => {
     if (window.confirm("Are you sure you want to delete this template?")) {
       try {
         const response = await fetch(
-          `http://localhost:5000/metadata/templates/${templateId}`,
+          `${API_BASE_URL}/metadata/templates/${templateId}`,
           {
             method: "DELETE",
             credentials: "include",

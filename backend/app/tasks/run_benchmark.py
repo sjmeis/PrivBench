@@ -5,6 +5,7 @@ import shutil
 import tarfile
 from io import BytesIO
 import os
+import time
 
 from ..utils.container_manager import container_manager
 
@@ -26,10 +27,14 @@ def run_benchmark(
     logger.info(f"Starting benchmark execution for module {module_name}")
 
     try:
-        # Get existing container
-        container = container_manager.get_container(module_name)
+        # Check if container is installing and wait for it to become ready
+        container = wait_for_container_with_installation_check(
+            module_name, progress_callback
+        )
         if not container:
-            logger.error(f"No running container found for module {module_name}")
+            logger.error(
+                f"Container for module {module_name} failed to start within timeout"
+            )
             raise Exception(f"Container not available for module {module_name}")
 
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -177,3 +182,89 @@ if __name__ == '__main__':
     except Exception as e:
         logger.error(f"Benchmark execution failed: {e}")
         raise RuntimeError(f"Benchmark execution failed: {e}")
+
+
+def wait_for_container_with_installation_check(
+    module_name, progress_callback=None, max_wait_time=300, check_interval=3
+):
+    """
+    Wait for a container to become available, checking if installation is in progress.
+    This allows starting evaluation tasks even while the container is still being installed.
+
+    Args:
+        module_name: Name of the module
+        progress_callback: Callback function to update progress
+        max_wait_time: Maximum time to wait in seconds (default: 300 seconds = 5 minutes)
+        check_interval: How often to check in seconds (default: 3 seconds)
+
+    Returns:
+        Container object if available, None if timeout
+    """
+    logger.info(f"Waiting for container for module {module_name}")
+    start_time = time.time()
+    installation_detected = False
+
+    while time.time() - start_time < max_wait_time:
+        # Try to get existing container
+        container = container_manager.get_container(module_name)
+        if container:
+            logger.info(f"Container for module {module_name} is ready")
+            return container
+
+        # Check if installation is in progress
+        if container_manager.is_container_installing(module_name):
+            installation_detected = True
+            elapsed = int(time.time() - start_time)
+            remaining = max_wait_time - elapsed
+            if progress_callback:
+                progress_callback(
+                    0,
+                    None,
+                    f"Container is being installed... ({elapsed}s elapsed, {remaining}s remaining)",
+                )
+            logger.info(
+                f"Container installation detected for {module_name}, continuing to wait..."
+            )
+        else:
+            # Try to start container if it doesn't exist and installation not detected
+            try:
+                from ..models import BenchmarkModule
+
+                module = BenchmarkModule.query.filter_by(
+                    name=module_name, is_active=True
+                ).first()
+                if module:
+                    logger.info(
+                        f"Attempting to start container for module {module_name}"
+                    )
+                    container = container_manager.start_module_container(module)
+                    if container:
+                        logger.info(
+                            f"Successfully started container for module {module_name}"
+                        )
+                        return container
+                    else:
+                        # Container start was initiated, mark as installing
+                        installation_detected = True
+            except Exception as e:
+                logger.warning(f"Failed to start container for {module_name}: {e}")
+
+        # Update progress with appropriate message
+        elapsed = int(time.time() - start_time)
+        remaining = max_wait_time - elapsed
+
+        if installation_detected:
+            status_msg = f"Container installation in progress... ({elapsed}s elapsed, {remaining}s remaining)"
+        else:
+            status_msg = f"Waiting for container to become available... ({elapsed}s elapsed, {remaining}s remaining)"
+
+        if progress_callback:
+            progress_callback(0, None, status_msg)
+
+        logger.debug(
+            f"Container not ready for {module_name}, waiting {check_interval} seconds..."
+        )
+        time.sleep(check_interval)
+
+    logger.error(f"Timeout waiting for container for module {module_name}")
+    return None
