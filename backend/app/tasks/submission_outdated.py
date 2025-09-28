@@ -1,9 +1,7 @@
-import os
 from celery import shared_task
-from ..models import Submission, User, BenchmarkModule
+from ..models import Submission, User
 from ..extensions import db
 from ..utils.email_sender import send_email
-from sqlalchemy import and_
 from flask import current_app
 from ..config import Config
 from datetime import datetime
@@ -15,7 +13,7 @@ def mark_submissions_outdated_and_notify(self, module_name):
     try:
         # Get all completed submissions
         submissions = Submission.query.filter_by(status="COMPLETED").all()
-        
+
         # Group submissions by user
         user_submissions = {}
         for submission in submissions:
@@ -24,22 +22,26 @@ def mark_submissions_outdated_and_notify(self, module_name):
             user_submissions[submission.user_id].append(submission)
             submission.status = "OUTDATED"
             submission.outdated_at = datetime.utcnow()  # Set the outdated timestamp
-        
+
         db.session.commit()
 
         # Send emails to users
-        for user_id, submissions in user_submissions.items(): 
+        for user_id, submissions in user_submissions.items():
             user = User.query.get(user_id)
             if not user or not user.mail_address:
                 continue
 
             # Create submission list for email
-            submission_list = "<br>".join([
-                f"- {sub.name} (Current Score: {round(sub.score, 2)})"
-                for sub in submissions
-            ])
+            submission_list = "<br>".join(
+                [
+                    f"- {sub.name} (Current Score: {round(sub.score, 2)})"
+                    for sub in submissions
+                ]
+            )
 
-            email_subject = f"Action Required: New Benchmark Module Added - {module_name}"
+            email_subject = (
+                f"Action Required: New Benchmark Module Added - {module_name}"
+            )
             frontend_url = Config.FRONTEND_URL  # Get the frontend URL from the config
             email_body = f"""
 Dear {user.username},<br><br>
@@ -61,14 +63,16 @@ PrivBench Team
                     to=user.mail_address,
                     subject=email_subject,
                     body=email_body,
-                    redirect_url=f"{frontend_url}/profile?state=submissions"  # Pass the redirect URL
+                    redirect_url=f"{frontend_url}/profile?state=submissions",  # Pass the redirect URL
                 )
             except Exception as e:
-                current_app.logger.error(f"Failed to send email to {user.mail_address}: {e}")
+                current_app.logger.error(
+                    f"Failed to send email to {user.mail_address}: {e}"
+                )
 
         return {
-            "status": "success", 
-            "message": f"Marked {len(submissions)} submissions as outdated and notified users."
+            "status": "success",
+            "message": f"Marked {len(submissions)} submissions as outdated and notified users.",
         }
     except Exception as e:
         return {"status": "error", "message": str(e)}

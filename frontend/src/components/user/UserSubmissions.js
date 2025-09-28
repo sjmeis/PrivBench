@@ -23,7 +23,7 @@ import {
 import UserSubmissionsTableRow from "./UserSubmissionsTableRow";
 import UpdateSubmissionModal from "./UpdateSubmissionModal";
 import { useSnackbar } from "../../contexts/SnackbarProvider";
-import { SubmissionStatus } from "src/enums/SubmissionStatus";
+import { SubmissionStatus } from "../../enums/SubmissionStatus";
 
 const UserSubmissions = () => {
   const [submissions, setSubmissions] = useState([]);
@@ -173,6 +173,7 @@ const UserSubmissions = () => {
                         <th style={{ width: 20 }}>Timestamp</th>
                         <th style={{ width: 20 }}>Status</th>
                         <th style={{ width: 20 }}>Score</th>
+                        <th style={{ width: 10 }}>Version</th>
                         <th style={{ width: 15 }} align="center">
                           Public
                         </th>

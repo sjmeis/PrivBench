@@ -1,5 +1,11 @@
 from flask import Blueprint, request, jsonify, make_response, current_app
-from ..models import User, Submission, SubmissionMetadata, BenchmarkModule, BenchmarkScore
+from ..models import (
+    User,
+    Submission,
+    SubmissionMetadata,
+    BenchmarkModule,
+    BenchmarkScore,
+)
 from .. import db
 from ..enums import SubmissionStatus, License
 from sqlalchemy import or_, and_
@@ -9,52 +15,71 @@ from flask_jwt_extended import (
 )
 from datetime import datetime, timedelta
 
-ranking_bp = Blueprint('ranking', __name__)
+ranking_bp = Blueprint("ranking", __name__)
 
-@ranking_bp.route('/ranking/user/count', methods=['GET'])
+
+@ranking_bp.route("/ranking/user/count", methods=["GET"])
 @jwt_required()
 def count_user_submissions():
     try:
         current_user_id = get_jwt_identity()
 
-        submission_count = db.session.query(Submission).filter_by(user_id=current_user_id).count()
+        submission_count = (
+            db.session.query(Submission).filter_by(user_id=current_user_id).count()
+        )
 
         return jsonify({"submissionCount": submission_count}), 200
 
     except Exception as e:
         return jsonify({"message": "Internal server error", "error": str(e)}), 500
 
-@ranking_bp.route('/ranking/update', methods=['POST'])
+
+@ranking_bp.route("/ranking/update", methods=["POST"])
 @jwt_required()
 def make_submission_public():
     try:
         current_user_id = get_jwt_identity()
         data = request.get_json()
-        submission_id = data.get('id')
-        is_public = data.get('isPublic')
+        submission_id = data.get("id")
+        is_public = data.get("isPublic")
 
         if not submission_id:
             return jsonify({"message": "Submission ID is required"}), 400
 
-        submission = db.session.query(Submission).filter_by(id=submission_id, user_id=current_user_id).first()
+        submission = (
+            db.session.query(Submission)
+            .filter_by(id=submission_id, user_id=current_user_id)
+            .first()
+        )
 
         if not submission:
             return jsonify({"message": "Submission not found or access denied"}), 404
 
         if submission.status != SubmissionStatus.COMPLETED:
-            return jsonify({"message": "Submission must be completed to make it public"}), 400
+            return (
+                jsonify({"message": "Submission must be completed to make it public"}),
+                400,
+            )
 
         submission.is_public = is_public
         db.session.commit()
 
-        return jsonify({"message": "Submission made public successfully", "submissionId": submission_id}), 200
+        return (
+            jsonify(
+                {
+                    "message": "Submission made public successfully",
+                    "submissionId": submission_id,
+                }
+            ),
+            200,
+        )
 
     except Exception as e:
         db.session.rollback()
         return jsonify({"message": "Internal server error", "error": str(e)}), 500
 
 
-@ranking_bp.route('/ranking/user', methods=['GET'])
+@ranking_bp.route("/ranking/user", methods=["GET"])
 @jwt_required()
 def get_user_submissions():
     try:
@@ -80,6 +105,7 @@ def get_user_submissions():
                 "status": submission.status.value,
                 "isPublic": submission.is_public,
                 "overallScore": submission.score,
+                "version": submission.version,
                 "metadata": None,
                 "user": {
                     "id": submission.user.id,
@@ -88,7 +114,7 @@ def get_user_submissions():
                     "badges": submission.user.badges or [],
                     "researchInstitute": submission.user.research_institute,
                 },
-                "benchmarkScores": []
+                "benchmarkScores": [],
             }
 
             if submission.submission_metadata:
@@ -116,10 +142,80 @@ def get_user_submissions():
                             "version": score.benchmark_module.version,
                             "isActive": score.benchmark_module.is_active,
                             "createdAt": score.benchmark_module.created_at.isoformat(),
-                        }
+                        },
                     }
                     for score in submission.benchmark_scores
                 ]
+
+            version_scores_list = []
+
+            # Process submission_version_scores if they exist
+            if submission.version_scores:
+                for vs in submission.version_scores:
+                    # Get modules for this version and find their scores
+                    version_modules = []
+                    for module in vs.modules:
+                        # Find the corresponding score from benchmark_scores for this module
+                        matching_score = None
+                        for score in submission.benchmark_scores:
+                            if score.benchmark_module.id == module.id:
+                                matching_score = score
+                                break
+
+                        if matching_score:
+                            version_modules.append(
+                                {
+                                    "benchmarkModule": {
+                                        "id": module.id,
+                                        "name": module.name,
+                                        "title": module.title,
+                                        "version": module.version,
+                                        "isActive": module.is_active,
+                                        "createdAt": module.created_at.isoformat(),
+                                    },
+                                    "score": matching_score.score,
+                                    "createdAt": matching_score.created_at.isoformat(),
+                                }
+                            )
+
+                    version_scores_list.append(
+                        {
+                            "version": vs.version,
+                            "score": vs.score,
+                            "created_at": vs.created_at.isoformat(),
+                            "modules": version_modules,
+                        }
+                    )
+
+            # If no version_scores exist, create one from current submission data
+            if not version_scores_list:
+                version_scores_list.append(
+                    {
+                        "version": submission.version,
+                        "score": submission.score,
+                        "created_at": submission.submission_date.isoformat(),
+                        "modules": [
+                            {
+                                "benchmarkModule": {
+                                    "id": score.benchmark_module.id,
+                                    "name": score.benchmark_module.name,
+                                    "title": score.benchmark_module.title,
+                                    "version": score.benchmark_module.version,
+                                    "isActive": score.benchmark_module.is_active,
+                                    "createdAt": score.benchmark_module.created_at.isoformat(),
+                                },
+                                "score": score.score,
+                                "createdAt": score.created_at.isoformat(),
+                            }
+                            for score in submission.benchmark_scores
+                        ],
+                    }
+                )
+
+            # Sort by version
+            submission_detail["version_scores"] = sorted(
+                version_scores_list, key=lambda x: x["version"], reverse=True
+            )
 
             submissions_data.append(submission_detail)
 
@@ -129,18 +225,15 @@ def get_user_submissions():
         return jsonify({"message": "Internal server error", "error": str(e)}), 500
 
 
-
-
-
-@ranking_bp.route('/ranking', methods=['POST'])
+@ranking_bp.route("/ranking", methods=["POST"])
 def get_all_filtered():
     try:
         data = request.get_json()
-        search_term = data.get('searchTerm', '').strip()
-        page = data.get('page', 1)
-        limit = data.get('limit', 8)
-        sort_by = data.get('sortBy', 'score')
-        sort_order = data.get('sortOrder', 'desc')
+        search_term = data.get("searchTerm", "").strip()
+        page = data.get("page", 1)
+        limit = data.get("limit", 8)
+        sort_by = data.get("sortBy", "score")
+        sort_order = data.get("sortOrder", "desc")
 
         # Base query
         query = (
@@ -150,17 +243,19 @@ def get_all_filtered():
                 or_(
                     and_(
                         Submission.status == SubmissionStatus.COMPLETED,
-                        Submission.is_public == True  # Ensure submission is public
+                        Submission.is_public == True,  # Ensure submission is public
                     ),
                     and_(
                         Submission.status == SubmissionStatus.OUTDATED,
-                        Submission.outdated_at >= datetime.utcnow() - timedelta(days=3)  # Check if outdated within last 3 days
-                    )
+                        Submission.outdated_at
+                        >= datetime.utcnow()
+                        - timedelta(days=3),  # Check if outdated within last 3 days
+                    ),
                 )
             )
         )
 
-        #Search filter
+        # Search filter
         if search_term:
             search_term = f"%{search_term}%"
             query = query.filter(
@@ -170,16 +265,16 @@ def get_all_filtered():
                 )
             )
 
-        #Sorting
+        # Sorting
         sort_column_map = {
             "score": Submission.score,
             "name": Submission.name,
             "submissionDate": Submission.submission_date,
-            "username": User.username
+            "username": User.username,
         }
 
         sort_column = sort_column_map.get(sort_by, Submission.score)  # Default to score
-        if sort_order == 'desc':
+        if sort_order == "desc":
             query = query.order_by(sort_column.desc())
         else:
             query = query.order_by(sort_column.asc())
@@ -203,7 +298,7 @@ def get_all_filtered():
                     "username": submission.user.username,
                     "mailAddress": submission.user.mail_address,
                     "badges": submission.user.badges,
-                    "researchInstitute": submission.user.research_institute
+                    "researchInstitute": submission.user.research_institute,
                 },
             }
             for submission in paginated_results
@@ -213,7 +308,7 @@ def get_all_filtered():
             "results": results_list,
             "totalEntries": total,
             "totalPages": (total + limit - 1) // limit,
-            "currentPage": page
+            "currentPage": page,
         }
         return jsonify(response), 200
 
@@ -221,11 +316,11 @@ def get_all_filtered():
         return jsonify({"message": "Internal server error", "error": str(e)}), 500
 
 
-@ranking_bp.route('/ranking/detail', methods=['POST'])
+@ranking_bp.route("/ranking/detail", methods=["POST"])
 def get_submission_detail():
     try:
         data = request.get_json()
-        submission_id = data.get('id')
+        submission_id = data.get("id")
 
         if not submission_id:
             return jsonify({"message": "Submission ID is required"}), 400
@@ -236,7 +331,9 @@ def get_submission_detail():
             .join(User)
             .join(SubmissionMetadata, isouter=True)
             .join(BenchmarkScore, isouter=True)
-            .join(BenchmarkModule, BenchmarkScore.benchmark_module, isouter=True)  # Using relationship to join BenchmarkModule
+            .join(
+                BenchmarkModule, BenchmarkScore.benchmark_module, isouter=True
+            )  # Using relationship to join BenchmarkModule
             .one_or_none()
         )
 
@@ -258,7 +355,7 @@ def get_submission_detail():
                 "badges": submission.user.badges or [],
                 "researchInstitute": submission.user.research_institute,
             },
-            "benchmarkScores": []
+            "benchmarkScores": [],
         }
 
         if submission.submission_metadata:
@@ -266,7 +363,11 @@ def get_submission_detail():
                 "modelName": submission.submission_metadata.model_name,
                 "modelDescription": submission.submission_metadata.model_description,
                 "license": str(submission.submission_metadata.license),
-                "tags": submission.submission_metadata.tags.split(",") if submission.submission_metadata.tags else [],
+                "tags": (
+                    submission.submission_metadata.tags.split(",")
+                    if submission.submission_metadata.tags
+                    else []
+                ),
                 "authors": submission.submission_metadata.authors,
                 "researchPaperUrl": submission.submission_metadata.research_paper_url,
                 "githubUrl": submission.submission_metadata.github_url,
@@ -286,8 +387,8 @@ def get_submission_detail():
                         "version": score.benchmark_module.version,
                         "description": score.benchmark_module.description,
                         "isActive": score.benchmark_module.is_active,
-                        "createdAt": score.benchmark_module.created_at.isoformat()
-                    }
+                        "createdAt": score.benchmark_module.created_at.isoformat(),
+                    },
                 }
                 for score in submission.benchmark_scores
             ]
@@ -297,11 +398,12 @@ def get_submission_detail():
     except Exception as e:
         return jsonify({"message": "Internal server error", "error": str(e)}), 500
 
-@ranking_bp.route('/ranking/detail', methods=['PUT'])
+
+@ranking_bp.route("/ranking/detail", methods=["PUT"])
 def update_submission_detail():
     try:
         data = request.get_json()
-        submission_id = data.get('id')
+        submission_id = data.get("id")
 
         if not submission_id:
             return jsonify({"message": "Submission ID is required"}), 400
@@ -315,35 +417,48 @@ def update_submission_detail():
         if not submission:
             return jsonify({"message": "Submission not found"}), 404
 
+        submission.name = data.get("name", submission.name)
+        submission.status = data.get("status", submission.status)
+        submission.is_public = data.get("isPublic", submission.is_public)
+        submission.submission_date = data.get(
+            "submissionDate", submission.submission_date
+        )
 
-        submission.name = data.get('name', submission.name)
-        submission.status = data.get('status', submission.status)
-        submission.is_public = data.get('isPublic', submission.is_public)
-        submission.submission_date = data.get('submissionDate', submission.submission_date)
-
-
-        metadata_data = data.get('metadata', {})
+        metadata_data = data.get("metadata", {})
         if metadata_data:
 
             submission_metadata = submission.submission_metadata or SubmissionMetadata()
-            submission_metadata.model_name = metadata_data.get('modelName', submission_metadata.model_name)
-            submission_metadata.model_description = metadata_data.get('modelDescription', submission_metadata.model_description)
-            license_name = metadata_data.get('license')
+            submission_metadata.model_name = metadata_data.get(
+                "modelName", submission_metadata.model_name
+            )
+            submission_metadata.model_description = metadata_data.get(
+                "modelDescription", submission_metadata.model_description
+            )
+            license_name = metadata_data.get("license")
             if license_name:
                 submission_metadata.license = License[license_name]
-            submission_metadata.tags = ",".join(metadata_data.get('tags', [])) if metadata_data.get('tags') else submission_metadata.tags
-            submission_metadata.authors = metadata_data.get('authors', submission_metadata.authors)
-            submission_metadata.research_paper_url = metadata_data.get('researchPaperUrl', submission_metadata.research_paper_url)
-            submission_metadata.github_url = metadata_data.get('githubUrl', submission_metadata.github_url)
-            submission_metadata.bibtex_citation = metadata_data.get('bibtexCitation', submission_metadata.bibtex_citation)
-
+            submission_metadata.tags = (
+                ",".join(metadata_data.get("tags", []))
+                if metadata_data.get("tags")
+                else submission_metadata.tags
+            )
+            submission_metadata.authors = metadata_data.get(
+                "authors", submission_metadata.authors
+            )
+            submission_metadata.research_paper_url = metadata_data.get(
+                "researchPaperUrl", submission_metadata.research_paper_url
+            )
+            submission_metadata.github_url = metadata_data.get(
+                "githubUrl", submission_metadata.github_url
+            )
+            submission_metadata.bibtex_citation = metadata_data.get(
+                "bibtexCitation", submission_metadata.bibtex_citation
+            )
 
             db.session.add(submission_metadata)
             submission.submission_metadata = submission_metadata
 
-
         db.session.commit()
-
 
         updated_submission_detail = {
             "id": submission.id,
@@ -360,7 +475,7 @@ def update_submission_detail():
                 "badges": submission.user.badges or [],
                 "researchInstitute": submission.user.research_institute,
             },
-            "benchmarkScores": []
+            "benchmarkScores": [],
         }
 
         if submission.submission_metadata:
@@ -368,21 +483,18 @@ def update_submission_detail():
                 "modelName": submission.submission_metadata.model_name,
                 "modelDescription": submission.submission_metadata.model_description,
                 "license": submission.submission_metadata.license.name,
-                "tags": submission.submission_metadata.tags.split(",") if submission.submission_metadata.tags else [],
+                "tags": (
+                    submission.submission_metadata.tags.split(",")
+                    if submission.submission_metadata.tags
+                    else []
+                ),
                 "authors": submission.submission_metadata.authors,
                 "researchPaperUrl": submission.submission_metadata.research_paper_url,
                 "githubUrl": submission.submission_metadata.github_url,
                 "bibtexCitation": submission.submission_metadata.bibtex_citation,
             }
 
-
         return jsonify({"submission": updated_submission_detail}), 200
 
     except Exception as e:
         return jsonify({"message": "Internal server error", "error": str(e)}), 500
-    
-
-
-
-    
-

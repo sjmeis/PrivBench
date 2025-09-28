@@ -6,6 +6,7 @@ import ScoreOverviewCard from "./ScoreOverviewCard";
 import { RemoveRedEye } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import CancelEvaluationModal from "./CancelEvaluationModal";
+import { API_BASE_URL } from "../../config";
 
 const FinalStep = () => {
   const [loading, setLoading] = useState(true);
@@ -54,7 +55,7 @@ const FinalStep = () => {
 
   const startBenchmark = async () => {
     try {
-      const response = await fetch("http://localhost:5000/run-benchmark", {
+      const response = await fetch(`${API_BASE_URL}/run-benchmark`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -126,7 +127,7 @@ const FinalStep = () => {
   const fetchQueueStatus = async (submissionId, moduleId) => {
     try {
       const response = await fetch(
-        `http://localhost:5000/queue-status/${submissionId}/${moduleId}`,
+        `${API_BASE_URL}/queue-status/${submissionId}/${moduleId}`,
         {
           credentials: "include",
         }
@@ -191,7 +192,7 @@ const FinalStep = () => {
             if (queuePositionInfo.task_id) {
               try {
                 const response = await fetch(
-                  `http://localhost:5000/task-status/${queuePositionInfo.task_id}`,
+                  `${API_BASE_URL}/task-status/${queuePositionInfo.task_id}`,
                   {
                     credentials: "include",
                   }
@@ -288,7 +289,7 @@ const FinalStep = () => {
         throw new Error("No submission ID found");
       }
       const response = await fetch(
-        `http://localhost:5000/cancel-benchmark/${submissionId}`,
+        `${API_BASE_URL}/cancel-benchmark/${submissionId}`,
         {
           method: "POST",
           headers: {
