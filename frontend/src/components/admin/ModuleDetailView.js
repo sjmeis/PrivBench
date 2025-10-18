@@ -30,8 +30,15 @@ const ModuleDetailView = ({
   onUpdateOrDelete,
   handleCloseDetailView,
 }) => {
-  const [formData, setFormData] = useState({});
+  const [formData, setFormData] = useState({
+    name: "",
+    description: "",
+    createdAt: null,
+    version: "",
+    path: "",
+  });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const DATASET_TABLE_TITLE = "Associated Dataset";
   const SCRIPT_TABLE_TITLE = "Python Benchmarking Module Logic";
   const { showSnackbar } = useSnackbar();
@@ -53,6 +60,7 @@ const ModuleDetailView = ({
 
   const handleDeleteModule = async () => {
     try {
+      setIsDeleting(true);
       await ModuleService.deleteBenchmarkModule(selectedModule.id);
       handleCloseDialog();
       handleCloseDetailView();
@@ -60,6 +68,8 @@ const ModuleDetailView = ({
       showSnackbar("Benchmarking Module was deleted", "success");
     } catch (error) {
       showSnackbar("Error deleting Module", "error");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -101,7 +111,13 @@ const ModuleDetailView = ({
   };
 
   useEffect(() => {
-    setFormData(selectedModule);
+    setFormData({
+      name: selectedModule?.name ?? "",
+      description: selectedModule?.description ?? "",
+      createdAt: selectedModule?.createdAt ?? null,
+      version: selectedModule?.version ?? "",
+      path: selectedModule?.path ?? "",
+    });
   }, [selectedModule]);
 
   return (
@@ -263,6 +279,7 @@ const ModuleDetailView = ({
         handleClose={handleCloseDialog}
         handleDelete={handleDeleteModule}
         moduleName={selectedModule.name}
+        isLoading={isDeleting}
       />
     </Sheet>
   );

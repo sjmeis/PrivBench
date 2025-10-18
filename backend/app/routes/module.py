@@ -1,19 +1,27 @@
+import os
+import logging
+import json
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from sqlalchemy import exists
-
-from ..models import BenchmarkModule, Dataset, BenchmarkScore, AppVersion, ModuleUpdate
-from ..models.user import User
-import os
+from ..models import (
+    BenchmarkModule,
+    Dataset,
+    BenchmarkScore,
+    AppVersion,
+    ModuleUpdate,
+    SubmissionVersionScore,
+    User,
+    Submission,
+    BenchmarkQueue,
+)
 from werkzeug.utils import secure_filename
-import logging
-import json
-from app.tasks.add_module import install_and_load_module
 from ..extensions import db
 from datetime import datetime
-from app.tasks.submission_outdated import mark_submissions_outdated_and_notify
-from ..models.submission import Submission
 from ..enums import SubmissionStatus
+from ..tasks.submission_outdated import mark_submissions_outdated_and_notify
+from ..tasks.add_module import install_and_load_module
+from ..utils.container_manager import container_manager
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +54,52 @@ def _is_version_greater(new_v: str, cur_v: str) -> bool:
     if a is None or b is None:
         return False
     return a > b
+
+
+def _recalculate_version_scores_after_module_delete(module_id: int):
+    """
+    Remove the deleted module from each SubmissionVersionScore.modules list and
+    recompute the version score using remaining module scores for that submission.
+    If no modules remain for a version, delete that version row.
+    """
+    try:
+        with db.session.no_autoflush:
+            affected_versions = (
+                db.session.query(SubmissionVersionScore)
+                .filter(
+                    SubmissionVersionScore.modules.any(BenchmarkModule.id == module_id)
+                )
+                .all()
+            )
+
+            for vs in affected_versions:
+                # Keep only remaining modules
+                vs.modules = [m for m in vs.modules if m.id != module_id]
+
+                # If no modules left for this version, remove the record entirely
+                if not vs.modules:
+                    db.session.delete(vs)
+                    continue
+
+                remaining_ids = [m.id for m in vs.modules]
+                scores = (
+                    db.session.query(BenchmarkScore.score)
+                    .filter(
+                        BenchmarkScore.submission_id == vs.submission_id,
+                        BenchmarkScore.module_id.in_(remaining_ids),
+                    )
+                    .all()
+                )
+                score_vals = [row[0] for row in scores]
+
+                # Recompute using available scores. If none found, remove the row.
+                if score_vals:
+                    vs.score = round(sum(score_vals) / len(score_vals), 2)
+                else:
+                    db.session.delete(vs)
+    except Exception as e:
+        logger.error(f"Error recalculating version scores after module delete: {e}")
+        raise
 
 
 @module_bp.route("/modules", methods=["GET"])
@@ -501,6 +555,54 @@ def delete_benchmark_module(module_id):
         if not module:
             return jsonify({"message": "Benchmark module not found"}), 404
 
+        # Stop and remove the running Docker container for this module (if any)
+        try:
+            container = container_manager.get_container(module.name)
+            if container:
+                container.stop()
+                container.remove(force=True)
+                container_manager.running_containers.pop(
+                    f"module-container-{module.name.lower()}",
+                    None,
+                )
+                logger.info(f"Stopped and removed container for module {module.name}")
+        except Exception as e:
+            logger.warning(f"Could not stop/remove container for {module.name}: {e}")
+
+        # Clean up any queue entries pointing to this module to avoid NOT NULL violations
+        try:
+            deleted_rows = (
+                db.session.query(BenchmarkQueue)
+                .filter(BenchmarkQueue.module_id == module_id)
+                .delete(synchronize_session=False)
+            )
+            if deleted_rows:
+                logger.info(
+                    f"Deleted {deleted_rows} queue entries for module {module.name}"
+                )
+        except Exception as e:
+            logger.warning(
+                f"Failed deleting queue entries for module {module.name}: {e}"
+            )
+
+        # Delete ModuleUpdate rows referencing this module (module_id is NOT NULL)
+        try:
+            updates_deleted = (
+                db.session.query(ModuleUpdate)
+                .filter(ModuleUpdate.module_id == module_id)
+                .delete(synchronize_session=False)
+            )
+            if updates_deleted:
+                logger.info(
+                    f"Deleted {updates_deleted} ModuleUpdate rows for module {module.name}"
+                )
+        except Exception as e:
+            logger.warning(f"Failed deleting ModuleUpdate rows for {module.name}: {e}")
+
+        # Update versioned scores that included this module
+        _recalculate_version_scores_after_module_delete(module_id)
+
+        # Delete BenchmarkScore entries for this module
         BenchmarkScore.query.filter_by(module_id=module_id).delete()
 
         # Update overall scores for submissions with status COMPLETED
@@ -513,24 +615,23 @@ def delete_benchmark_module(module_id):
                 .filter_by(submission_id=submission.id)
                 .all()
             )
-
             if remaining_scores:
-                overall_score = sum(score.score for score in remaining_scores) / len(
+                overall_score = sum(s.score for s in remaining_scores) / len(
                     remaining_scores
                 )
-                submission.score = overall_score
+                submission.score = round(overall_score, 2)
             else:
                 submission.score = None
 
-            db.session.commit()
-
+        db.session.commit()
+        # Delete the module
         db.session.delete(module)
         db.session.commit()
 
         return (
             jsonify(
                 {
-                    "message": "Benchmark module and associated scores deleted successfully"
+                    "message": "Benchmark module and associated scores deleted successfully",
                 }
             ),
             200,
