@@ -219,6 +219,18 @@ const Rankings = () => {
     setCurrentPage(1);
   };
 
+  // Allow manual number entry (0–100%) and convert to 0–1 weight
+  const handleWeightNumberInputChange = (moduleId, rawValue) => {
+    const cleaned = String(rawValue)
+      .replace(",", ".")
+      .replace(/[^\d.]/g, "");
+    let num = parseFloat(cleaned);
+    if (isNaN(num)) num = 0;
+    if (num < 0) num = 0;
+    if (num > 100) num = 100;
+    handleWeightChange(moduleId, Number((num / 100).toFixed(2)));
+  };
+
   const isWeightsValid = () => {
     const total = getTotalWeight();
     return Math.abs(total - 1.0) < 0.01; // Allow small rounding differences
@@ -690,16 +702,18 @@ const Rankings = () => {
                     <Typography level="body-sm" sx={{ fontWeight: 500 }}>
                       {module.name}
                     </Typography>
-                    <Typography
-                      level="body-sm"
-                      sx={{
-                        color: "text.secondary",
-                        minWidth: "60px",
-                        textAlign: "right",
-                      }}
-                    >
-                      {percentage}%
-                    </Typography>
+                    {/* Numeric input for manual percentage entry */}
+                    <Input
+                      size="sm"
+                      type="number"
+                      value={percentage}
+                      onChange={(e) =>
+                        handleWeightNumberInputChange(module.id, e.target.value)
+                      }
+                      slotProps={{ input: { min: 0, max: 100, step: 1 } }}
+                      endDecorator="%"
+                      sx={{ width: 90 }}
+                    />
                   </Box>
                   <Slider
                     value={weight}
