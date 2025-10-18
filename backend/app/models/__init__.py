@@ -10,6 +10,7 @@ from .benchmark_queue import BenchmarkQueue, QueueStatus
 from .task import Task
 from .app_version import AppVersion
 from .submission_version_score import SubmissionVersionScore
+from .module_update import ModuleUpdate
 
 __all__ = [
     "User",
@@ -25,4 +26,5 @@ __all__ = [
     "Task",
     "AppVersion",
     "SubmissionVersionScore",
+    "ModuleUpdate",
 ]
