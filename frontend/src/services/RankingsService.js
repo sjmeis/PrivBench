@@ -6,7 +6,10 @@ const fetchRankings = async (
   page = 1,
   limit = 10,
   sortOrder = "desc",
-  orderBy = "score"
+  orderBy = "score",
+  version = null,
+  moduleIds = [],
+  moduleWeights = {}
 ) => {
   try {
     const url = `${API_BASE_URL}/ranking`;
@@ -17,6 +20,9 @@ const fetchRankings = async (
       limit: limit,
       sortOrder: sortOrder,
       sortBy: orderBy,
+      version: version,
+      moduleIds: moduleIds,
+      moduleWeights: moduleWeights,
     };
 
     const response = await axios.post(url, requestBody, {
@@ -31,6 +37,31 @@ const fetchRankings = async (
     }
   } catch (error) {
     console.error("Error fetching rankings:", error);
+    throw error;
+  }
+};
+
+const fetchRankingFilters = async (version = null) => {
+  try {
+    const url = version
+      ? `${API_BASE_URL}/ranking/filters?version=${encodeURIComponent(version)}`
+      : `${API_BASE_URL}/ranking/filters`;
+
+    const response = await fetch(url, {
+      method: "GET",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching ranking filters:", error);
     throw error;
   }
 };
@@ -97,6 +128,7 @@ const updateSubmissionVisibility = async (submissionId, isPublic) => {
 
 export {
   fetchRankings,
+  fetchRankingFilters,
   fetchSubmissionDetails,
   getUserSubmissions,
   getUserSubmissionsCount,

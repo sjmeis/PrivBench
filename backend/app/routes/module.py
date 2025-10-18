@@ -1,12 +1,13 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
-from ..models import BenchmarkModule, Dataset, BenchmarkScore, AppVersion
+from sqlalchemy import exists
+
+from ..models import BenchmarkModule, Dataset, BenchmarkScore, AppVersion, ModuleUpdate
 from ..models.user import User
 import os
 from werkzeug.utils import secure_filename
 import logging
 import json
-import threading
 from app.tasks.add_module import install_and_load_module
 from ..extensions import db
 from datetime import datetime
@@ -22,6 +23,29 @@ DATASET_FOLDER = os.path.join(PROJECT_ROOT, "data", "datasets")
 MODULES_FOLDER = os.path.join(PROJECT_ROOT, "modules")
 
 module_bp = Blueprint("benchmark_module", __name__)
+
+
+def _recommend_next_version(current: str) -> str:
+    major, minor, patch = map(int, current.split("."))
+    return f"{major}.{minor}.{patch + 1}"
+
+
+def _parse_version(v: str):
+    try:
+        parts = [int(p) for p in v.strip().split(".")]
+        if len(parts) != 3:
+            return None
+        return tuple(parts)
+    except Exception:
+        return None
+
+
+def _is_version_greater(new_v: str, cur_v: str) -> bool:
+    a = _parse_version(new_v)
+    b = _parse_version(cur_v)
+    if a is None or b is None:
+        return False
+    return a > b
 
 
 @module_bp.route("/modules", methods=["GET"])
@@ -72,6 +96,164 @@ def get_all_benchmark_modules():
         )
 
 
+@module_bp.route("/modules/updates/pending", methods=["GET"])
+@jwt_required()
+def list_pending_module_updates():
+    try:
+        user_id = get_jwt_identity()
+        user = User.query.get(int(user_id))
+        if not user or not user.admin:
+            return jsonify({"message": "Forbidden"}), 403
+
+        pending = (
+            db.session.query(ModuleUpdate)
+            .filter(ModuleUpdate.is_updated == True, ModuleUpdate.version_id == None)
+            .order_by(ModuleUpdate.created_at.asc())
+            .all()
+        )
+        current_version = AppVersion.get_current_version()
+        recommended_next = _recommend_next_version(current_version)
+
+        return (
+            jsonify(
+                {
+                    "currentVersion": current_version,
+                    "recommendedNext": recommended_next,
+                    "pending": [u.to_dict() for u in pending],
+                }
+            ),
+            200,
+        )
+    except Exception as e:
+        logger.error(f"Error listing pending updates: {e}")
+        return jsonify({"message": str(e)}), 500
+
+
+@module_bp.route("/modules/publish", methods=["POST"])
+@jwt_required()
+def publish_module_updates():
+    try:
+        user_id = get_jwt_identity()
+        user = User.query.get(int(user_id))
+        if not user or not user.admin:
+            return jsonify({"message": "Forbidden"}), 403
+
+        data = request.get_json() or {}
+        version_str = data.get("version")  # required on publish
+        description = data.get("description")
+
+        if (
+            not version_str
+            or not isinstance(version_str, str)
+            or not version_str.strip()
+        ):
+            return jsonify({"message": "Version is required to publish"}), 400
+
+        current_version = AppVersion.get_current_version()
+        if not _is_version_greater(version_str, current_version):
+            return (
+                jsonify(
+                    {
+                        "message": f"Version must be greater than current ({current_version})"
+                    }
+                ),
+                400,
+            )
+
+        # ensure version uniqueness
+        exists_version = db.session.query(
+            exists().where(AppVersion.version == version_str)
+        ).scalar()
+        if exists_version:
+            return jsonify({"message": f"Version {version_str} already exists"}), 409
+
+        # get pending updates
+        pending = (
+            db.session.query(ModuleUpdate)
+            .filter(ModuleUpdate.is_updated == True, ModuleUpdate.version_id == None)
+            .all()
+        )
+        if not pending:
+            return jsonify({"message": "No pending module updates to publish"}), 400
+
+        # create new AppVersion
+        new_version = AppVersion(version=version_str)
+        db.session.add(new_version)
+        db.session.flush()
+
+        # apply version to updated/added modules and finalize ModuleUpdate rows
+        affected_module_ids = {u.module_id for u in pending}
+        modules = (
+            db.session.query(BenchmarkModule)
+            .filter(BenchmarkModule.id.in_(affected_module_ids))
+            .all()
+        )
+        for module in modules:
+            module.version = version_str
+
+        for pending_update in pending:
+            pending_update.is_updated = False
+            pending_update.version_id = new_version.id
+            if (
+                description
+                and pending_update.update_type == "modified"
+                and not pending_update.description
+            ):
+                pending_update.description = description
+
+        db.session.commit()
+
+        # Build change summary for the email/task
+        module_by_id = {m.id: m for m in modules}
+        new_modules = [
+            {"id": u.module_id, "name": module_by_id[u.module_id].name}
+            for u in pending
+            if u.update_type == "new_module" and u.module_id in module_by_id
+        ]
+        modified_modules = [
+            {
+                "id": u.module_id,
+                "name": module_by_id[u.module_id].name,
+                "description": (u.description or "").strip(),
+            }
+            for u in pending
+            if u.update_type == "modified" and u.module_id in module_by_id
+        ]
+
+        # Only require users to update submissions and send emails if at least one new module was added
+        if new_modules:
+            try:
+                notify_task = mark_submissions_outdated_and_notify.delay(
+                    version_str,
+                    {"new_modules": new_modules, "modified_modules": modified_modules},
+                )
+                logger.info(f"Outdated-mark notify task queued: {notify_task.id}")
+            except Exception as e:
+                logger.warning(f"Failed to enqueue notify task: {e}")
+        else:
+            logger.info(
+                "Publish completed with metadata-only changes; no submission updates required."
+            )
+
+        return (
+            jsonify(
+                {
+                    "message": "Published successfully",
+                    "version": version_str,
+                    "affectedModules": [m.id for m in modules],
+                    "pendingUpdatesClosed": len(pending),
+                    "requiresSubmissionUpdate": bool(new_modules),
+                }
+            ),
+            200,
+        )
+
+    except Exception as e:
+        logger.error(f"Error publishing updates: {e}")
+        db.session.rollback()
+        return jsonify({"message": str(e)}), 500
+
+
 @module_bp.route("/modules/create", methods=["POST"])
 @jwt_required()
 def create_benchmark_module():
@@ -89,6 +271,8 @@ def create_benchmark_module():
 
         name = request.form.get("name")
         description = request.form.get("description")
+        provided_version = request.form.get("version")  # may be empty
+        device_spec = request.form.get("deviceSpecification")  # optional
 
         # Handle selected datasets - comes as JSON string
         selected_datasets_json = request.form.get("selectedDatasets")
@@ -158,15 +342,15 @@ def create_benchmark_module():
                     logger.warning(f"Skipping invalid dataset file")
                     continue
 
-        # Increment app version
-        new_version = AppVersion.increment_version()
-        logger.info(f"Incremented app version to {new_version}")
+        # Do not increment app version here, module will receive its version upon publish.
+        # Use current app version or provided version as placeholder.
+        current_ver = provided_version or AppVersion.get_current_version()
 
         new_benchmark_module = BenchmarkModule(
             name=name,
             title=name,
             description=description,
-            version=new_version,
+            version=current_ver,
             is_active=True,
             path=algo_path,
             dataset_id=dataset_ids[0],  # TODO: add support for multiple datasets
@@ -174,6 +358,17 @@ def create_benchmark_module():
 
         db.session.add(new_benchmark_module)
         db.session.flush()
+
+        # Record a pending update entry
+        db.session.add(
+            ModuleUpdate(
+                module_id=new_benchmark_module.id,
+                update_type="new_module",
+                description=f"New module '{name}' added",
+                is_updated=True,
+                version_id=None,
+            )
+        )
 
         db.session.commit()
 
@@ -196,8 +391,6 @@ def create_benchmark_module():
             is_new_module=True,
         )
 
-        notify_task = mark_submissions_outdated_and_notify.delay(name)
-
         return (
             jsonify(
                 {
@@ -210,7 +403,6 @@ def create_benchmark_module():
                         "requirementsFilePath": requirements_path,
                         "uploadedDatasetPaths": uploaded_file_paths,
                         "install_task_id": install_task.id,
-                        "notify_task_id": notify_task.id,
                     },
                 }
             ),
@@ -372,12 +564,27 @@ def update_benchmark_module(module_id):
         new_name = data.get("name")
         new_description = data.get("description")
 
+        changed_fields = []
         if new_name:
             module.name = new_name
-        if new_description:
+            changed_fields.append("name")
+        if new_description and new_description != module.description:
             module.description = new_description
+            changed_fields.append("description")
 
         db.session.commit()
+
+        if changed_fields:
+            db.session.add(
+                ModuleUpdate(
+                    module_id=module.id,
+                    update_type="modified",
+                    description=f"Fields updated: {', '.join(changed_fields)}",
+                    is_updated=True,
+                    version_id=None,
+                )
+            )
+            db.session.commit()
 
         # Return the updated module as JSON
         updated_module = {

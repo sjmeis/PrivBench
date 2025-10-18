@@ -85,7 +85,6 @@ const UserSubmissionsTableRow = ({
   };
 
   const availableVersions = getAvailableVersions();
-  console.log("row", row);
 
   return (
     <Fragment>
@@ -135,7 +134,12 @@ const UserSubmissionsTableRow = ({
                         {versionData.version}
                       </Box>
                       <Box sx={{ fontSize: "0.8em", color: "text.secondary" }}>
-                        Score: {versionData.score?.toFixed(2) || "N/A"}
+                        {/* 0 is valid */}
+                        Score:{" "}
+                        {versionData.score !== null &&
+                        versionData.score !== undefined
+                          ? Number(versionData.score).toFixed(2)
+                          : "N/A"}
                       </Box>
                     </Box>
                   </MenuItem>
@@ -200,7 +204,6 @@ const UserSubmissionsTableRow = ({
                 <thead>
                   <tr>
                     <th>Module Name</th>
-                    <th>Version</th>
                     <th>Score</th>
                   </tr>
                 </thead>
@@ -212,17 +215,16 @@ const UserSubmissionsTableRow = ({
                         moduleData.benchmarkModule?.name ||
                         moduleData.name ||
                         moduleData.module_name;
-                      const moduleVersion =
-                        moduleData.benchmarkModule?.version ||
-                        moduleData.version;
                       const moduleScore = moduleData.score;
 
                       return (
                         <tr key={index}>
                           <th scope="row">{moduleName || "Unknown Module"}</th>
-                          <td>{moduleVersion || "N/A"}</td>
                           <td>
-                            {moduleScore ? moduleScore.toFixed(2) : "N/A"}
+                            {/* 0 is valid */}
+                            {moduleScore !== null && moduleScore !== undefined
+                              ? Number(moduleScore).toFixed(2)
+                              : "N/A"}
                           </td>
                         </tr>
                       );
