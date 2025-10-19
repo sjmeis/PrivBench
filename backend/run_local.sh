@@ -2,6 +2,23 @@
 set -e
 FLASK_PID=""
 
+# Activate virtual environment from root directory
+if [ -d "../venv" ]; then
+    source ../venv/bin/activate
+else
+    echo "Virtual environment not found in root directory"
+    exit 1
+fi
+
+# Load environment variables from .env, ignoring comments and empty lines
+if [ -f .env ]; then
+    echo "Loading .env file..."
+    export $(grep -v '^#' .env | grep -v '^$' | xargs)
+else
+    echo "Warning: .env file not found"
+fi
+
+
 # Trap SIGINT and SIGTERM to stop containers gracefully
 cleanup() {
     echo "Stopping module containers..."
@@ -21,17 +38,16 @@ trap cleanup SIGINT SIGTERM
 # Function to wait for Redis
 wait_for_redis() {
     echo "Waiting for Redis..."
-    while ! nc -z redis 6379; do
+    until redis-cli ping; do
         sleep 1
     done
     echo "Redis is up!"
-    redis-cli -h redis ping
 }
 
 # Function to wait for PostgreSQL
 wait_for_postgres() {
     echo "Waiting for PostgreSQL..."
-    while ! nc -z db 5432; do
+    while ! nc -z localhost 5432; do
         sleep 1
     done
     echo "PostgreSQL is ready!"
@@ -49,7 +65,7 @@ wait_for_flask() {
 run_db_scripts() {
     # Ensure the database is ready before running the scripts
     echo "Waiting for the database to be ready..."
-    until pg_isready -h db -p 5432 -U user; do
+    until pg_isready -h localhost -p 5432 -U user; do
       sleep 1
     done
 
@@ -57,21 +73,23 @@ run_db_scripts() {
 
     # Run the database setup script to add modules
     echo "Running setup-db.py..."
-    python /app/setup-db.py
+    python setup-db.py
 
     # Populate the database  //FIXME: remove this in production, only needed for demo data
     if [ "$FLASK_ENV" = "development" ]; then
         echo "Running populate-db.py..."
-        python /app/populate-db.py
+        python populate-db.py
     fi
     
 }
 
 # Function to handle database migrations
 setup_database() {
+    echo "DEBUG: FLASK_ENV is: '$FLASK_ENV'"
+    echo "DEBUG: CLEAN_DB is: '$CLEAN_DB'"
     if [ "$FLASK_ENV" = "development" ] && [ "$CLEAN_DB" = "true" ]; then
         echo "Resetting DB and migrations..."
-        PGPASSWORD=$POSTGRES_PASSWORD psql -h db -U user -d dbname -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+        PGPASSWORD=$POSTGRES_PASSWORD psql -h localhost -U user -d dbname -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
         rm -rf migrations
     fi
 
@@ -110,7 +128,8 @@ wait_for_postgres
 setup_database
 
 echo "Starting the Flask application..."
-python -m flask run --host=0.0.0.0 &
+# python -m flask run --host=0.0.0.0 &
+python -m debugpy --listen 5678 -m flask run --host=0.0.0.0 --no-reload --no-debugger &
 FLASK_PID=$!
 
 # Wait for Flask to be ready

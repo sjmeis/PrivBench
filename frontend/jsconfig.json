@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "es6",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "jsx": "react-jsx",
+    "checkJs": true,
+    "baseUrl": ".",
+    "paths": {
+      "@components/*": ["src/components/*"],
+      "@shared/*": ["src/shared/*"],
+      "@submission/*": ["src/submission/*"],
+      "@user/*": ["src/user/*"]
+    }
+  },
+  "include": ["src"]
+}

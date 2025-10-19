@@ -1,304 +1,481 @@
-import React, {useEffect, useState} from "react";
+import React, { useEffect, useState } from "react";
 import {
-    Box,
-    Button,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
-    Divider,
-    Modal,
-    ModalClose,
-    ModalDialog, Typography
+  Box,
+  Button,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
+  Modal,
+  ModalClose,
+  ModalDialog,
+  Typography,
 } from "@mui/joy";
-import {InfoOutlined, CloudDownload, RemoveRedEye, Close, Update} from "@mui/icons-material";
-import {useSnackbar} from "../../contexts/SnackbarProvider";
-import {DatasetService} from '../../services/DatasetService';
-import {TaskService} from '../../services/TaskService';
-import {BenchmarkService} from '../../services/BenchmarkService';
-import DatasetTableUpdate from '../submission/DatasetTableUpdate';
-import ScoreOverviewCard from "../submission/ScoreOverviewCard";
+import {
+  InfoOutlined,
+  CloudDownload,
+  Close,
+  Update,
+  RemoveRedEye,
+} from "@mui/icons-material";
+import { useSnackbar } from "../../contexts/SnackbarProvider";
+import { DatasetService } from "../../services/DatasetService";
+import { BenchmarkService } from "../../services/BenchmarkService";
+import DatasetTableUpdate from "../submission/DatasetTableUpdate";
 import TaskProgressCard from "../submission/TaskProgressCard";
+import ScoreOverviewCard from "../submission/ScoreOverviewCard";
+import { API_BASE_URL } from "../../config";
 
-const UpdateSubmissionModal = ({isOpen, onClose, submission}) => {
-    const [datasets, setDatasets] = useState([]);
-    const [uploadedFiles, setUploadedFiles] = useState({});
-    const [uploadingDatasetId, setUploadingDatasetId] = useState(null);
-    const [tasks, setTasks] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [moduleScores, setModuleScores] = useState([]);
-    const [averageScore, setAverageScore] = useState(null);
-    const {showSnackbar} = useSnackbar();
+const UpdateSubmissionModal = ({ isOpen, onClose, submission }) => {
+  // State for file upload phase
+  const [datasets, setDatasets] = useState([]);
+  const [uploadedFiles, setUploadedFiles] = useState({});
+  const [uploadingDatasetId, setUploadingDatasetId] = useState(null);
 
-    useEffect(() => {
-        if (!submission) {
-            return;
-        }
+  // State for evaluation phase (single task)
+  const [task, setTask] = useState(null);
+  const [queueEntry, setQueueEntry] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [submissionId, setSubmissionId] = useState(null);
 
-        const fetchData = async () => {
-            try {
-                await DatasetService.fetchAllDatasetsForUpdate(submission.id)
-                    .then(data => setDatasets(data.datasets))
-                    .catch();
-            } catch (error) {
-                showSnackbar('Failed to fetch data', 'error');
-            }
-        };
+  // State for results phase
+  const [averageScore, setAverageScore] = useState(null);
+  const [newModuleScore, setNewModuleScore] = useState(null);
 
-        if (isOpen) {
-            fetchData();
-        }
-    }, [isOpen, submission]);
+  const { showSnackbar } = useSnackbar();
 
-
-    useEffect(() => {
-        if (tasks.length === 0) return;
-
-        const pollTasks = async () => {
-            const token = localStorage.getItem("token");
-
-            const updatedTasks = await BenchmarkService.pollTasks(tasks, token, showSnackbar);
-
-            setTasks(updatedTasks);
-
-            const allTasksFinished = updatedTasks.every(
-                (task) => task.completed || task.error || task.state === "FAILURE"
-            );
-
-            if (allTasksFinished) {
-                setLoading(false);
-                const successfulTasks = updatedTasks.filter(
-                    (task) => task.completed && task.score !== null
-                );
-
-                if (successfulTasks.length > 0) {
-                    const scores = successfulTasks.map((t) => ({
-                        module_name: t.module_name,
-                        score: t.score,
-                    }));
-                    setModuleScores(scores);
-                    const s = scores.concat(submission.benchmarkScores)
-                    setAverageScore(
-                        s.reduce((sum, curr) => sum + curr.score, 0) / s.length
-                    );
-                }
-            }
-        };
-
-        const intervalId = setInterval(pollTasks, 1000);
-        return () => clearInterval(intervalId);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [tasks.length]);
-
-    const isFormValid = () => {
-        return Array.isArray(datasets) && datasets.every(dataset => uploadedFiles[dataset.id]);
+  // Effect to initialize datasets when modal opens
+  useEffect(() => {
+    if (!submission || !isOpen) {
+      // Reset all state when modal is closed
+      setTask(null);
+      setQueueEntry(null);
+      setUploadedFiles({});
+      setDatasets([]);
+      setLoading(false);
+      setSubmissionId(null);
+      setAverageScore(null);
+      setNewModuleScore(null);
+      return;
     }
 
-    const updateSubmission = async () => {
-        if (!isFormValid()) {
-            showSnackbar("Please upload all required datasets", "error");
-            return;
-        }
-
-        try {
-            setLoading(true);
-            const data = await BenchmarkService.startBenchmarkUpdate(submission.id);
-
-            if (data.message === "No new modules to benchmark") {
-                showSnackbar("No new modules to benchmark", "info");
-                return;
-            }
-
-            setTasks(data.task_ids.map(task => ({
-                ...task,
-                progress: 0,
-                processedRows: 0,
-                totalRows: 0,
-                status: 'Starting...',
-                completed: false,
-                score: null,
-                error: null
-            })));
-
-        } catch (error) {
-            console.error('Error starting benchmark update:', error);
-            showSnackbar(error.message || "Failed to start benchmark update", "error");
-            setLoading(false);
-        }
+    const fetchData = async () => {
+      try {
+        const data = await DatasetService.fetchAllDatasetsForUpdate(
+          submission.id
+        );
+        setDatasets(data.datasets);
+      } catch (error) {
+        showSnackbar("Failed to fetch required datasets", "error");
+      }
     };
 
-    useEffect(() => {
-        if (tasks.length > 0 && !loading) {
-            setLoading(true);
-            const cleanup = TaskService.startPolling(
-                tasks,
-                (updatedTasks) => setTasks(updatedTasks),
-                (result) => {
-                    setLoading(false);
-                    if (result.scores) {
-                        setModuleScores(result.scores);
-                        const scores = result.scores.concat(submission.benchmarkScores)
-                        setAverageScore(
-                            scores.reduce((sum, curr) => sum + curr.score, 0) / scores.length
-                        );
-                    }
-                    onClose();
-                }
+    fetchData();
+  }, [isOpen, submission]);
+
+  // Helper function to fetch queue status for the single module
+  const fetchQueueStatus = async (submissionId, moduleId) => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/queue-status/${submissionId}/${moduleId}`,
+        {
+          credentials: "include",
+        }
+      );
+      if (response.ok) {
+        return await response.json();
+      }
+    } catch (error) {
+      console.error(
+        `Error fetching queue status for module ${moduleId}:`,
+        error
+      );
+    }
+    return null;
+  };
+
+  // Simplified polling effect for single task
+  useEffect(() => {
+    if (!loading || !submissionId || !task) {
+      return;
+    }
+
+    const pollStatus = async () => {
+      try {
+        // Check if the single task is finished
+        if (task.completed || task.error) {
+          setLoading(false);
+
+          // Calculate final score if task completed successfully
+          if (task.completed && task.score !== null) {
+            const newScore = {
+              module_name: task.module_name,
+              score: task.score,
+            };
+            setNewModuleScore(newScore);
+            // Combine old scores with new score for final average
+            const oldScores = submission.benchmarkScores.map((s) => s.score);
+            const combinedScores = [...oldScores, task.score];
+            const totalScore = combinedScores.reduce(
+              (sum, score) => sum + score,
+              0
             );
-            return cleanup;
+            const finalAverage = totalScore / combinedScores.length;
+
+            setAverageScore(finalAverage);
+
+            // Call backend to finalize and save - only once
+            try {
+              const result = await BenchmarkService.finalizeBenchmarkUpdate(
+                submissionId
+              );
+              showSnackbar(result.message, "success");
+            } catch (error) {
+              showSnackbar(
+                error.response?.data?.message ||
+                  "Failed to finalize submission update.",
+                "error"
+              );
+            }
+          }
+          return;
         }
-    }, [tasks]);
 
-    const handleFileSelect = async (event, originalDatasetId) => {
-        const file = event.target.files[0];
-        if (!file) return;
+        // Get queue status for the single module
+        const queueStatusResponse = await fetchQueueStatus(
+          submissionId,
+          task.module_id
+        );
 
-        setUploadingDatasetId(originalDatasetId);
-        const submissionId = submission.id;
+        if (!queueStatusResponse) {
+          return;
+        }
 
-        const result = await DatasetService.uploadPrivatizedDataset({
-            file,
-            submissionId,
-            originalDatasetId,
-            setUploadingDatasetId,
-            setUploadedFiles,
-            event,
-        });
+        const queuePositionInfo = queueStatusResponse.queue_position_info;
+        const moduleQueueStatus = queueStatusResponse.module_queue_status;
 
-        if (result.success) {
-            setUploadedFiles((prev) => ({
-                ...prev,
-                [originalDatasetId]: file,
-            }));
-            showSnackbar(result.message, "success");
+        let updatedTask = { ...task };
+
+        // If task is actively processing
+        if (queuePositionInfo.task_id) {
+          try {
+            const response = await fetch(
+              `${API_BASE_URL}/task-status/${queuePositionInfo.task_id}`,
+              {
+                credentials: "include",
+              }
+            );
+            const data = await response.json();
+
+            updatedTask = {
+              ...task,
+              task_id: queuePositionInfo.task_id,
+              progress: Math.round((data.current / data.total) * 100),
+              processedRows: data.processedRows,
+              totalRows: data.totalRows,
+              status: data.status,
+              completed: data.state === "SUCCESS",
+              error: data.state === "FAILURE" ? data.status : null,
+              score: data.score,
+            };
+          } catch (error) {
+            updatedTask = { ...task, error: "Failed to fetch task status." };
+          }
         } else {
-            showSnackbar(result.message, "error");
+          // Task is waiting in queue
+          updatedTask = {
+            ...task,
+            status: `In queue (Position: ${queuePositionInfo.position})`,
+          };
         }
+
+        setTask(updatedTask);
+
+        // Update queue entry status
+        if (queueEntry) {
+          let newStatus = "waiting";
+          if (updatedTask.completed) {
+            newStatus = "completed";
+          } else if (updatedTask.error) {
+            newStatus = "failed";
+          } else if (updatedTask.task_id) {
+            newStatus = "processing";
+          }
+
+          setQueueEntry({
+            ...queueEntry,
+            ...queuePositionInfo,
+            status: newStatus,
+            moduleQueueStatus: moduleQueueStatus,
+          });
+        }
+      } catch (error) {
+        console.error("Error in pollStatus:", error);
+      }
     };
 
-    const handleDownloadMissingDatasets = async () => {
-        DatasetService.downloadDatasets(datasets.map(dataset => dataset.name))
-            .then(() => {
-                showSnackbar("All selected datasets were downloaded successfully!", "success");
-            })
-            .catch(() => {
-                showSnackbar("Error downloading datasets", "error");
-            });
-    };
+    const intervalId = setInterval(pollStatus, 2000);
+    return () => clearInterval(intervalId);
+  }, [loading, submissionId, task]);
 
+  // Form validation
+  const isFormValid = () => {
     return (
-        <Modal
-            open={isOpen}
-            onClose={onClose}
-            sx={{display: "flex", alignItems: "center", justifyContent: "center"}}
-        >
-            <ModalDialog sx={{width: '90vw', maxWidth: '1200px', overflowX: 'hidden'}}>
-                <DialogTitle
-                    sx={{
-                        alignItems: 'center',
-                    }}
+      Array.isArray(datasets) &&
+      datasets.every((dataset) => uploadedFiles[dataset.id])
+    );
+  };
+
+  // Start the update process
+  const updateSubmission = async () => {
+    if (!isFormValid()) {
+      showSnackbar("Please upload all required datasets", "error");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const data = await BenchmarkService.startBenchmarkUpdate(submission.id);
+
+      if (data.message === "No new modules to benchmark") {
+        showSnackbar("This submission is already up-to-date.", "info");
+        setLoading(false);
+        onClose();
+        return;
+      }
+
+      // Since we have only one new module, get the first (and only) entry
+      const queueEntry = data.queue_entries[0];
+      const immediateTask = data.immediate_tasks?.find(
+        (task) => task.module_id === queueEntry.module_id
+      );
+
+      // Initialize single task state
+      const initialTask = {
+        task_id: immediateTask?.task_id || null,
+        module_id: queueEntry.module_id,
+        module_name: queueEntry.module_name,
+        queue_entry_id: queueEntry.queue_entry_id,
+        progress: 0,
+        processedRows: 0,
+        totalRows: 0,
+        status: immediateTask
+          ? "Starting..."
+          : `In queue (Position: ${queueEntry.position})`,
+        completed: false,
+        score: null,
+        error: null,
+      };
+
+      setTask(initialTask);
+      setQueueEntry(queueEntry);
+      setSubmissionId(data.submission_id || submission.id);
+    } catch (error) {
+      console.error("Error starting benchmark update:", error);
+      showSnackbar(
+        error.response?.data?.message || "Failed to start benchmark update",
+        "error"
+      );
+      setLoading(false);
+    }
+  };
+
+  // Handle file selection for datasets
+  const handleFileSelect = async (event, originalDatasetId) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    setUploadingDatasetId(originalDatasetId);
+
+    const result = await DatasetService.uploadPrivatizedDataset({
+      file,
+      submissionId: submission.id,
+      originalDatasetId,
+      setUploadingDatasetId,
+      setUploadedFiles,
+      event,
+    });
+
+    if (result.success) {
+      setUploadedFiles((prev) => ({
+        ...prev,
+        [originalDatasetId]: file,
+      }));
+      showSnackbar(result.message, "success");
+    } else {
+      showSnackbar(result.message, "error");
+    }
+  };
+
+  // Download missing datasets
+  const handleDownloadMissingDatasets = async () => {
+    try {
+      await DatasetService.downloadDatasets(
+        datasets.map((dataset) => dataset.name)
+      );
+      showSnackbar(
+        "All selected datasets were downloaded successfully!",
+        "success"
+      );
+    } catch (error) {
+      showSnackbar("Error downloading datasets", "error");
+    }
+  };
+
+  // Don't render if modal is closed or submission is null
+  if (!isOpen || !submission) {
+    return null;
+  }
+
+  return (
+    <Modal
+      open={isOpen}
+      onClose={onClose}
+      sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}
+    >
+      <ModalDialog
+        sx={{ width: "90vw", maxWidth: "1200px", overflowX: "hidden" }}
+      >
+        <DialogTitle sx={{ alignItems: "center" }}>
+          Update Submission
+          <Typography variant="soft" color="primary">
+            {submission ? submission.name : "Loading..."}
+          </Typography>
+        </DialogTitle>
+        <Divider sx={{ marginBottom: "10px" }} />
+
+        <DialogContent sx={{ overflowX: "hidden" }}>
+          {/* Phase 1: File Upload */}
+          {!task ? (
+            <>
+              <Box
+                sx={{
+                  mb: 3,
+                  flex: 1,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 2,
+                }}
+              >
+                <Typography level="h5" fontWeight="bold">
+                  Step 1: Download missing datasets
+                </Typography>
+                <Box sx={{ textAlign: "center" }}>
+                  <Button
+                    fullWidth
+                    variant="solid"
+                    startDecorator={<CloudDownload />}
+                    onClick={handleDownloadMissingDatasets}
+                    disabled={datasets.length === 0}
+                  >
+                    Download Missing Datasets
+                  </Button>
+                </Box>
+              </Box>
+
+              <Box
+                sx={{
+                  flex: 1,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 2,
+                }}
+              >
+                <Typography level="h5" fontWeight="bold">
+                  Step 2: Upload privatized dataset for the new benchmarking
+                  module
+                </Typography>
+                <Typography
+                  sx={{ marginY: 2, p: 1 }}
+                  startDecorator={<InfoOutlined />}
+                  variant="soft"
+                  color="neutral"
+                  level="body1"
                 >
-                    Update Submission
-                    <Typography variant="soft" color="primary">
-                        {submission ? submission.name : 'Loading...'}
-                    </Typography>
-                </DialogTitle>
-                <Divider sx={{marginBottom: "10px"}}/>
-                <DialogContent sx={{overflowX: 'hidden'}}>
-                    {tasks.length === 0 && (
-                        <>
-                            <Box sx={{mb: 3, flex: 1, display: "flex", flexDirection: "column", gap: 2}}>
-                                <Typography level="h5" fontWeight="bold">
-                                    Step 1: Download missing datasets
-                                </Typography>
-                                <Box sx={{textAlign: "center"}}>
-                                    <Button
-                                        fullWidth
-                                        variant="solid"
-                                        startDecorator={<CloudDownload/>}
-                                        onClick={handleDownloadMissingDatasets}
-                                        disabled={datasets.length === 0}
-                                    >
-                                        Download Missing Datasets
-                                    </Button>
-                                </Box>
-                            </Box>
-                            <Box sx={{flex: 1, display: "flex", flexDirection: "column", gap: 2}}>
-                                <Typography level="h5" fontWeight="bold">
-                                    Step 2: Upload of privatized datasets for missing benchmarking modules
-                                </Typography>
+                  A privatized version of the dataset in .csv format must be
+                  uploaded for the new module.
+                </Typography>
+                {datasets.length > 0 && (
+                  <DatasetTableUpdate
+                    datasets={datasets}
+                    uploadedFiles={uploadedFiles}
+                    uploadingDatasetId={uploadingDatasetId}
+                    onFileSelect={handleFileSelect}
+                  />
+                )}
+              </Box>
+            </>
+          ) : /* Phase 2: Processing */
+          loading ? (
+            <>
+              <Typography level="h3">Evaluation in Progress</Typography>
+              {/* Pass single task as array to TaskProgressCard for compatibility */}
+              <TaskProgressCard
+                tasks={[task]}
+                queueEntries={queueEntry ? [queueEntry] : []}
+              />
+              <Typography level="body2" sx={{ mt: 2, textAlign: "center" }}>
+                {task.status.includes("Position")
+                  ? "Your submission is queued. Please wait for your turn."
+                  : "Your submission is being processed."}
+              </Typography>
+            </>
+          ) : (
+            /* Phase 3: Results */
+            <>
+              <Typography level="h3" mb={2}>
+                Updated Results
+              </Typography>
+              <ScoreOverviewCard
+                oldModulesScores={submission.benchmarkScores}
+                moduleScores={newModuleScore ? [newModuleScore] : []}
+                averageScore={averageScore}
+              />
+            </>
+          )}
+        </DialogContent>
 
-                                <Typography sx={{marginY: 2, p: 1}} startDecorator={<InfoOutlined/>} variant='soft'
-                                            color='neutral' level="body1">
-                                    For every dataset listed below there needs to be uploaded the privatized counterpart
-                                    in
-                                    .csv
-                                    format
-                                </Typography>
-                                {datasets.length > 0 &&
-                                    <DatasetTableUpdate
-                                        datasets={datasets}
-                                        uploadedFiles={uploadedFiles}
-                                        uploadingDatasetId={uploadingDatasetId}
-                                        onFileSelect={handleFileSelect}
-                                    />
-                                }
+        {/* Action buttons based on current phase */}
+        {!loading && averageScore !== null && (
+          <DialogActions>
+            <Button
+              fullWidth
+              variant="solid"
+              color="primary"
+              onClick={onClose}
+              endDecorator={<RemoveRedEye />}
+            >
+              View My Submissions
+            </Button>
+          </DialogActions>
+        )}
 
-                            </Box>
-                        </>
-                    )
-                    }
+        {!task && (
+          <DialogActions>
+            <Button
+              onClick={updateSubmission}
+              disabled={!isFormValid() || loading}
+              color={isFormValid() ? "success" : "primary"}
+              endDecorator={<Update />}
+            >
+              Update Submission
+            </Button>
+            <Button
+              onClick={onClose}
+              variant="soft"
+              color="neutral"
+              disabled={loading}
+              startDecorator={<Close />}
+            >
+              {loading ? "Please wait..." : "Close"}
+            </Button>
+          </DialogActions>
+        )}
 
-                    {tasks.length > 0 && submission && (
-                        moduleScores.length > 0 ? (
-                            <>
-                                <Typography level="h3" mb={2}>
-                                   Updated Results
-                                </Typography>
-                                <ScoreOverviewCard oldModulesScores={submission.benchmarkScores} moduleScores={moduleScores} averageScore={averageScore} />
-                                <Button
-                                    fullWidth
-                                    variant="solid"
-                                    color="primary"
-                                    sx={{ mt: 3 }}
-                                    onClick={() => onClose()}
-                                    endDecorator={<RemoveRedEye />}
-                                >
-                                    View My Submissions
-                                </Button>
-                            </>
-                        ) : (
-                            <>
-                                <Typography level="h3">
-                                    Evaluation in Progress
-                                </Typography>
-                                <TaskProgressCard tasks={tasks} />
-                            </>
-
-                        )
-                    )}
-
-                </DialogContent>
-                {tasks.length === 0 && (
-                    <DialogActions>
-
-                        <Button
-                            onClick={updateSubmission}
-                            disabled={!isFormValid() || loading}
-                            color={isFormValid() ? 'success' : 'primary'}
-                            endDecorator={<Update />}
-                        >
-                            Update Submission
-                        </Button>
-                        <Button onClick={onClose} variant='soft' color='neutral' disabled={loading} startDecorator={<Close />}>
-                            {loading ? 'Please wait...' : 'Close'}
-                        </Button>
-                    </DialogActions>
-                )
-                }
-                <ModalClose/>
-            </ModalDialog>
-        </Modal>
-    )
-}
+        <ModalClose />
+      </ModalDialog>
+    </Modal>
+  );
+};
 
 export default UpdateSubmissionModal;
