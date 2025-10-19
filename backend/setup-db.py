@@ -1,5 +1,5 @@
 from app import create_app, db
-from app.models import Dataset, BenchmarkModule
+from app.models import Dataset, BenchmarkModule, AppVersion
 from app.tasks.add_module import install_and_load_module
 from datetime import datetime
 import os
@@ -31,49 +31,56 @@ with app.app_context():
     db.drop_all()
     db.create_all()
 
+    # Initialize app version
+    initial_version = AppVersion(version="1.0.0")
+    db.session.add(initial_version)
+    db.session.commit()
+    logger.info("Initialized app version to 1.0.0")
+
     module_names = [
-        # "NERpriv",
+        "NERpriv",
         "Coherence",
-        # "NearestNeighbor",
-        # "Similarity",
-        # "MaskedTokenInference",
+        "NearestNeighbor",
+        "Similarity",
+        "MaskedTokenInference",
     ]
     module_file_names = [
-        # "NERpriv.py",
+        "NERpriv.py",
         "Coherence.py",
-        # "NearestNeighbor.py",
-        # "Similarity.py",
-        # "MaskedTokenInference.py",
+        "NearestNeighbor.py",
+        "Similarity.py",
+        "MaskedTokenInference.py",
     ]
     module_requirement_file_names = [
-        # "ner_requirements.txt",
+        "ner_requirements.txt",
         "coh-reqs.txt",
-        # "nearest-neighbor-reqs.txt",
-        # "similarity-reqs.txt",
-        # "masked-token-reqs.txt",
+        "nearest-neighbor-reqs.txt",
+        "similarity-reqs.txt",
+        "masked-token-reqs.txt",
     ]
     dataset_names = [
-        # "demo_nerpriv.csv",
+        "demo_nerpriv.csv",
         "demo_coherence.csv",
-        # "demo_nearestneighbor.csv",
-        # "demo_similarity.csv",
-        # "demo_maskedtokeninf.csv",
+        "demo_nearestneighbor.csv",
+        "demo_similarity.csv",
+        "demo_maskedtokeninf.csv",
     ]
 
     module_titles = [
-        # "NER Evaluation",
+        "NER Evaluation",
         "Text Coherence",
-        # "Nearest Neighbor Search",
-        # "Text Similarity",
-        # "Masked Token Inference",
+        "Nearest Neighbor Search",
+        "Text Similarity",
+        "Masked Token Inference",
     ]
+
     module_descriptions = [
-        # "On the surface, text privatization should pay particular attention to named entities, or words or groups of words that point to some real-world object, person, organization, etc. Ensuring that such entities are not leaked into the privatized text, while also balancing the preservation of semantics, is the mark of an effective privatization method.",
+        "On the surface, text privatization should pay particular attention to named entities, or words or groups of words that point to some real-world object, person, organization, etc. Ensuring that such entities are not leaked into the privatized text, while also balancing the preservation of semantics, is the mark of an effective privatization method.",
         "This module evaluates the coherence of text, ensuring logical flow and semantic connectivity between sentences and paragraphs.",
-        # "The nearest neighbor module enables efficient searching for the closest data points, useful in "
-        # "classification and recommendation systems.",
-        # "Text similarity measures the likeness between two pieces of text, commonly used in search engines, clustering, and recommendation tasks.",
-        # "In this module, we test for a privatization method's ability to defend against masked token prediction. Here, an attacker is simulated who attempts to infer tokens from the original text by leveraging the surrounding context. An effective privatization method should therefore not divulge information about the original content given the private context.",
+        "The nearest neighbor module enables efficient searching for the closest data points, useful in "
+        "classification and recommendation systems.",
+        "Text similarity measures the likeness between two pieces of text, commonly used in search engines, clustering, and recommendation tasks.",
+        "In this module, we test for a privatization method's ability to defend against masked token prediction. Here, an attacker is simulated who attempts to infer tokens from the original text by leveraging the surrounding context. An effective privatization method should therefore not divulge information about the original content given the private context.",
     ]
 
     # Create a dictionary to store datasets
@@ -145,7 +152,7 @@ with app.app_context():
             logger.info(f"Waiting for {module_name} installation...")
 
             try:
-                result = task.get(timeout=300)  # 5 minute timeout per module
+                result = task.get(timeout=600)  # 10 minute timeout per module
                 if result["status"] == "success":
                     logger.info(f"Module {module_name} installed successfully")
                 else:
