@@ -644,12 +644,15 @@ const Rankings = () => {
               alignItems: "center",
             }}
           >
-            <Typography level="title-sm" sx={{ color: "primary.solidColor" }}>
+            <Typography
+              level="title-sm"
+              sx={{ fontWeight: 600, color: "primary.softColor" }}
+            >
               Module Weights
             </Typography>
             <Button
               variant="outlined"
-              color="neutral"
+              color="primary"
               size="sm"
               onClick={() => {
                 const totalWeight = getTotalWeight();
@@ -663,6 +666,16 @@ const Rankings = () => {
                 }
               }}
               disabled={isWeightsValid()}
+              sx={{
+                color: "primary.softColor",
+                fontWeight: 700,
+                textTransform: "none",
+                // ensure readable text when disabled in light/dark
+                "&.Mui-disabled": {
+                  opacity: 1,
+                  color: "text.secondary",
+                },
+              }}
             >
               Normalize to 100%
             </Button>
