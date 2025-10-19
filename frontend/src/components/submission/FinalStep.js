@@ -188,8 +188,8 @@ const FinalStep = () => {
               queuePositionInfos.set(task.module_id, queuePositionInfo);
             }
 
-            // If task is processing, get detailed status
-            if (queuePositionInfo.task_id) {
+            // If we have a task_id, poll the Celery task and also persist it on the task
+            if (queuePositionInfo?.task_id) {
               try {
                 const response = await fetch(
                   `${API_BASE_URL}/task-status/${queuePositionInfo.task_id}`,
@@ -201,6 +201,7 @@ const FinalStep = () => {
 
                 return {
                   ...task,
+                  task_id: queuePositionInfo.task_id,
                   progress: Math.round((data.current / data.total) * 100),
                   processedRows: data.processedRows,
                   totalRows: data.totalRows,
@@ -214,10 +215,20 @@ const FinalStep = () => {
               }
             }
 
+            // No task_id yet — reflect the queue status accurately
+            const statusStr = (queuePositionInfo?.status || "").toLowerCase();
+            const isProcessing =
+              statusStr === "processing" || queuePositionInfo?.position === 0; // treat 0 as processing fallback
+
             // Task is waiting
             return {
               ...task,
-              status: `In queue (Position: ${queuePositionInfo.position})`,
+              status: isProcessing
+                ? "Processing..."
+                : `In queue (Position: ${Math.max(
+                    1,
+                    Number(queuePositionInfo?.position ?? 1)
+                  )})`,
             };
           })
         );
@@ -246,6 +257,11 @@ const FinalStep = () => {
             return {
               ...entry,
               ...(newPositionInfo || {}), // Overwrite with fresh data (position, etc.)
+              // Normalize position for display if backend emitted 0
+              position: Math.max(
+                1,
+                Number(newPositionInfo?.position ?? entry.position ?? 1)
+              ),
               status: newStatus,
               moduleQueueStatus: moduleStatus,
             };
