@@ -109,11 +109,6 @@ const Rankings = () => {
         setAvailableVersions(filterData.versions);
         setAvailableModules(filterData.modules);
         setFilteredModules(filterData.modules);
-
-        // Set the latest version as default if no version is selected
-        if (!selectedVersion && filterData.versions.length > 0) {
-          setSelectedVersion(filterData.versions[0]);
-        }
       } catch (error) {
         console.error("Failed to load filter options:", error);
       }

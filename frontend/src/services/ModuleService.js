@@ -161,10 +161,14 @@ const fetchPendingModuleUpdates = async () => {
   return response.data;
 };
 
-const publishModuleUpdates = async (version, description) => {
+const publishModuleUpdates = async (version, description, sendEmail = true) => {
   const response = await axios.post(
     `${API_BASE_URL}/modules/publish`,
-    { version, description },
+    {
+      version,
+      description,
+      send_email: sendEmail,
+    },
     { withCredentials: true }
   );
   return response.data;

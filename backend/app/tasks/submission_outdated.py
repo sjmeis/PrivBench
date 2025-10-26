@@ -25,16 +25,6 @@ def mark_submissions_outdated_and_notify(self, version, changes):
             changes.get("modified_modules", []) if isinstance(changes, dict) else []
         )
 
-        # If no new modules, do not mark submissions as outdated (metadata-only release)
-        if not new_modules:
-            current_app.logger.info(
-                f"Publish v{version} has no new modules; no submissions marked outdated; no emails sent."
-            )
-            return {
-                "status": "skipped",
-                "message": "No new modules; no submissions require updates.",
-            }
-
         # Get all completed submissions
         submissions = Submission.query.filter_by(status="COMPLETED").all()
 
@@ -51,17 +41,23 @@ def mark_submissions_outdated_and_notify(self, version, changes):
 
         # Build change log (HTML)
         new_list_html = (
-            "<ul>" + "".join(f"<li>{m['name']}</li>" for m in new_modules) + "</ul>"
+            "<ul>"
+            + "".join(f"<li>{module['name']}</li>" for module in new_modules)
+            + "</ul>"
             if new_modules
             else "<i>None</i>"
         )
         mod_list_html = (
             "<ul>"
             + "".join(
-                f"<li>{m['name']}"
-                + (f": {m.get('description','')}" if m.get("description") else "")
+                f"<li>{module['name']}"
+                + (
+                    f": {module.get('description','')}"
+                    if module.get("description")
+                    else ""
+                )
                 + "</li>"
-                for m in modified_modules
+                for module in modified_modules
             )
             + "</ul>"
             if modified_modules

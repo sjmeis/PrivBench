@@ -206,6 +206,7 @@ def publish_module_updates():
         data = request.get_json() or {}
         version_str = data.get("version")  # required on publish
         description = data.get("description")
+        send_email = data.get("sendEmail", True)
 
         if (
             not version_str
@@ -285,20 +286,19 @@ def publish_module_updates():
             if u.update_type == "modified" and u.module_id in module_by_id
         ]
 
-        # Only require users to update submissions and send emails if at least one new module was added
-        if new_modules:
-            try:
+        try:
+            if send_email:
                 notify_task = mark_submissions_outdated_and_notify.delay(
                     version_str,
                     {"new_modules": new_modules, "modified_modules": modified_modules},
                 )
                 logger.info(f"Outdated-mark notify task queued: {notify_task.id}")
-            except Exception as e:
-                logger.warning(f"Failed to enqueue notify task: {e}")
-        else:
-            logger.info(
-                "Publish completed with metadata-only changes; no submission updates required."
-            )
+            else:
+                logger.info(
+                    "Publish completed without sending emails (admin unchecked notification)."
+                )
+        except Exception as e:
+            logger.warning(f"Failed to enqueue notify task: {e}")
 
         return (
             jsonify(

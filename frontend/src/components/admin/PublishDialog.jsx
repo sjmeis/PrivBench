@@ -12,6 +12,7 @@ import {
   Stack,
   Typography,
   Textarea,
+  Checkbox,
 } from "@mui/joy";
 import { Save } from "@mui/icons-material";
 import { ModuleService } from "../../services/ModuleService";
@@ -44,6 +45,8 @@ const PublishDialog = ({ open, onClose, onPublished }) => {
   const [version, setVersion] = useState("");
   const [versionError, setVersionError] = useState("");
   const [description, setDescription] = useState("");
+  const [sendEmail, setSendEmail] = useState(true);
+  const [hasMajorChanges, setHasMajorChanges] = useState(false);
   const { showSnackbar } = useSnackbar();
 
   useEffect(() => {
@@ -55,6 +58,7 @@ const PublishDialog = ({ open, onClose, onPublished }) => {
         setPending(data.pending || []);
         setCurrentVersion(data.currentVersion || "");
         setRecommended(data.recommendedNext || "");
+        setHasMajorChanges(data.hasMajorChanges || false);
         const next = data.recommendedNext || "";
         setVersion(next);
         if (next && data.currentVersion) {
@@ -103,15 +107,20 @@ const PublishDialog = ({ open, onClose, onPublished }) => {
       setLoading(true);
       const result = await ModuleService.publishModuleUpdates(
         version.trim(),
-        description.trim()
+        description.trim(),
+        sendEmail
       );
       const requiresUpdate = !!result?.requiresSubmissionUpdate;
-      showSnackbar(
-        requiresUpdate
-          ? "Published. Users need to update submissions (new module added)."
-          : "Published. No user submission updates required.",
-        "success"
-      );
+      let message = "Published successfully.";
+      if (requiresUpdate) {
+        message = sendEmail
+          ? "Published. Users will be notified via email about new modules."
+          : "Published. Users need to update submissions (new modules added). No emails sent.";
+      } else {
+        message = "Published. No user submission updates required.";
+      }
+
+      showSnackbar(message, "success");
       onPublished?.();
       onClose();
     } catch (e) {
@@ -149,6 +158,31 @@ const PublishDialog = ({ open, onClose, onPublished }) => {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
+
+            {/* Add checkbox for email notification */}
+            {hasMajorChanges && (
+              <Box
+                sx={{
+                  p: 1.5,
+                  bgcolor: "background.level1",
+                  borderRadius: "sm",
+                  border: "1px solid",
+                  borderColor: "divider",
+                }}
+              >
+                <Checkbox
+                  label="Send email notifications to users about outdated submissions"
+                  checked={sendEmail}
+                  onChange={(e) => setSendEmail(e.target.checked)}
+                />
+                <Typography level="body-xs" sx={{ ml: 3.5, mt: 0.5 }}>
+                  {sendEmail
+                    ? "Users will receive an email notification about new modules requiring submission updates."
+                    : "No email notifications will be sent. Users will only see updates on the platform."}
+                </Typography>
+              </Box>
+            )}
+
             <Box
               sx={{
                 border: "1px solid #eee",
@@ -168,7 +202,7 @@ const PublishDialog = ({ open, onClose, onPublished }) => {
                     sx={{ p: 1, borderBottom: "1px solid #f2f2f2" }}
                   >
                     <Typography level="body-sm">
-                      [{u.update_type}] {u.module_name} —{" "}
+                      [{u.update_type}] [{u.change_level}] {u.module_name} —{" "}
                       {u.description || "No details"}
                     </Typography>
                   </Box>
