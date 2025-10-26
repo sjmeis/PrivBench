@@ -170,6 +170,72 @@ const publishModuleUpdates = async (version, description) => {
   return response.data;
 };
 
+const downloadModuleLogic = async (moduleId, moduleName) => {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/modules/${moduleId}/logic/download`,
+      {
+        credentials: "include",
+        cache: "no-cache",
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to download module logic");
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${moduleName}.py`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error("Error downloading module logic:", error);
+    throw error;
+  }
+};
+
+const updateModuleLogic = async (moduleId, formData) => {
+  try {
+    const response = await axios.post(
+      `${API_BASE_URL}/modules/update/logic/${moduleId}`,
+      formData,
+      {
+        withCredentials: true,
+        headers: { "Content-Type": "multipart/form-data" },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error updating module logic:", error);
+    throw error;
+  }
+};
+
+const updateModuleDataset = async (moduleId, formData) => {
+  try {
+    const response = await axios.post(
+      `${API_BASE_URL}/modules/update/dataset/${moduleId}`,
+      formData,
+      {
+        withCredentials: true,
+        headers: { "Content-Type": "multipart/form-data" },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error updating module dataset:", error);
+    throw error;
+  }
+};
+
 export const ModuleService = {
   updateBenchmarkModule,
   deleteBenchmarkModule,
@@ -178,4 +244,7 @@ export const ModuleService = {
   pollModuleStatus,
   fetchPendingModuleUpdates,
   publishModuleUpdates,
+  downloadModuleLogic,
+  updateModuleLogic,
+  updateModuleDataset,
 };

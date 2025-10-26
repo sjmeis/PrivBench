@@ -24,6 +24,7 @@ import UserSubmissionsTableRow from "./UserSubmissionsTableRow";
 import UpdateSubmissionModal from "./UpdateSubmissionModal";
 import { useSnackbar } from "../../contexts/SnackbarProvider";
 import { SubmissionStatus } from "../../enums/SubmissionStatus";
+import { API_BASE_URL } from "../../config";
 
 const UserSubmissions = () => {
   const [submissions, setSubmissions] = useState([]);
@@ -52,7 +53,7 @@ const UserSubmissions = () => {
 
       // Fetch templates
       const templateResponse = await fetch(
-        "http://localhost:5000/metadata/templates",
+        `${API_BASE_URL}/metadata/templates`,
         { credentials: "include" }
       );
       if (templateResponse.ok) {

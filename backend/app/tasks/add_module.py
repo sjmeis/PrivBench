@@ -14,6 +14,7 @@ def install_and_load_module(
     module_path,
     requirements_path,
     is_new_module=False,
+    restart_container=False,
 ):
     """Celery task to install and load a module."""
     container_name = f"module-container-{module_name.lower()}"
@@ -44,8 +45,9 @@ def install_and_load_module(
         if test_result["success"]:
             logger.info(f"Module {module_name} image built and tested successfully")
 
-            # Only start the container if a new module is added.
-            if is_new_module:
+            should_start = is_new_module or restart_container
+
+            if should_start:
                 logger.info(
                     f"Flag 'is_new_module' is set. Attempting to start container for module: {module_name}"
                 )
