@@ -1,7 +1,7 @@
 import os
 import logging
 import json
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, send_file
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from sqlalchemy import exists
 from ..models import (
@@ -100,6 +100,35 @@ def _recalculate_version_scores_after_module_delete(module_id: int):
     except Exception as e:
         logger.error(f"Error recalculating version scores after module delete: {e}")
         raise
+
+
+def _find_existing_requirements_path(module: BenchmarkModule):
+    try:
+        safe_module_name = secure_filename(module.name)
+        module_dir = os.path.dirname(module.path) if module.path else MODULES_FOLDER
+
+        candidate_paths = [
+            os.path.join(MODULES_FOLDER, f"{safe_module_name}_requirements.txt"),
+            os.path.join(MODULES_FOLDER, f"{safe_module_name}.txt"),
+            os.path.join(module_dir, "requirements.txt"),
+        ]
+
+        for candidate_path in candidate_paths:
+            if candidate_path and os.path.isfile(candidate_path):
+                return candidate_path
+
+        # Fallback: any .txt containing module name in modules folder
+        for entry_name in os.listdir(MODULES_FOLDER):
+            is_text_file = entry_name.lower().endswith(".txt")
+            name_matches = safe_module_name.lower() in entry_name.lower()
+            if is_text_file and name_matches:
+                fallback_path = os.path.join(MODULES_FOLDER, entry_name)
+                if os.path.isfile(fallback_path):
+                    return fallback_path
+    except Exception:
+        pass
+
+    return None
 
 
 @module_bp.route("/modules", methods=["GET"])
@@ -704,3 +733,199 @@ def update_benchmark_module(module_id):
         logger.error(f"Error updating benchmark module: {e}")
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
+
+
+@module_bp.route("/modules/<int:module_id>/logic/download", methods=["GET"])
+@jwt_required()
+def download_module_logic(module_id):
+    try:
+        module = BenchmarkModule.query.get(module_id)
+        if not module:
+            return jsonify({"message": "Benchmark module not found"}), 404
+
+        if not module.path or not os.path.isfile(module.path):
+            return jsonify({"message": "Module logic file not found"}), 404
+
+        return send_file(
+            module.path,
+            as_attachment=True,
+            download_name=os.path.basename(module.path),
+        )
+    except Exception as e:
+        logger.error(f"Error downloading module logic: {e}")
+        return jsonify({"message": str(e)}), 500
+
+
+@module_bp.route("/modules/update/logic/<int:module_id>", methods=["POST"])
+@jwt_required()
+def update_module_logic(module_id):
+    try:
+        user_id = get_jwt_identity()
+        user = User.query.get(int(user_id))
+        if not user:
+            return jsonify({"message": "User not found"}), 404
+        if not user.admin:
+            return (
+                jsonify({"message": "User doesn't possess the necessary permissions."}),
+                403,
+            )
+
+        module = BenchmarkModule.query.get(module_id)
+        if not module:
+            return jsonify({"message": "Benchmark module not found"}), 404
+
+        file = request.files.get("file")
+        if not file or not file.filename:
+            return jsonify({"message": "No file provided"}), 400
+
+        filename = secure_filename(file.filename)
+        if not filename.lower().endswith(".py"):
+            return jsonify({"message": "Only .py files are accepted"}), 400
+
+        # Use a stable filename and overwrite if it exists
+        os.makedirs(MODULES_FOLDER, exist_ok=True)
+        stable_name = f"{secure_filename(module.name)}.py"
+        save_path = os.path.join(MODULES_FOLDER, stable_name)
+        file.save(save_path)
+
+        # Find existing requirements for this module (reuse, do not require re-upload)
+        requirements_path = _find_existing_requirements_path(module)
+
+        # Restart container and keep path stable
+        try:
+            container = container_manager.get_container(module.name)
+            if container:
+                container.stop()
+                container.remove(force=True)
+                container_manager.running_containers.pop(
+                    f"module-container-{module.name.lower()}",
+                    None,
+                )
+        except Exception as e:
+            logger.warning(f"Could not stop/remove container for {module.name}: {e}")
+
+        # Ensure DB path points to the stable file
+        if module.path != save_path:
+            module.path = save_path
+        db.session.commit()
+
+        db.session.add(
+            ModuleUpdate(
+                module_id=module.id,
+                update_type="modified",
+                description=f"Logic updated (overwrote {stable_name})",
+                is_updated=True,
+                version_id=None,
+            )
+        )
+        db.session.commit()
+
+        # Reinstall/reload in background
+        install_task = None
+        try:
+            install_task = install_and_load_module.delay(
+                module_id=module.id,
+                module_name=module.name,
+                module_path=save_path,
+                requirements_path=requirements_path,
+                is_new_module=False,
+                restart_container=True,
+            )
+        except Exception as e:
+            logger.warning(f"Failed to enqueue reinstall for {module.name}: {e}")
+
+        return (
+            jsonify(
+                {
+                    "message": "Module logic updated",
+                    "moduleId": module.id,
+                    "path": save_path,
+                    "install_task_id": install_task.id if install_task else None,
+                }
+            ),
+            200,
+        )
+
+    except Exception as e:
+        logger.error(f"Error updating module logic: {e}")
+        db.session.rollback()
+        return jsonify({"message": str(e)}), 500
+
+
+@module_bp.route("/modules/update/dataset/<int:module_id>", methods=["POST"])
+@jwt_required()
+def update_module_dataset(module_id):
+    try:
+        user_id = get_jwt_identity()
+        user = User.query.get(int(user_id))
+        if not user or not user.admin:
+            return jsonify({"message": "Forbidden"}), 403
+
+        module = BenchmarkModule.query.get(module_id)
+        if not module:
+            return jsonify({"message": "Benchmark module not found"}), 404
+
+        dataset = module.dataset
+        if not dataset:
+            return jsonify({"message": "Module dataset not configured"}), 400
+
+        uploaded = request.files.get("file")
+        if not uploaded or not uploaded.filename:
+            return jsonify({"message": "No file provided"}), 400
+
+        allowed_exts = (".csv", ".parquet", ".json", ".zip", ".txt")
+        filename = secure_filename(uploaded.filename)
+        if not filename.lower().endswith(allowed_exts):
+            return (
+                jsonify(
+                    {
+                        "message": f"Unsupported file type. Allowed: {', '.join(allowed_exts)}"
+                    }
+                ),
+                400,
+            )
+
+        # Overwrite in place and update Dataset row
+        os.makedirs(DATASET_FOLDER, exist_ok=True)
+        new_path = os.path.join(DATASET_FOLDER, filename)
+        uploaded.save(new_path)
+
+        dataset.name = filename
+        dataset.file_path = new_path
+
+        db.session.add(
+            ModuleUpdate(
+                module_id=module.id,
+                update_type="modified",
+                description=f"Dataset updated (overwrote {dataset.name})",
+                is_updated=True,
+                version_id=None,
+            )
+        )
+        db.session.commit()
+
+        return (
+            jsonify(
+                {
+                    "message": "Dataset updated",
+                    "moduleId": module.id,
+                    "dataset": {
+                        "id": dataset.id,
+                        "name": dataset.name,
+                        "filePath": dataset.file_path,
+                        "createdAt": (
+                            dataset.created_at.isoformat()
+                            if dataset.created_at
+                            else None
+                        ),
+                        "isActive": dataset.is_active,
+                    },
+                }
+            ),
+            200,
+        )
+
+    except Exception as e:
+        logger.error(f"Error updating module dataset: {e}")
+        db.session.rollback()
+        return jsonify({"message": str(e)}), 500
