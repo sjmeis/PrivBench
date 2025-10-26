@@ -17,9 +17,10 @@ from ..models import (
 )
 from ..enums import SubmissionStatus
 from datetime import datetime
-from app.tasks.run_benchmark import run_benchmark
-from app.utils.dataset_loader import load_dataset
-from app.utils.email_sender import send_email
+from ..tasks.run_benchmark import run_benchmark
+from ..utils.dataset_loader import load_dataset
+from ..utils.email_sender import send_email
+from ..utils.version_utils import get_significant_version
 from celery.utils.log import get_task_logger
 from datetime import datetime
 from sqlalchemy.dialects.postgresql import insert
@@ -217,6 +218,9 @@ def run_benchmark_task(
 
                 submission.score = overall_score
                 submission.status = SubmissionStatus.COMPLETED
+
+                # Ensure submission version is significant (x.y.0)
+                submission.version = get_significant_version(submission.version)
 
                 # Check if version entry already exists before creating
                 existing_version = (
@@ -472,9 +476,9 @@ def benchmark():
         # Only update status if it's PENDING
         if submission.status == SubmissionStatus.PENDING:
             submission.status = SubmissionStatus.IN_PROGRESS
-            submission.version = (
-                AppVersion.get_current_version()
-            )  # Set the version here
+            # Get current version and ensure it's a significant version (x.y.0)
+            current_version = AppVersion.get_current_version()
+            submission.version = get_significant_version(current_version)
             db.session.commit()
             logger.info(f"Updated submission {submission.id} status to IN_PROGRESS")
         else:
@@ -966,11 +970,12 @@ def finalize_submission_update():
     new_overall_score = new_scores_sum / new_module_count
 
     current_app_version_str = AppVersion.get_current_version()
+    significant_version = get_significant_version(current_app_version_str)
 
     # Check if version entry already exists
     existing_version = (
         db.session.query(SubmissionVersionScore)
-        .filter_by(submission_id=submission.id, version=current_app_version_str)
+        .filter_by(submission_id=submission.id, version=significant_version)
         .first()
     )
 
@@ -979,7 +984,7 @@ def finalize_submission_update():
         # Create the new version score entry only if it doesn't exist
         new_version_entry = SubmissionVersionScore(
             submission_id=submission.id,
-            version=current_app_version_str,
+            version=significant_version,
             score=new_overall_score,
             modules=all_modules_for_new_version,
         )
@@ -990,7 +995,7 @@ def finalize_submission_update():
 
     # Update the main submission
     submission.score = new_overall_score
-    submission.version = current_app_version_str
+    submission.version = significant_version
     submission.status = SubmissionStatus.COMPLETED
     db.session.commit()
 
@@ -998,7 +1003,7 @@ def finalize_submission_update():
         jsonify(
             {
                 "message": "Submission updated to new version successfully",
-                "new_version": current_app_version_str,
+                "new_version": significant_version,
                 "new_score": new_overall_score,
             }
         ),

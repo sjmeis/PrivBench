@@ -22,6 +22,7 @@ from ..enums import SubmissionStatus
 from ..tasks.submission_outdated import mark_submissions_outdated_and_notify
 from ..tasks.add_module import install_and_load_module
 from ..utils.container_manager import container_manager
+from ..utils.version_utils import is_version_greater, recommend_next_version
 
 logger = logging.getLogger(__name__)
 
@@ -31,29 +32,6 @@ DATASET_FOLDER = os.path.join(PROJECT_ROOT, "data", "datasets")
 MODULES_FOLDER = os.path.join(PROJECT_ROOT, "modules")
 
 module_bp = Blueprint("benchmark_module", __name__)
-
-
-def _recommend_next_version(current: str) -> str:
-    major, minor, patch = map(int, current.split("."))
-    return f"{major}.{minor}.{patch + 1}"
-
-
-def _parse_version(v: str):
-    try:
-        parts = [int(p) for p in v.strip().split(".")]
-        if len(parts) != 3:
-            return None
-        return tuple(parts)
-    except Exception:
-        return None
-
-
-def _is_version_greater(new_v: str, cur_v: str) -> bool:
-    a = _parse_version(new_v)
-    b = _parse_version(cur_v)
-    if a is None or b is None:
-        return False
-    return a > b
 
 
 def _recalculate_version_scores_after_module_delete(module_id: int):
@@ -195,14 +173,18 @@ def list_pending_module_updates():
             .all()
         )
         current_version = AppVersion.get_current_version()
-        recommended_next = _recommend_next_version(current_version)
+
+        # Check if any pending update is major
+        has_major = any(update.change_level == "major" for update in pending)
+        recommended_next = recommend_next_version(current_version, has_major)
 
         return (
             jsonify(
                 {
                     "currentVersion": current_version,
                     "recommendedNext": recommended_next,
-                    "pending": [u.to_dict() for u in pending],
+                    "hasMajorChanges": has_major,
+                    "pending": [update.to_dict() for update in pending],
                 }
             ),
             200,
@@ -233,7 +215,7 @@ def publish_module_updates():
             return jsonify({"message": "Version is required to publish"}), 400
 
         current_version = AppVersion.get_current_version()
-        if not _is_version_greater(version_str, current_version):
+        if not is_version_greater(version_str, current_version):
             return (
                 jsonify(
                     {
@@ -447,6 +429,7 @@ def create_benchmark_module():
             ModuleUpdate(
                 module_id=new_benchmark_module.id,
                 update_type="new_module",
+                change_level="major",
                 description=f"New module '{name}' added",
                 is_updated=True,
                 version_id=None,
@@ -584,6 +567,19 @@ def delete_benchmark_module(module_id):
         if not module:
             return jsonify({"message": "Benchmark module not found"}), 404
 
+        # Record deletion as a pending update before removing the module
+        db.session.add(
+            ModuleUpdate(
+                module_id=module.id,
+                update_type="deleted",
+                change_level="major",
+                description=f"Module '{module.name}' deleted",
+                is_updated=True,
+                version_id=None,
+            )
+        )
+        db.session.flush()
+
         # Stop and remove the running Docker container for this module (if any)
         try:
             container = container_manager.get_container(module.name)
@@ -709,6 +705,7 @@ def update_benchmark_module(module_id):
                 ModuleUpdate(
                     module_id=module.id,
                     update_type="modified",
+                    change_level="minor",
                     description=f"Fields updated: {', '.join(changed_fields)}",
                     is_updated=True,
                     version_id=None,
@@ -813,6 +810,7 @@ def update_module_logic(module_id):
             ModuleUpdate(
                 module_id=module.id,
                 update_type="modified",
+                change_level="major",
                 description=f"Logic updated (overwrote {stable_name})",
                 is_updated=True,
                 version_id=None,
@@ -897,6 +895,7 @@ def update_module_dataset(module_id):
             ModuleUpdate(
                 module_id=module.id,
                 update_type="modified",
+                change_level="major",
                 description=f"Dataset updated (overwrote {dataset.name})",
                 is_updated=True,
                 version_id=None,
