@@ -161,6 +161,13 @@ const fetchPendingModuleUpdates = async () => {
   return response.data;
 };
 
+const hasPendingModuleUpdates = async () => {
+  const res = await axios.get(`${API_BASE_URL}/modules/updates/has-pending`, {
+    withCredentials: true,
+  });
+  return !!res.data?.hasPending;
+};
+
 const publishModuleUpdates = async (version, description, sendEmail = true) => {
   const response = await axios.post(
     `${API_BASE_URL}/modules/publish`,
@@ -275,6 +282,7 @@ export const ModuleService = {
   createBenchmarkingModule,
   pollModuleStatus,
   fetchPendingModuleUpdates,
+  hasPendingModuleUpdates,
   publishModuleUpdates,
   downloadModuleLogic,
   updateModuleLogic,

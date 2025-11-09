@@ -1,4 +1,5 @@
 from flask import Blueprint, jsonify, request
+from sqlalchemy import exists, and_
 from ..services import QueueService, BenchmarkService, run_benchmark_task
 from ..extensions import db, celery
 from flask_jwt_extended import jwt_required, get_jwt_identity
@@ -144,6 +145,27 @@ def benchmark():
         # Handle preflight OPTIONS request
         if request.method == "OPTIONS":
             return ("", 204, response_headers)
+
+        # Guard: block starting benchmark if unpublished module updates exist
+        pending_block = db.session.query(
+            exists().where(
+                and_(
+                    ModuleUpdate.is_updated == True,
+                    ModuleUpdate.version_id == None,
+                )
+            )
+        ).scalar()
+
+        if pending_block:
+            return (
+                jsonify(
+                    {
+                        "message": "Submissions disabled: admin must publish pending benchmark module updates."
+                    }
+                ),
+                423,
+                response_headers,
+            )
 
         user_id = get_jwt_identity()
         user = User.query.get(user_id)

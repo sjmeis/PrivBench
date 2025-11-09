@@ -200,6 +200,21 @@ def list_pending_module_updates():
         return jsonify({"message": str(e)}), 500
 
 
+@module_bp.route("/modules/updates/has-pending", methods=["GET"])
+@jwt_required()
+def has_pending_module_updates():
+    try:
+        pending_count = (
+            db.session.query(ModuleUpdate)
+            .filter(ModuleUpdate.is_updated == True, ModuleUpdate.version_id == None)
+            .count()
+        )
+        return jsonify({"hasPending": pending_count > 0}), 200
+    except Exception as e:
+        logger.error(f"Error checking pending module updates flag: {e}")
+        return jsonify({"hasPending": False, "error": str(e)}), 500
+
+
 @module_bp.route("/modules/publish", methods=["POST"])
 @jwt_required()
 def publish_module_updates():
