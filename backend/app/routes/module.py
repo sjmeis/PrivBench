@@ -109,6 +109,12 @@ def _find_existing_requirements_path(module: BenchmarkModule):
     return None
 
 
+def _stable_requirements_path(module: BenchmarkModule) -> str:
+    os.makedirs(MODULES_FOLDER, exist_ok=True)
+    safe_module_name = secure_filename(module.name)
+    return os.path.join(MODULES_FOLDER, f"{safe_module_name}_requirements.txt")
+
+
 @module_bp.route("/modules", methods=["GET"])
 def get_all_benchmark_modules():
     try:
@@ -307,7 +313,7 @@ def publish_module_updates():
                     "version": version_str,
                     "affectedModules": [m.id for m in modules],
                     "pendingUpdatesClosed": len(pending),
-                    "requiresSubmissionUpdate": bool(new_modules),
+                    "requiresSubmissionUpdate": send_email,
                 }
             ),
             200,
@@ -811,7 +817,7 @@ def update_module_logic(module_id):
                 module_id=module.id,
                 update_type="modified",
                 change_level="major",
-                description=f"Logic updated (overwrote {stable_name})",
+                description="Logic updated",
                 is_updated=True,
                 version_id=None,
             )
@@ -896,7 +902,7 @@ def update_module_dataset(module_id):
                 module_id=module.id,
                 update_type="modified",
                 change_level="major",
-                description=f"Dataset updated (overwrote {dataset.name})",
+                description="Dataset updated",
                 is_updated=True,
                 version_id=None,
             )
@@ -927,4 +933,115 @@ def update_module_dataset(module_id):
     except Exception as e:
         logger.error(f"Error updating module dataset: {e}")
         db.session.rollback()
+        return jsonify({"message": str(e)}), 500
+
+
+@module_bp.route("/admin/modules/<int:module_id>/requirements", methods=["POST"])
+@jwt_required()
+def update_module_requirements(module_id):
+    try:
+        user_id = get_jwt_identity()
+        user = User.query.get(int(user_id))
+        if not user or not user.admin:
+            return jsonify({"message": "Forbidden"}), 403
+
+        module = BenchmarkModule.query.get(module_id)
+        if not module:
+            return jsonify({"message": "Benchmark module not found"}), 404
+
+        uploaded = request.files.get("file")
+        if not uploaded or not uploaded.filename:
+            return jsonify({"message": "No file provided"}), 400
+
+        filename = secure_filename(uploaded.filename)
+        if not filename.lower().endswith((".txt", ".in")):
+            return jsonify({"message": "Only .txt or .in files are accepted"}), 400
+
+        # Save to stable location so future updates can find it
+        save_path = _stable_requirements_path(module)
+        uploaded.save(save_path)
+
+        db.session.add(
+            ModuleUpdate(
+                module_id=module.id,
+                update_type="modified",
+                change_level="major",
+                description="Requirements updated",
+                is_updated=True,
+                version_id=None,
+            )
+        )
+        db.session.commit()
+
+        # Restart container if exists (we'll reinstall requirements)
+        try:
+            container = container_manager.get_container(module.name)
+            if container:
+                container.stop()
+                container.remove(force=True)
+                container_manager.running_containers.pop(
+                    f"module-container-{module.name.lower()}",
+                    None,
+                )
+        except Exception as e:
+            logger.warning(f"Could not stop/remove container for {module.name}: {e}")
+
+        # Reinstall dependencies and reload module in background
+        install_task = None
+        try:
+            install_task = install_and_load_module.delay(
+                module_id=module.id,
+                module_name=module.name,
+                module_path=module.path,  # keep current logic file
+                requirements_path=save_path,
+                is_new_module=False,
+                restart_container=True,
+            )
+        except Exception as e:
+            logger.warning(f"Failed to enqueue reinstall for {module.name}: {e}")
+
+        return (
+            jsonify(
+                {
+                    "message": "Requirements updated",
+                    "moduleId": module.id,
+                    "requirementsPath": save_path,
+                    "install_task_id": install_task.id if install_task else None,
+                }
+            ),
+            200,
+        )
+
+    except Exception as e:
+        logger.error(f"Error updating module requirements: {e}")
+        db.session.rollback()
+        return jsonify({"message": str(e)}), 500
+
+
+@module_bp.route(
+    "/admin/modules/<int:module_id>/requirements/download", methods=["GET"]
+)
+@jwt_required()
+def download_module_requirements(module_id):
+    try:
+        user_id = get_jwt_identity()
+        user = User.query.get(int(user_id))
+        if not user or not user.admin:
+            return jsonify({"message": "Forbidden"}), 403
+
+        module = BenchmarkModule.query.get(module_id)
+        if not module:
+            return jsonify({"message": "Benchmark module not found"}), 404
+
+        req_path = _find_existing_requirements_path(module)
+        if not req_path or not os.path.isfile(req_path):
+            return jsonify({"message": "Requirements file not found"}), 404
+
+        return send_file(
+            req_path,
+            as_attachment=True,
+            download_name=os.path.basename(req_path),
+        )
+    except Exception as e:
+        logger.error(f"Error downloading requirements: {e}")
         return jsonify({"message": str(e)}), 500

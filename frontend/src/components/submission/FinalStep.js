@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Typography, Box, Button } from "@mui/joy";
 import { useSnackbar } from "../../contexts/SnackbarProvider";
 import TaskProgressCard from "./TaskProgressCard";

@@ -1,15 +1,19 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Box,
   Button,
+  Checkbox,
   DialogActions,
   DialogContent,
   DialogTitle,
   Divider,
+  ListItem,
+  ListItemDecorator,
   Modal,
   ModalClose,
   ModalDialog,
   Typography,
+  List,
 } from "@mui/joy";
 import {
   InfoOutlined,
@@ -26,250 +30,403 @@ import TaskProgressCard from "../submission/TaskProgressCard";
 import ScoreOverviewCard from "../submission/ScoreOverviewCard";
 import { API_BASE_URL } from "../../config";
 
-const UpdateSubmissionModal = ({ isOpen, onClose, submission }) => {
+const UpdateSubmissionModal = ({ isOpen, onClose, submission, onUpdated }) => {
   // State for file upload phase
   const [datasets, setDatasets] = useState([]);
   const [uploadedFiles, setUploadedFiles] = useState({});
   const [uploadingDatasetId, setUploadingDatasetId] = useState(null);
 
   // State for evaluation phase (single task)
-  const [task, setTask] = useState(null);
-  const [queueEntry, setQueueEntry] = useState(null);
+  const [tasks, setTasks] = useState([]);
+  const [queueEntries, setQueueEntries] = useState([]);
   const [loading, setLoading] = useState(false);
   const [submissionId, setSubmissionId] = useState(null);
+  const [modulesToUpdate, setModulesToUpdate] = useState([]);
+  const [rerunModules, setRerunModules] = useState([]);
+  const [selectedRerunIds, setSelectedRerunIds] = useState(new Set());
 
   // State for results phase
   const [averageScore, setAverageScore] = useState(null);
-  const [newModuleScore, setNewModuleScore] = useState(null);
-
+  const [newModuleScores, setNewModuleScores] = useState([]);
+  const [finalized, setFinalized] = useState(false);
   const { showSnackbar } = useSnackbar();
+
+  const intervalRef = useRef(null);
+  const tasksRef = useRef([]);
 
   // Effect to initialize datasets when modal opens
   useEffect(() => {
     if (!submission || !isOpen) {
       // Reset all state when modal is closed
-      setTask(null);
-      setQueueEntry(null);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      setTasks([]);
+      tasksRef.current = [];
+      setQueueEntries([]);
       setUploadedFiles({});
       setDatasets([]);
       setLoading(false);
       setSubmissionId(null);
       setAverageScore(null);
-      setNewModuleScore(null);
+      setNewModuleScores([]);
+      setFinalized(false);
+      setModulesToUpdate([]);
+      setRerunModules([]);
+      setSelectedRerunIds(new Set());
       return;
     }
 
-    const fetchData = async () => {
+    // Fetch modules and datasets to update from backend
+    const fetchUpdateData = async () => {
       try {
-        const data = await DatasetService.fetchAllDatasetsForUpdate(
+        const info = await BenchmarkService.getSubmissionUpdatesInfo(
           submission.id
         );
-        setDatasets(data.datasets);
+        const modules = info.modules_to_update || [];
+        setModulesToUpdate(modules);
+
+        // Build dataset list for modules that require dataset upload
+        const datasets = modules
+          .filter(
+            (module) =>
+              module.requires_dataset_upload &&
+              module.dataset_id &&
+              module.dataset_name
+          )
+          .map((module) => ({
+            id: module.dataset_id,
+            name: module.dataset_name,
+            module_id: module.module_id,
+            module_name: module.module_name,
+            reasons: module.reasons || [],
+          }));
+        setDatasets(datasets);
+
+        // Reruns exclude any module that requires dataset upload
+        const reruns = modules
+          .filter((module) => !module.requires_dataset_upload)
+          .map((module) => ({
+            ...module,
+            reasons: module.reasons || [],
+          }));
+        setRerunModules(reruns);
+        setSelectedRerunIds(new Set(reruns.map((module) => module.module_id))); // preselect all by default
       } catch (error) {
-        showSnackbar("Failed to fetch required datasets", "error");
+        showSnackbar("Failed to fetch update info", "error");
+        setModulesToUpdate([]);
+        setDatasets([]);
+        setRerunModules([]);
+        setSelectedRerunIds(new Set());
       }
     };
 
-    fetchData();
-  }, [isOpen, submission]);
+    fetchUpdateData();
+  }, [isOpen, submission, showSnackbar]);
 
-  // Helper function to fetch queue status for the single module
-  const fetchQueueStatus = async (submissionId, moduleId) => {
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/queue-status/${submissionId}/${moduleId}`,
-        {
-          credentials: "include",
-        }
-      );
-      if (response.ok) {
-        return await response.json();
-      }
-    } catch (error) {
-      console.error(
-        `Error fetching queue status for module ${moduleId}:`,
-        error
-      );
-    }
-    return null;
-  };
-
-  // Simplified polling effect for single task
+  // Polling effect
   useEffect(() => {
-    if (!loading || !submissionId || !task) {
-      return;
-    }
+    if (!loading || !submissionId || tasks.length === 0) return;
+
+    const fetchQueueStatus = async (subId, moduleId) => {
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/queue-status/${subId}/${moduleId}`,
+          { credentials: "include" }
+        );
+        if (response.ok) return await response.json();
+      } catch (err) {
+        console.error(`Queue status error for module ${moduleId}:`, err);
+      }
+      return null;
+    };
 
     const pollStatus = async () => {
       try {
-        // Check if the single task is finished
-        if (task.completed || task.error) {
-          setLoading(false);
+        const currentTasks = tasksRef.current;
+        if (currentTasks.length === 0) return;
 
-          // Calculate final score if task completed successfully
-          if (task.completed && task.score !== null) {
-            const newScore = {
-              module_name: task.module_name,
-              score: task.score,
-            };
-            setNewModuleScore(newScore);
-            // Combine old scores with new score for final average
-            const oldScores = submission.benchmarkScores.map((s) => s.score);
-            const combinedScores = [...oldScores, task.score];
-            const totalScore = combinedScores.reduce(
-              (sum, score) => sum + score,
-              0
+        const queuePositionInfos = new Map();
+        const moduleQueueStatuses = new Map();
+
+        const updatedTasks = await Promise.all(
+          currentTasks.map(async (task) => {
+            if (task.completed || task.error) return task;
+
+            const queueStatusResponse = await fetchQueueStatus(
+              submissionId,
+              task.module_id
             );
-            const finalAverage = totalScore / combinedScores.length;
+            if (!queueStatusResponse) return task;
 
-            setAverageScore(finalAverage);
+            const queuePositionInfo = queueStatusResponse.queue_position_info;
+            const moduleQueueStatus = queueStatusResponse.module_queue_status;
 
-            // Call backend to finalize and save - only once
-            try {
-              const result = await BenchmarkService.finalizeBenchmarkUpdate(
-                submissionId
-              );
-              showSnackbar(result.message, "success");
-            } catch (error) {
-              showSnackbar(
-                error.response?.data?.message ||
-                  "Failed to finalize submission update.",
-                "error"
-              );
+            moduleQueueStatuses.set(task.module_id, moduleQueueStatus);
+            if (queuePositionInfo) {
+              queuePositionInfos.set(task.module_id, queuePositionInfo);
             }
-          }
-          return;
-        }
 
-        // Get queue status for the single module
-        const queueStatusResponse = await fetchQueueStatus(
-          submissionId,
-          task.module_id
+            // Only trust queue task_id when the queue says "processing"
+            const qStatusRaw = String(
+              queuePositionInfo?.status || ""
+            ).toLowerCase();
+            const qIsProcessing = qStatusRaw === "processing";
+
+            // Prefer an already-known task_id. Otherwise
+            // use queue-provided task_id only if processing.
+            let activeTaskId = task.task_id || null;
+            if (!activeTaskId && qIsProcessing && queuePositionInfo?.task_id) {
+              activeTaskId = queuePositionInfo.task_id;
+            }
+
+            if (activeTaskId) {
+              try {
+                const response = await fetch(
+                  `${API_BASE_URL}/task-status/${activeTaskId}`,
+                  { credentials: "include" }
+                );
+                const data = await response.json();
+                const current = Number(data.current ?? data.processedRows ?? 0);
+                const total = Number(data.total ?? data.totalRows ?? 0);
+                const progress =
+                  total > 0
+                    ? Math.round((current / total) * 100)
+                    : Number(data.progress) || 0;
+                const state = data.state || data.status;
+
+                // if we got a SUCCESS but queue isn't processing yet and
+                // this task_id did not come from an already-known task, ignore it
+                if (
+                  String(state).toUpperCase() === "SUCCESS" &&
+                  !qIsProcessing &&
+                  task.task_id == null
+                ) {
+                  return {
+                    ...task,
+                    status: `In queue (Position: ${Math.max(
+                      1,
+                      Number(queuePositionInfo?.position ?? 1)
+                    )})`,
+                  };
+                }
+
+                return {
+                  ...task,
+                  task_id: activeTaskId,
+                  progress,
+                  processedRows: current,
+                  totalRows: total,
+                  status: data.status || state,
+                  completed: String(state).toUpperCase() === "SUCCESS",
+                  error:
+                    String(state).toUpperCase() === "FAILURE"
+                      ? data.error || data.status
+                      : null,
+                  score: data.score ?? data.result?.score ?? task.score ?? null,
+                };
+              } catch (error) {
+                return { ...task, error: "Failed to fetch task status." };
+              }
+            }
+
+            // No task id yet: infer waiting/processing only
+            const statusStr = String(
+              queuePositionInfo?.status || ""
+            ).toLowerCase();
+            const isProcessing =
+              statusStr === "processing" ||
+              queuePositionInfo?.position === 0 ||
+              queuePositionInfo?.position === 1;
+
+            return {
+              ...task,
+              status: isProcessing
+                ? "Processing..."
+                : `In queue (Position: ${Math.max(
+                    1,
+                    Number(queuePositionInfo?.position ?? 1)
+                  )})`,
+            };
+          })
         );
 
-        if (!queueStatusResponse) {
-          return;
-        }
+        setTasks(updatedTasks);
+        tasksRef.current = updatedTasks;
 
-        const queuePositionInfo = queueStatusResponse.queue_position_info;
-        const moduleQueueStatus = queueStatusResponse.module_queue_status;
-
-        let updatedTask = { ...task };
-
-        // If task is actively processing
-        if (queuePositionInfo.task_id) {
-          try {
-            const response = await fetch(
-              `${API_BASE_URL}/task-status/${queuePositionInfo.task_id}`,
-              {
-                credentials: "include",
-              }
+        setQueueEntries((current) =>
+          (current || []).map((entry) => {
+            const correspondingTask = updatedTasks.find(
+              (t) => t.module_id === entry.module_id
             );
-            const data = await response.json();
+            const moduleStatus = moduleQueueStatuses.get(entry.module_id);
+            const newPositionInfo = queuePositionInfos.get(entry.module_id);
+            if (!correspondingTask) return entry;
 
-            updatedTask = {
-              ...task,
-              task_id: queuePositionInfo.task_id,
-              progress: Math.round((data.current / data.total) * 100),
-              processedRows: data.processedRows,
-              totalRows: data.totalRows,
-              status: data.status,
-              completed: data.state === "SUCCESS",
-              error: data.state === "FAILURE" ? data.status : null,
-              score: data.score,
+            let newStatus = "waiting";
+            if (correspondingTask.completed) newStatus = "completed";
+            else if (correspondingTask.error) newStatus = "failed";
+            else if (correspondingTask.task_id) newStatus = "processing";
+
+            return {
+              ...entry,
+              ...(newPositionInfo || {}),
+              position: Math.max(
+                1,
+                Number(newPositionInfo?.position ?? entry.position ?? 1)
+              ),
+              status: newStatus,
+              moduleQueueStatus: moduleStatus,
             };
+          })
+        );
+
+        const allFinished = updatedTasks.every((t) => t.completed || t.error);
+        if (allFinished && !finalized) {
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+          }
+          setLoading(false);
+
+          const scores = updatedTasks
+            .filter((t) => t.completed && t.score != null)
+            .map((t) => ({ module_name: t.module_name, score: t.score }));
+          setNewModuleScores(scores);
+
+          const oldScores = (submission.benchmarkScores || []).map(
+            (s) => s.score
+          );
+          const combined = [...oldScores, ...scores.map((s) => s.score)];
+          setAverageScore(
+            combined.length
+              ? combined.reduce((a, b) => a + b, 0) / combined.length
+              : null
+          );
+
+          try {
+            const result = await BenchmarkService.finalizeBenchmarkUpdate(
+              submissionId
+            );
+            showSnackbar(result.message || "Submission updated", "success");
           } catch (error) {
-            updatedTask = { ...task, error: "Failed to fetch task status." };
+            showSnackbar(
+              error.response?.data?.message ||
+                "Failed to finalize submission update.",
+              "error"
+            );
+          } finally {
+            setFinalized(true);
+            try {
+              onUpdated && onUpdated();
+            } catch {}
           }
-        } else {
-          // Task is waiting in queue
-          updatedTask = {
-            ...task,
-            status: `In queue (Position: ${queuePositionInfo.position})`,
-          };
         }
-
-        setTask(updatedTask);
-
-        // Update queue entry status
-        if (queueEntry) {
-          let newStatus = "waiting";
-          if (updatedTask.completed) {
-            newStatus = "completed";
-          } else if (updatedTask.error) {
-            newStatus = "failed";
-          } else if (updatedTask.task_id) {
-            newStatus = "processing";
-          }
-
-          setQueueEntry({
-            ...queueEntry,
-            ...queuePositionInfo,
-            status: newStatus,
-            moduleQueueStatus: moduleQueueStatus,
-          });
-        }
-      } catch (error) {
-        console.error("Error in pollStatus:", error);
+      } catch (err) {
+        console.error("Error in pollStatus:", err);
       }
     };
 
-    const intervalId = setInterval(pollStatus, 2000);
-    return () => clearInterval(intervalId);
-  }, [loading, submissionId, task]);
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    intervalRef.current = setInterval(pollStatus, 2000);
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, [loading, submissionId, tasks.length]);
 
-  // Form validation
   const isFormValid = () => {
-    return (
-      Array.isArray(datasets) &&
-      datasets.every((dataset) => uploadedFiles[dataset.id])
-    );
+    // For dataset-required modules, ensure uploads exist
+    const datasetOk =
+      datasets.length === 0 ||
+      datasets.every((dataset) => uploadedFiles[dataset.id]);
+    // For rerun modules, require at least one selection when reruns exist
+    const rerunOk = rerunModules.length === 0 || selectedRerunIds.size > 0;
+    return datasetOk && rerunOk;
   };
 
   // Start the update process
   const updateSubmission = async () => {
     if (!isFormValid()) {
-      showSnackbar("Please upload all required datasets", "error");
+      showSnackbar("Please upload required datasets", "error");
       return;
     }
 
     try {
       setLoading(true);
-      const data = await BenchmarkService.startBenchmarkUpdate(submission.id);
 
-      if (data.message === "No new modules to benchmark") {
-        showSnackbar("This submission is already up-to-date.", "info");
+      // Include dataset-required modules that now have an uploaded privatized dataset
+      const datasetModuleIdsToQueue = (modulesToUpdate || [])
+        .filter(
+          (m) =>
+            m.requires_dataset_upload &&
+            m.dataset_id &&
+            uploadedFiles[m.dataset_id]
+        )
+        .map((m) => m.module_id);
+
+      // Union rerun selections and dataset-required modules
+      const selectedIds = Array.from(
+        new Set([...Array.from(selectedRerunIds), ...datasetModuleIdsToQueue])
+      );
+
+      const response = await BenchmarkService.startBenchmarkUpdate(
+        submission.id,
+        selectedIds
+      );
+
+      if (!response.queue_entries || response.queue_entries.length === 0) {
+        showSnackbar(
+          response.message ||
+            "No modules were queued. Upload required datasets or select modules to update.",
+          "warning"
+        );
         setLoading(false);
-        onClose();
         return;
       }
 
-      // Since we have only one new module, get the first (and only) entry
-      const queueEntry = data.queue_entries[0];
-      const immediateTask = data.immediate_tasks?.find(
-        (task) => task.module_id === queueEntry.module_id
+      // Initialize tasks state
+      const allQueueEntries = response.queue_entries || [];
+      const immediateTasks = response.immediate_tasks || [];
+      const immediateIds = new Set(
+        immediateTasks.map((task) => task.module_id)
       );
 
-      // Initialize single task state
-      const initialTask = {
-        task_id: immediateTask?.task_id || null,
-        module_id: queueEntry.module_id,
-        module_name: queueEntry.module_name,
-        queue_entry_id: queueEntry.queue_entry_id,
-        progress: 0,
-        processedRows: 0,
-        totalRows: 0,
-        status: immediateTask
-          ? "Starting..."
-          : `In queue (Position: ${queueEntry.position})`,
-        completed: false,
-        score: null,
-        error: null,
-      };
+      const enrichedQueueEntries = allQueueEntries.map((queueEntry) => ({
+        ...queueEntry,
+        status: immediateIds.has(queueEntry.module_id)
+          ? "processing"
+          : String(queueEntry.status || "waiting").toLowerCase(),
+        position: Math.max(1, Number(queueEntry.position ?? 1)),
+      }));
 
-      setTask(initialTask);
-      setQueueEntry(queueEntry);
-      setSubmissionId(data.submission_id || submission.id);
+      const initialTasks = enrichedQueueEntries.map((queueEntry) => {
+        const immediate = immediateTasks.find(
+          (task) => task.module_id === queueEntry.module_id
+        );
+        return {
+          task_id: immediate?.task_id || null,
+          module_id: queueEntry.module_id,
+          module_name: queueEntry.module_name,
+          queue_entry_id: queueEntry.queue_entry_id,
+          progress: 0,
+          processedRows: 0,
+          totalRows: 0,
+          status: immediate ? "Processing..." : "Waiting in queue...",
+          completed: false,
+          score: null,
+          error: null,
+        };
+      });
+
+      setTasks(initialTasks);
+      tasksRef.current = initialTasks;
+      setQueueEntries(enrichedQueueEntries);
+      setSubmissionId(response.submission_id || submission.id);
+      setFinalized(false);
     } catch (error) {
       console.error("Error starting benchmark update:", error);
       showSnackbar(
@@ -278,6 +435,12 @@ const UpdateSubmissionModal = ({ isOpen, onClose, submission }) => {
       );
       setLoading(false);
     }
+  };
+
+  const handleModalClose = (event, reason) => {
+    if (reason === "backdropClick" || reason === "escapeKeyDown") return;
+    if (loading) return;
+    onClose && onClose();
   };
 
   // Handle file selection for datasets
@@ -330,7 +493,7 @@ const UpdateSubmissionModal = ({ isOpen, onClose, submission }) => {
   return (
     <Modal
       open={isOpen}
-      onClose={onClose}
+      onClose={handleModalClose}
       sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}
     >
       <ModalDialog
@@ -346,7 +509,7 @@ const UpdateSubmissionModal = ({ isOpen, onClose, submission }) => {
 
         <DialogContent sx={{ overflowX: "hidden" }}>
           {/* Phase 1: File Upload */}
-          {!task ? (
+          {tasks.length === 0 ? (
             <>
               <Box
                 sx={{
@@ -382,7 +545,7 @@ const UpdateSubmissionModal = ({ isOpen, onClose, submission }) => {
                 }}
               >
                 <Typography level="h5" fontWeight="bold">
-                  Step 2: Upload privatized dataset for the new benchmarking
+                  Step 2: Upload privatized datasets for new/updated modules
                   module
                 </Typography>
                 <Typography
@@ -392,8 +555,9 @@ const UpdateSubmissionModal = ({ isOpen, onClose, submission }) => {
                   color="neutral"
                   level="body1"
                 >
-                  A privatized version of the dataset in .csv format must be
-                  uploaded for the new module.
+                  A privatized .csv dataset is required for the modules below.
+                  If a module only had logic/requirements changes, no dataset
+                  upload is needed.
                 </Typography>
                 {datasets.length > 0 && (
                   <DatasetTableUpdate
@@ -404,20 +568,72 @@ const UpdateSubmissionModal = ({ isOpen, onClose, submission }) => {
                   />
                 )}
               </Box>
+
+              {/* Section for modules requiring only reruns */}
+              {rerunModules.length > 0 && (
+                <Box
+                  sx={{
+                    flex: 1,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 2,
+                    mt: 3,
+                  }}
+                >
+                  <Typography level="h5" fontWeight="bold">
+                    Step 3: Select modules to rerun (logic/requirements changes)
+                  </Typography>
+                  <Typography level="body-sm" sx={{ color: "text.tertiary" }}>
+                    Selected: {selectedRerunIds.size} / {rerunModules.length}
+                  </Typography>
+                  <Typography
+                    sx={{ marginY: 2, p: 1 }}
+                    startDecorator={<InfoOutlined />}
+                    variant="soft"
+                    color="neutral"
+                    level="body1"
+                  >
+                    These modules changed and only require rerunning the
+                    submission. No dataset upload is needed.
+                  </Typography>
+                  <List size="sm" sx={{ p: 0 }}>
+                    {rerunModules.map((module) => (
+                      <ListItem key={module.module_id} sx={{ px: 0 }}>
+                        <ListItemDecorator sx={{ mr: 1 }}>
+                          <Checkbox
+                            checked={selectedRerunIds.has(module.module_id)}
+                            onChange={(e) => {
+                              setSelectedRerunIds((prev) => {
+                                const next = new Set(prev);
+                                if (e.target.checked)
+                                  next.add(module.module_id);
+                                else next.delete(module.module_id);
+                                return next;
+                              });
+                            }}
+                          />
+                        </ListItemDecorator>
+                        <Typography>
+                          {module.module_name}
+                          {Array.isArray(module.reasons) &&
+                          module.reasons.length > 0
+                            ? ` — ${module.reasons.join(", ")}`
+                            : ""}
+                        </Typography>
+                      </ListItem>
+                    ))}
+                  </List>
+                </Box>
+              )}
             </>
           ) : /* Phase 2: Processing */
           loading ? (
             <>
               <Typography level="h3">Evaluation in Progress</Typography>
-              {/* Pass single task as array to TaskProgressCard for compatibility */}
-              <TaskProgressCard
-                tasks={[task]}
-                queueEntries={queueEntry ? [queueEntry] : []}
-              />
+              <TaskProgressCard tasks={tasks} queueEntries={queueEntries} />
               <Typography level="body2" sx={{ mt: 2, textAlign: "center" }}>
-                {task.status.includes("Position")
-                  ? "Your submission is queued. Please wait for your turn."
-                  : "Your submission is being processed."}
+                Your submission is queued or processing. This may take a few
+                minutes.
               </Typography>
             </>
           ) : (
@@ -428,7 +644,7 @@ const UpdateSubmissionModal = ({ isOpen, onClose, submission }) => {
               </Typography>
               <ScoreOverviewCard
                 oldModulesScores={submission.benchmarkScores}
-                moduleScores={newModuleScore ? [newModuleScore] : []}
+                moduleScores={newModuleScores}
                 averageScore={averageScore}
               />
             </>
@@ -450,7 +666,7 @@ const UpdateSubmissionModal = ({ isOpen, onClose, submission }) => {
           </DialogActions>
         )}
 
-        {!task && (
+        {tasks.length === 0 && (
           <DialogActions>
             <Button
               onClick={updateSubmission}

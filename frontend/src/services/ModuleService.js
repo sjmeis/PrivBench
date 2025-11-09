@@ -240,6 +240,34 @@ const updateModuleDataset = async (moduleId, formData) => {
   }
 };
 
+const updateModuleRequirements = async (moduleId, formData) => {
+  const res = await axios.post(
+    `${API_BASE_URL}/admin/modules/${moduleId}/requirements`,
+    formData,
+    {
+      withCredentials: true,
+      headers: { "Content-Type": "multipart/form-data" },
+    }
+  );
+  return res.data;
+};
+
+const downloadModuleRequirements = async (moduleId, moduleName = "module") => {
+  const res = await axios.get(
+    `${API_BASE_URL}/admin/modules/${moduleId}/requirements/download`,
+    { withCredentials: true, responseType: "blob" }
+  );
+  const blob = new Blob([res.data], { type: "text/plain;charset=utf-8" });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${moduleName}_requirements.txt`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
+};
+
 export const ModuleService = {
   updateBenchmarkModule,
   deleteBenchmarkModule,
@@ -251,4 +279,6 @@ export const ModuleService = {
   downloadModuleLogic,
   updateModuleLogic,
   updateModuleDataset,
+  updateModuleRequirements,
+  downloadModuleRequirements,
 };
