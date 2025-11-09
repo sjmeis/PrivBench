@@ -1,5 +1,4 @@
 from flask import Blueprint, jsonify, request
-
 from ..services import QueueService, BenchmarkService, run_benchmark_task
 from ..extensions import db, celery
 from flask_jwt_extended import jwt_required, get_jwt_identity
@@ -14,11 +13,12 @@ from ..models import (
     QueueStatus,
     AppVersion,
     SubmissionVersionScore,
+    ModuleUpdate,
 )
 from ..enums import SubmissionStatus
 from datetime import datetime
 from ..utils.email_sender import send_email
-from ..utils.version_utils import get_significant_version
+from ..utils.version_utils import get_significant_version, is_version_greater
 from celery.utils.log import get_task_logger
 from datetime import datetime
 from ..config import Config
@@ -26,6 +26,105 @@ from ..config import Config
 logger = get_task_logger(__name__)
 
 benchmark_bp = Blueprint("benchmark", __name__)
+
+
+def _compute_modules_to_update(submission: Submission):
+    """Return list of modules requiring update with reason and dataset requirement."""
+    active_modules = BenchmarkModule.query.filter_by(is_active=True).all()
+
+    # Build AppVersion lookup for ModuleUpdate.version_id
+    versions_by_id = {
+        version.id: version for version in db.session.query(AppVersion).all()
+    }
+
+    results = []
+    for module in active_modules:
+        score = (
+            db.session.query(BenchmarkScore)
+            .filter_by(submission_id=submission.id, module_id=module.id)
+            .first()
+        )
+
+        if not score:
+            # New module for this submission
+            dataset = (
+                Dataset.query.get(module.dataset_id) if module.dataset_id else None
+            )
+            results.append(
+                {
+                    "module_id": module.id,
+                    "module_name": module.name,
+                    "reason": "new",
+                    "requires_dataset_upload": True,
+                    "dataset_id": dataset.id if dataset else None,
+                    "dataset_name": dataset.name if dataset else None,
+                }
+            )
+            continue
+
+        # Find published updates for this module after the submission's version
+        published_updates = (
+            db.session.query(ModuleUpdate)
+            .filter(
+                ModuleUpdate.module_id == module.id,
+                ModuleUpdate.version_id.isnot(None),
+            )
+            .all()
+        )
+
+        # Collect flags, then decide a single reason
+        has_dataset_update = False
+        has_logic_update = False
+        has_requirements_update = False
+        has_other_major_modified = False
+
+        for update in published_updates:
+            app_version = versions_by_id.get(update.version_id)
+            if not app_version:
+                continue
+            # Only consider updates published after the user's submission version
+            if submission.version and not is_version_greater(
+                app_version.version, submission.version
+            ):
+                continue
+
+            desc = (update.description or "").lower()
+            if "dataset updated" in desc:
+                has_dataset_update = True
+            if "requirements updated" in desc:
+                has_requirements_update = True
+            if "logic updated" in desc:
+                has_logic_update = True
+            if update.change_level == "major" and update.update_type == "modified":
+                has_other_major_modified = True
+
+        # Build reasons array
+        reasons = []
+        if has_logic_update:
+            reasons.append("logic")
+        if has_requirements_update:
+            reasons.append("requirements")
+        if has_dataset_update:
+            reasons.append("dataset")
+        if has_other_major_modified:
+            reasons.append("modified")
+
+        if reasons:
+            dataset = (
+                Dataset.query.get(module.dataset_id) if module.dataset_id else None
+            )
+            results.append(
+                {
+                    "module_id": module.id,
+                    "module_name": module.name,
+                    "reasons": reasons,
+                    "requires_dataset_upload": has_dataset_update,
+                    "dataset_id": dataset.id if dataset else None,
+                    "dataset_name": dataset.name if dataset else None,
+                }
+            )
+
+    return results
 
 
 @benchmark_bp.route("/run-benchmark", methods=["POST"])
@@ -399,7 +498,7 @@ def task_status(task_id):
 @benchmark_bp.route("/run-benchmark/update", methods=["POST"])
 @jwt_required()
 def benchmark_update():
-    """Endpoint to add new modules to the queue for an existing submission."""
+    """Queue selected modules for update for an OUTDATED submission."""
     try:
         response_headers = {
             "Access-Control-Allow-Origin": "http://localhost:3000",
@@ -412,124 +511,117 @@ def benchmark_update():
             logger.info("CORS preflight request received")
             return ("", 204, response_headers)
 
-        logger.info("Parsing request data for benchmark update")
-        request_data = request.get_json()
-        if not request_data or "submissionId" not in request_data:
-            logger.warning("Missing 'submissionId' in request body for update")
+        request_data = request.get_json() or {}
+        submission_id = request_data.get("submissionId")
+        selected_module_ids = request_data.get("selectedModuleIds")  # optional
+
+        if not submission_id:
             return (
                 jsonify({"message": "Missing submission_id in request body"}),
                 400,
                 response_headers,
             )
 
-        submission_id = request_data["submissionId"]
-        logger.info(f"Parsed submission_id for update: {submission_id}")
-
         user_id = get_jwt_identity()
-        logger.info(f"Retrieved user_id from JWT: {user_id}")
-
-        logger.info(f"Fetching submission with ID {submission_id}")
         submission = Submission.query.get(submission_id)
         if not submission:
-            logger.warning(
-                f"Submission with ID {submission_id} not found in the database"
-            )
             return jsonify({"message": "Submission not found"}), 404, response_headers
 
-        # Verify the submission belongs to the user
-        if str(submission.user_id) != user_id:
+        if str(submission.user_id) != str(user_id):
             return jsonify({"message": "Unauthorized"}), 403, response_headers
 
-        # Get modules that don't have scores for this submission
-        logger.info("Fetching completed module IDs for the submission")
-        completed_module_ids = {
-            score.module_id for score in submission.benchmark_scores
-        }
-        logger.info(f"Completed module IDs: {completed_module_ids}")
+        if submission.status != SubmissionStatus.OUTDATED:
+            return jsonify({"message": "Submission is already up-to-date"}), 200
 
-        logger.info("Fetching new modules for benchmarking")
-        new_modules = BenchmarkModule.query.filter(
-            BenchmarkModule.is_active == True,
-            (
-                ~BenchmarkModule.id.in_(completed_module_ids)
-                if completed_module_ids
-                else True
-            ),
-        ).all()
-        logger.info(f"Found {len(new_modules)} new modules to benchmark")
+        # Compute modules needing update, then filter by selection if provided
+        computed = _compute_modules_to_update(submission)
+        by_id = {module["module_id"]: module for module in computed}
 
-        if not new_modules:
-            logger.info("No new modules to benchmark for this submission")
-            return (
-                jsonify({"message": "No new modules to benchmark"}),
-                200,
-                response_headers,
-            )
+        if selected_module_ids:
+            modules_to_update = [
+                by_id[mid] for mid in selected_module_ids if mid in by_id
+            ]
+        else:
+            modules_to_update = computed
 
-        # Add new modules to the queue
+        if not modules_to_update:
+            return jsonify({"message": "No modules to update"}), 200, response_headers
+
+        # Add to queue
         queue_entries = []
         immediate_tasks = []
 
-        for module in new_modules:
-            logger.info(f"Processing module for queue: {module.name} (ID: {module.id})")
-            dataset = Dataset.query.get(module.dataset_id)
-            if not dataset:
-                logger.warning(
-                    f"Dataset with ID {module.dataset_id} not found for module {module.name}"
-                )
+        # Preload modules to reduce queries
+        module_ids = [m["module_id"] for m in modules_to_update]
+        modules = (
+            db.session.query(BenchmarkModule)
+            .filter(BenchmarkModule.id.in_(module_ids))
+            .all()
+        )
+        modules_map = {m.id: m for m in modules}
+
+        for info in modules_to_update:
+            module = modules_map.get(info["module_id"])
+            if not module:
                 continue
 
-            privatized_dataset = PrivatizedDataset.query.filter_by(
-                submission_id=submission_id, original_dataset_id=module.dataset_id
-            ).first()
-            if not privatized_dataset:
+            dataset = (
+                Dataset.query.get(module.dataset_id) if module.dataset_id else None
+            )
+
+            privatized_dataset = None
+            if dataset:
+                privatized_dataset = PrivatizedDataset.query.filter_by(
+                    submission_id=submission_id, original_dataset_id=module.dataset_id
+                ).first()
+
+            # If dataset upload is required, ensure privatized dataset exists
+            if info["requires_dataset_upload"] and not privatized_dataset:
                 logger.warning(
-                    f"Privatized dataset not found for submission {submission_id} and dataset {module.dataset_id}"
+                    f"Required privatized dataset missing for submission {submission_id}, module {module.id}"
                 )
+                # Skip queueing this module
                 continue
 
-            # Add submission to the queue for this new module
             queue_entry = QueueService.add_to_queue(
                 submission_id=submission_id, module_id=module.id, user_id=user_id
             )
+            if not queue_entry:
+                continue
 
-            if queue_entry:
-                position_info = QueueService.get_queue_position(
-                    submission_id, module.id
-                )
-                queue_entries.append(
-                    {
-                        "module_id": module.id,
-                        "module_name": module.name,
-                        "queue_entry_id": queue_entry.id,
-                        "position": (
-                            position_info.get("position") if position_info else None
-                        ),
-                        "status": (
-                            position_info.get("status") if position_info else "waiting"
-                        ),
-                    }
-                )
+            position_info = QueueService.get_queue_position(submission_id, module.id)
+            queue_entries.append(
+                {
+                    "module_id": module.id,
+                    "module_name": module.name,
+                    "queue_entry_id": queue_entry.id,
+                    "position": (
+                        position_info.get("position") if position_info else None
+                    ),
+                    "status": (
+                        position_info.get("status") if position_info else "waiting"
+                    ),
+                }
+            )
 
-                # If this is the first item in the queue for this new module, start it
-                if position_info and position_info.get("position") == 1:
-                    logger.info(
-                        f"Starting immediate processing for new module {module.name} at position 1"
-                    )
-                    task_result = BenchmarkService.process_module_queue_entry(
-                        queue_entry, module, dataset, privatized_dataset
-                    )
-                    if task_result:
-                        immediate_tasks.append(task_result)
-                        for item in queue_entries:
-                            if item["queue_entry_id"] == queue_entry.id:
-                                item["status"] = "processing"
-                                break
+            if position_info and position_info.get("position") == 1:
+                task_result = BenchmarkService.process_module_queue_entry(
+                    queue_entry, module, dataset, privatized_dataset
+                )
+                if task_result:
+                    immediate_tasks.append(task_result)
+                    for item in queue_entries:
+                        if item["queue_entry_id"] == queue_entry.id:
+                            item["status"] = "processing"
+                            break
 
         if not queue_entries:
-            logger.warning("No new modules could be queued for this submission")
             return (
-                jsonify({"message": "No new modules could be queued"}),
+                jsonify(
+                    {
+                        "message": "No modules could be queued. Some modules may require dataset upload first."
+                    }
+                ),
                 400,
                 response_headers,
             )
@@ -538,16 +630,11 @@ def benchmark_update():
             "submission_id": submission_id,
             "queue_entries": queue_entries,
             "immediate_tasks": immediate_tasks,
-            "message": f"Added {len(queue_entries)} new modules to the benchmark queue.",
+            "message": f"Queued {len(queue_entries)} module(s) for update.",
         }
-
-        # If some tasks started immediately, include their task IDs for the frontend
         if immediate_tasks:
             response_data["task_ids"] = immediate_tasks
 
-        logger.info(
-            f"Successfully queued {len(queue_entries)} new modules for submission {submission_id}"
-        )
         return jsonify(response_data), 202, response_headers
 
     except Exception as e:
@@ -750,4 +837,48 @@ def delete_latest_submission():
     except Exception as e:
         logger.error(f"Error deleting latest submission: {str(e)}")
         db.session.rollback()
+        return jsonify({"message": str(e)}), 500
+
+
+@benchmark_bp.route("/submission/<int:submission_id>/updates-info", methods=["GET"])
+@jwt_required()
+def get_submission_updates_info(submission_id: int):
+    """Return which modules for this submission require updates and why."""
+    try:
+        user_id = get_jwt_identity()
+
+        submission = (
+            db.session.query(Submission)
+            .filter_by(id=submission_id, user_id=user_id)
+            .first()
+        )
+        if not submission:
+            return jsonify({"message": "Submission not found"}), 404
+
+        if submission.status != SubmissionStatus.OUTDATED:
+            return jsonify({"message": "Submission is already up-to-date"}), 200
+
+        modules_to_update = _compute_modules_to_update(submission)
+
+        return (
+            jsonify(
+                {
+                    "submission_id": submission.id,
+                    "modules_to_update": modules_to_update,
+                    "dataset_modules": [
+                        module
+                        for module in modules_to_update
+                        if module["requires_dataset_upload"]
+                    ],
+                    "rerun_modules": [
+                        module
+                        for module in modules_to_update
+                        if not module["requires_dataset_upload"]
+                    ],
+                }
+            ),
+            200,
+        )
+    except Exception as e:
+        logger.error(f"Error getting submission updates info: {e}")
         return jsonify({"message": str(e)}), 500

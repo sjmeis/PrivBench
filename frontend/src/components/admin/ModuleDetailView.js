@@ -43,13 +43,17 @@ const ModuleDetailView = ({
   const [isDeleting, setIsDeleting] = useState(false);
   const DATASET_TABLE_TITLE = "Associated Dataset";
   const SCRIPT_TABLE_TITLE = "Python Benchmarking Module Logic";
+  const REQUIREMENTS_TABLE_TITLE = "Python Dependencies (requirements.txt)";
   const { showSnackbar } = useSnackbar();
   const [logicFile, setLogicFile] = useState(null);
   const [datasetFile, setDatasetFile] = useState(null);
+  const [requirementsFile, setRequirementsFile] = useState(null);
   const [isUploadingLogic, setIsUploadingLogic] = useState(false);
   const [isUploadingDataset, setIsUploadingDataset] = useState(false);
+  const [isUploadingRequirements, setIsUploadingRequirements] = useState(false);
   const logicInputRef = useRef(null);
   const datasetInputRef = useRef(null);
+  const requirementsInputRef = useRef(null);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -127,6 +131,10 @@ const ModuleDetailView = ({
     setDatasetFile(e.target.files?.[0] || null);
   };
 
+  const onSelectRequirementsFile = (e) => {
+    setRequirementsFile(e.target.files?.[0] || null);
+  };
+
   const downloadLogic = async () => {
     try {
       await ModuleService.downloadModuleLogic(
@@ -143,6 +151,17 @@ const ModuleDetailView = ({
       await DatasetService.downloadDatasets([selectedModule.dataset?.name]);
     } catch (error) {
       showSnackbar("Error downloading dataset", "error");
+    }
+  };
+
+  const downloadRequirements = async () => {
+    try {
+      await ModuleService.downloadModuleRequirements(
+        selectedModule.id,
+        selectedModule.name
+      );
+    } catch (error) {
+      showSnackbar("Error downloading requirements", "error");
     }
   };
 
@@ -185,6 +204,27 @@ const ModuleDetailView = ({
       showSnackbar("Error updating dataset", "error");
     } finally {
       setIsUploadingDataset(false);
+    }
+  };
+
+  const uploadRequirements = async () => {
+    if (!requirementsFile) {
+      showSnackbar("Select a requirements file first", "neutral");
+      return;
+    }
+    setIsUploadingRequirements(true);
+    try {
+      const form = new FormData();
+      form.append("file", requirementsFile);
+      await ModuleService.updateModuleRequirements(selectedModule.id, form);
+      showSnackbar("Requirements updated", "success");
+      setRequirementsFile(null);
+      if (requirementsInputRef.current) requirementsInputRef.current.value = "";
+      onUpdateOrDelete();
+    } catch (error) {
+      showSnackbar("Error updating requirements", "error");
+    } finally {
+      setIsUploadingRequirements(false);
     }
   };
 
@@ -380,6 +420,47 @@ const ModuleDetailView = ({
                 items={[selectedModule]}
                 title={SCRIPT_TABLE_TITLE}
                 onDownload={downloadLogic}
+              />
+              {/* Upload/Replace Requirements */}
+              <Sheet variant="outlined" sx={{ p: 1.5, borderRadius: "sm" }}>
+                <Stack spacing={1}>
+                  <Typography level="title-sm">
+                    Update Requirements (requirements.txt)
+                  </Typography>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Input
+                      type="file"
+                      sx={{ flex: 1, alignItems: "center" }}
+                      slotProps={{
+                        input: {
+                          ref: requirementsInputRef,
+                          accept: ".txt,.in",
+                          onChange: onSelectRequirementsFile,
+                        },
+                      }}
+                    />
+                    <Button
+                      variant="solid"
+                      color="primary"
+                      endDecorator={<CloudUploadIcon />}
+                      disabled={!requirementsFile || isUploadingRequirements}
+                      loading={isUploadingRequirements}
+                      onClick={uploadRequirements}
+                    >
+                      {requirementsFile ? "Upload" : "Choose file"}
+                    </Button>
+                  </Stack>
+                  {requirementsFile && (
+                    <Typography level="body-sm" sx={{ color: "text.tertiary" }}>
+                      Selected: {requirementsFile.name}
+                    </Typography>
+                  )}
+                </Stack>
+              </Sheet>
+              <FileTableSmall
+                items={[selectedModule]}
+                title={REQUIREMENTS_TABLE_TITLE}
+                onDownload={downloadRequirements}
               />
               {/* Upload/Replace Dataset */}
               <Sheet variant="outlined" sx={{ p: 1.5, borderRadius: "sm" }}>

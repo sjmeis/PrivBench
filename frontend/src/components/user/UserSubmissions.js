@@ -71,6 +71,11 @@ const UserSubmissions = () => {
     fetchSubmissionsAndTemplates();
   }, []);
 
+  const handleSubmissionUpdated = () => {
+    // Refresh list
+    fetchSubmissionsAndTemplates();
+  };
+
   const onTogglePublic = async (submissionId, newVisibility) => {
     try {
       await updateSubmissionVisibility(submissionId, newVisibility);
@@ -262,6 +267,7 @@ const UserSubmissions = () => {
         isOpen={isModalOpen}
         submission={submission}
         onClose={onClose}
+        onUpdated={handleSubmissionUpdated}
       />
     </>
   );

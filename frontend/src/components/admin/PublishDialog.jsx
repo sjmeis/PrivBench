@@ -18,21 +18,25 @@ import { Save } from "@mui/icons-material";
 import { ModuleService } from "../../services/ModuleService";
 import { useSnackbar } from "../../contexts/SnackbarProvider";
 
-const compareVersions = (a, b) => {
-  if (!a || !b) return null;
-  const pa = a
+const compareVersions = (versionA, versionB) => {
+  if (!versionA || !versionB) return null;
+  const segmentsA = versionA
     .trim()
     .split(".")
     .map((n) => Number(n));
-  const pb = b
+  const segmentsB = versionB
     .trim()
     .split(".")
     .map((n) => Number(n));
-  if (pa.length !== 3 || pb.length !== 3 || pa.some(isNaN) || pb.some(isNaN))
-    return null;
+  const isValid =
+    segmentsA.length === 3 &&
+    segmentsB.length === 3 &&
+    !segmentsA.some(Number.isNaN) &&
+    !segmentsB.some(Number.isNaN);
+  if (!isValid) return null;
   for (let i = 0; i < 3; i++) {
-    if (pa[i] > pb[i]) return 1;
-    if (pa[i] < pb[i]) return -1;
+    if (segmentsA[i] > segmentsB[i]) return 1;
+    if (segmentsA[i] < segmentsB[i]) return -1;
   }
   return 0;
 };
@@ -68,6 +72,23 @@ const PublishDialog = ({ open, onClose, onPublished }) => {
           );
         } else {
           setVersionError("");
+        }
+
+        // Prefill description with changes-to-publish summary if user hasn't typed anything
+        if (!description) {
+          const pendingList = (data.pending || [])
+            .map(
+              (update) =>
+                `- ${update.module_name}${
+                  update.description ? ` — ${update.description}` : ""
+                }`
+            )
+            .join("\n");
+          const changesHeader =
+            pendingList.length > 0
+              ? `Changes to publish:\n${pendingList}\n\n`
+              : "";
+          setDescription(changesHeader);
         }
       } catch (e) {
         showSnackbar(e.message || "Failed to load pending updates", "error");
@@ -153,7 +174,7 @@ const PublishDialog = ({ open, onClose, onPublished }) => {
               </Typography>
             )}
             <Textarea
-              placeholder="Optional: describe this release"
+              placeholder="Optional: describe this release (Detected changes prefilled based on pending updates)"
               minRows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}

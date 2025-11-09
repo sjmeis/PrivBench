@@ -1,7 +1,7 @@
 import { Box, Grid, Input, Button } from "@mui/joy";
 import FormControl from "@mui/joy/FormControl";
 import SearchIcon from "@mui/icons-material/Search";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import BenchmarkCardAdmin from "../ranking/BenchmarkCardAdmin";
 import axios from "axios";
 import AddIcon from "@mui/icons-material/Add";
@@ -15,6 +15,7 @@ import { ModuleService } from "../../services/ModuleService";
 
 const ModuleManagement = () => {
   const [modules, setModules] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [selectedModule, setSelectedModule] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPublishOpen, setPublishOpen] = useState(false);
@@ -22,8 +23,14 @@ const ModuleManagement = () => {
   const [hasPendingUpdates, setHasPendingUpdates] = useState(false);
   const { showSnackbar } = useSnackbar();
 
-  //TODO: add search functionality
-  //TODO: finalize detailview including update
+  const filteredModules = useMemo(() => {
+    const term = (searchTerm || "").trim().toLowerCase();
+    if (!term) return modules;
+    return modules.filter((module) => {
+      const title = (module.title || "").toLowerCase();
+      return title.includes(term);
+    });
+  }, [modules, searchTerm]);
 
   const fetchModules = async () => {
     try {
@@ -116,6 +123,8 @@ const ModuleManagement = () => {
             <Input
               variant="outlined"
               placeholder="Search for Benchmarking Modules"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               name="searchTerm"
               size="sm"
               startDecorator={<SearchIcon />}
@@ -154,7 +163,7 @@ const ModuleManagement = () => {
         ) : (
           <Box>
             <Grid container spacing={2}>
-              {modules.map((module) => (
+              {filteredModules.map((module) => (
                 <Grid key={module.id} item xs={selectedModule ? 12 : 6}>
                   <BenchmarkCardAdmin
                     item={module}

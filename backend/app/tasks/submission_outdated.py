@@ -81,8 +81,8 @@ def mark_submissions_outdated_and_notify(self, version, changes):
             email_body = f"""
 Dear {user.username},<br><br>
 
-A new PrivBench version <b>v{version}</b> has been published.<br>
-Your submissions need attention because new benchmark module(s) were added.<br><br>
+PrivBench version <b>v{version}</b> has been published and the benchmark suite was updated. 
+These changes may affect previously evaluated submissions.<br><br>
 
 <b>What changed in v{version}:</b><br>
 <b>New modules:</b><br>
@@ -91,7 +91,7 @@ Your submissions need attention because new benchmark module(s) were added.<br><
 {mod_list_html}
 <br>
 
-<b>Submissions to update:</b><br>
+<b>Submissions to review:</b><br>
 {submission_list}<br><br>
 
 Please visit the platform to update your submissions with the new benchmark module(s).
