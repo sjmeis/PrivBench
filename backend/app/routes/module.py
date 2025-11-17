@@ -1069,3 +1069,44 @@ def download_module_requirements(module_id):
     except Exception as e:
         logger.error(f"Error downloading requirements: {e}")
         return jsonify({"message": str(e)}), 500
+
+
+@module_bp.route("/versions/history", methods=["GET"])
+@jwt_required()
+def get_version_history():
+    """
+    Returns all published versions with their associated module updates.
+    JWT required.
+    """
+    try:
+        versions = (
+            db.session.query(AppVersion).order_by(AppVersion.created_at.desc()).all()
+        )
+
+        result = []
+        for version in versions:
+            updates = (
+                db.session.query(ModuleUpdate)
+                .filter(ModuleUpdate.version_id == version.id)
+                .order_by(ModuleUpdate.created_at.asc())
+                .all()
+            )
+
+            result.append(
+                {
+                    "id": version.id,
+                    "version": version.version,
+                    "created_at": (
+                        version.created_at.isoformat() if version.created_at else None
+                    ),
+                    "updates": [update.to_dict() for update in updates],
+                }
+            )
+
+        return jsonify(result), 200
+    except Exception as e:
+        logger.error(f"Error fetching version history: {e}")
+        return (
+            jsonify({"message": "Failed to fetch version history", "error": str(e)}),
+            500,
+        )
