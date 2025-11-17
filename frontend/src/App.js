@@ -21,6 +21,7 @@ import UserProfile from "./pages/UserProfile";
 import AdminView from "./pages/AdminView";
 import ProtectedRoutesAdmin from "./routes/ProtectedRoutesAdmin";
 import { SnackbarProvider } from "./contexts/SnackbarProvider";
+import VersionHistory from "./pages/VersionHistory";
 
 function App() {
   return (
@@ -63,6 +64,9 @@ function App() {
                 </Route>
                 <Route element={<ProtectedRoutes />}>
                   <Route path="/profile" element={<UserProfile />} />
+                </Route>
+                <Route element={<ProtectedRoutes />}>
+                  <Route path="/version-history" element={<VersionHistory />} />
                 </Route>
               </Routes>
             </Box>
