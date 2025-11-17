@@ -36,6 +36,7 @@ const createBenchmarkingModule = async (formData, onProgress) => {
 
     form.append("name", formData.name);
     form.append("description", formData.description);
+    form.append("deviceSpecification", formData.deviceSpecification || "cpu");
 
     if (formData.algorithmFile) {
       form.append("algorithmFile", formData.algorithmFile);
