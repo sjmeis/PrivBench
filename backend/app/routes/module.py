@@ -136,6 +136,7 @@ def get_all_benchmark_modules():
                 "path": module.path,
                 "datasetId": module.dataset_id,
                 "description": module.description,
+                "deviceSpecification": module.device_specification,
                 "dataset": (
                     {
                         "id": dataset.id,
@@ -440,6 +441,7 @@ def create_benchmark_module():
             is_active=True,
             path=algo_path,
             dataset_id=dataset_ids[0],  # TODO: add support for multiple datasets
+            device_specification=device_spec or "cpu",
         )
 
         db.session.add(new_benchmark_module)
@@ -476,6 +478,7 @@ def create_benchmark_module():
             module_path=algo_path,
             requirements_path=requirements_path if requirements_path else None,
             is_new_module=True,
+            device_specification=device_spec or "cpu",
         )
 
         return (
@@ -489,6 +492,7 @@ def create_benchmark_module():
                         "algorithmFilePath": algo_path,
                         "requirementsFilePath": requirements_path,
                         "uploadedDatasetPaths": uploaded_file_paths,
+                        "deviceSpecification": device_spec or "cpu",
                         "install_task_id": install_task.id,
                     },
                 }
@@ -711,6 +715,7 @@ def update_benchmark_module(module_id):
         new_name = data.get("name")
         new_description = data.get("description")
 
+        new_device_spec = data.get("deviceSpecification")
         changed_fields = []
         if new_name:
             module.name = new_name
@@ -718,6 +723,9 @@ def update_benchmark_module(module_id):
         if new_description and new_description != module.description:
             module.description = new_description
             changed_fields.append("description")
+        if new_device_spec and new_device_spec != module.device_specification:
+            module.device_specification = new_device_spec
+            changed_fields.append("device_specification")
 
         db.session.commit()
 
@@ -739,6 +747,7 @@ def update_benchmark_module(module_id):
             "id": module.id,
             "name": module.name,
             "description": module.description,
+            "deviceSpecification": module.device_specification,
             "title": module.title,
             "version": module.version,
             "isActive": module.is_active,
