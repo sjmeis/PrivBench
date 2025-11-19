@@ -86,6 +86,10 @@ const UserSubmissionsTableRow = ({
 
   const availableVersions = getAvailableVersions();
 
+  const canUpdateSubmission =
+    row.status === SubmissionStatus.OUTDATED ||
+    row.status === SubmissionStatus.IN_PROGRESS;
+
   return (
     <Fragment>
       <tr>
@@ -160,8 +164,7 @@ const UserSubmissionsTableRow = ({
               title={row.isPublic ? "Make private" : "Make public"}
             />
           )}
-          {/* Show the Update button only for outdated submissions */}
-          {row.status === SubmissionStatus.OUTDATED && (
+          {canUpdateSubmission && (
             <Button
               color="primary"
               size="sm"
@@ -169,7 +172,9 @@ const UserSubmissionsTableRow = ({
               onClick={() => onUpdateSubmission(row)}
               endDecorator={<Update />}
             >
-              Update
+              {row.status === SubmissionStatus.IN_PROGRESS
+                ? "View Progress"
+                : "Update"}
             </Button>
           )}
         </td>

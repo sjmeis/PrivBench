@@ -17,6 +17,7 @@ import Upload from "./pages/Upload";
 import Register from "./pages/Register";
 import RankingDetailView from "./pages/RankingDetailView";
 import ProtectedRoutes from "./routes/ProtectedRoutes";
+import UploadRouteGuard from "./routes/UploadRouteGuard";
 import UserProfile from "./pages/UserProfile";
 import AdminView from "./pages/AdminView";
 import ProtectedRoutesAdmin from "./routes/ProtectedRoutesAdmin";
@@ -60,7 +61,9 @@ function App() {
                   <Route path="/admin" element={<AdminView />} />
                 </Route>
                 <Route element={<ProtectedRoutes />}>
-                  <Route path="/upload" element={<Upload />} />
+                  <Route element={<UploadRouteGuard />}>
+                    <Route path="/upload" element={<Upload />} />
+                  </Route>
                 </Route>
                 <Route element={<ProtectedRoutes />}>
                   <Route path="/profile" element={<UserProfile />} />

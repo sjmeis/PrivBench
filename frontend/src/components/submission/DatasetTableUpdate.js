@@ -42,12 +42,7 @@ const DatasetTableUpdate = ({
             borderBottom: "1px solid #e0e0e0",
           }}
         >
-          <Box sx={{ flex: 1 }}>
-            {dataset.name}
-            {Array.isArray(dataset.reasons) && dataset.reasons.length > 0
-              ? ` — ${dataset.reasons.join(", ")}`
-              : ""}
-          </Box>
+          <Box sx={{ flex: 1 }}>{dataset.name}</Box>
           <Box sx={{ flex: 1 }}>{dataset.module_name}</Box>
           <Box sx={{ flex: 1 }}>
             {uploadedFiles[dataset.id]

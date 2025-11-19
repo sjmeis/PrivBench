@@ -1,19 +1,24 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Box,
   Button,
+  Card,
+  CardContent,
   Checkbox,
+  Chip,
+  CircularProgress,
   DialogActions,
   DialogContent,
   DialogTitle,
   Divider,
+  List,
   ListItem,
   ListItemDecorator,
   Modal,
   ModalClose,
   ModalDialog,
+  Sheet,
   Typography,
-  List,
 } from "@mui/joy";
 import {
   InfoOutlined,
@@ -21,6 +26,8 @@ import {
   Close,
   Update,
   RemoveRedEye,
+  UploadFile,
+  PlayArrow,
 } from "@mui/icons-material";
 import { useSnackbar } from "../../contexts/SnackbarProvider";
 import { DatasetService } from "../../services/DatasetService";
@@ -30,65 +37,283 @@ import TaskProgressCard from "../submission/TaskProgressCard";
 import ScoreOverviewCard from "../submission/ScoreOverviewCard";
 import { API_BASE_URL } from "../../config";
 
+const REASON_DETAILS = {
+  dataset: { label: "Dataset change", color: "primary" },
+  logic: { label: "Logic update", color: "success" },
+  requirements: { label: "Requirements update", color: "warning" },
+  modified: { label: "Major update", color: "danger" },
+  new: { label: "New module", color: "info" },
+};
+
+const PROGRESS_STORAGE_PREFIX = "submission-update-progress-";
+const hasWindow = typeof window !== "undefined";
+
+const getProgressStorageKey = (submissionId) =>
+  `${PROGRESS_STORAGE_PREFIX}${submissionId}`;
+
+const loadPersistedProgress = (submissionId) => {
+  if (!submissionId || !hasWindow) return null;
+  try {
+    const raw = window.localStorage.getItem(
+      getProgressStorageKey(submissionId)
+    );
+    return raw ? JSON.parse(raw) : null;
+  } catch (error) {
+    console.warn("Failed to load persisted submission progress", error);
+    return null;
+  }
+};
+
+const persistProgressState = (submissionId, state = {}) => {
+  if (!submissionId || !hasWindow) return;
+  try {
+    window.localStorage.setItem(
+      getProgressStorageKey(submissionId),
+      JSON.stringify({ ...state, timestamp: Date.now() })
+    );
+  } catch (error) {
+    console.warn("Failed to persist submission progress", error);
+  }
+};
+
+const clearPersistedProgress = (submissionId) => {
+  if (!submissionId || !hasWindow) return;
+  try {
+    window.localStorage.removeItem(getProgressStorageKey(submissionId));
+  } catch (error) {
+    console.warn("Failed to clear persisted submission progress", error);
+  }
+};
+
+const getModuleReasons = (module) => {
+  if (Array.isArray(module?.reasons) && module.reasons.length > 0) {
+    return module.reasons;
+  }
+  if (module?.reason) {
+    return [module.reason];
+  }
+  return [];
+};
+
+const formatReasonChips = (module) => {
+  const moduleReasons = getModuleReasons(module);
+  const chips = [];
+  if (module.requires_dataset_upload) {
+    chips.push({
+      key: `${module.module_id}-dataset`,
+      label: REASON_DETAILS.dataset.label,
+      color: REASON_DETAILS.dataset.color,
+    });
+  }
+
+  moduleReasons
+    .filter((reason) =>
+      module.requires_dataset_upload ? reason !== "dataset" : true
+    )
+    .forEach((reason, idx) => {
+      const meta = REASON_DETAILS[reason] || {
+        label: reason,
+        color: "neutral",
+      };
+      chips.push({
+        key: `${module.module_id}-${reason}-${idx}`,
+        label: meta.label,
+        color: meta.color,
+      });
+    });
+  return chips;
+};
+
 const UpdateSubmissionModal = ({ isOpen, onClose, submission, onUpdated }) => {
-  // State for file upload phase
+  const [modulesToUpdate, setModulesToUpdate] = useState([]);
   const [datasets, setDatasets] = useState([]);
   const [uploadedFiles, setUploadedFiles] = useState({});
   const [uploadingDatasetId, setUploadingDatasetId] = useState(null);
+  const [rerunModules, setRerunModules] = useState([]);
+  const [selectedRerunIds, setSelectedRerunIds] = useState(new Set());
 
-  // State for evaluation phase (single task)
   const [tasks, setTasks] = useState([]);
   const [queueEntries, setQueueEntries] = useState([]);
   const [loading, setLoading] = useState(false);
   const [submissionId, setSubmissionId] = useState(null);
-  const [modulesToUpdate, setModulesToUpdate] = useState([]);
-  const [rerunModules, setRerunModules] = useState([]);
-  const [selectedRerunIds, setSelectedRerunIds] = useState(new Set());
-
-  // State for results phase
-  const [averageScore, setAverageScore] = useState(null);
   const [newModuleScores, setNewModuleScores] = useState([]);
+  const [averageScore, setAverageScore] = useState(null);
   const [finalized, setFinalized] = useState(false);
-  const { showSnackbar } = useSnackbar();
+  const [isStartingUpdate, setIsStartingUpdate] = useState(false);
 
+  const { showSnackbar } = useSnackbar();
   const intervalRef = useRef(null);
   const tasksRef = useRef([]);
+  const queueEntriesRef = useRef([]);
 
-  // Effect to initialize datasets when modal opens
+  const resetState = useCallback(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    setModulesToUpdate([]);
+    setDatasets([]);
+    setUploadedFiles({});
+    setUploadingDatasetId(null);
+    setRerunModules([]);
+    setSelectedRerunIds(new Set());
+    setTasks([]);
+    tasksRef.current = [];
+    setQueueEntries([]);
+    queueEntriesRef.current = [];
+    setLoading(false);
+    setSubmissionId(null);
+    setNewModuleScores([]);
+    setAverageScore(null);
+    setFinalized(false);
+  }, []);
+
+  const previousSubmissionIdRef = useRef(null);
+
   useEffect(() => {
-    if (!submission || !isOpen) {
-      // Reset all state when modal is closed
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-      setTasks([]);
-      tasksRef.current = [];
-      setQueueEntries([]);
-      setUploadedFiles({});
-      setDatasets([]);
-      setLoading(false);
-      setSubmissionId(null);
-      setAverageScore(null);
-      setNewModuleScores([]);
-      setFinalized(false);
-      setModulesToUpdate([]);
-      setRerunModules([]);
-      setSelectedRerunIds(new Set());
+    const currentId = submission?.id;
+    const previousId = previousSubmissionIdRef.current;
+
+    // When switching to a different submission, reset state.
+    if (currentId && previousId && currentId !== previousId) {
+      resetState();
+    }
+
+    // Record the latest non-null submission id so we can detect switches.
+    if (currentId) {
+      previousSubmissionIdRef.current = currentId;
+    }
+  }, [submission?.id, resetState]);
+
+  useEffect(() => {
+    if (!isOpen || !submission) return;
+
+    const stored = loadPersistedProgress(submission.id);
+    if (stored?.tasks?.length) {
+      setSubmissionId(submission.id);
+      setTasks(stored.tasks);
+      tasksRef.current = stored.tasks;
+      const restoredQueueEntries = stored.queueEntries || [];
+      setQueueEntries(restoredQueueEntries);
+      queueEntriesRef.current = restoredQueueEntries;
+      setLoading(true);
       return;
     }
 
-    // Fetch modules and datasets to update from backend
+    // No persisted progress: ensure we start from selection view.
+    setLoading(false);
+    setAverageScore(null);
+    setNewModuleScores([]);
+    setFinalized(false);
+    setTasks([]);
+    tasksRef.current = [];
+    setQueueEntries([]);
+    queueEntriesRef.current = [];
+  }, [isOpen, submission]);
+
+  const hydrateOngoingTasks = useCallback(async (subId, modules = []) => {
+    if (!subId || modules.length === 0) return false;
+
+    try {
+      const statuses = await Promise.all(
+        modules.map(async (module) => {
+          try {
+            const res = await fetch(
+              `${API_BASE_URL}/queue-status/${subId}/${module.module_id}`,
+              {
+                credentials: "include",
+              }
+            );
+            if (!res.ok) return null;
+            const data = await res.json();
+            return { module, data };
+          } catch (error) {
+            console.warn("queue-status hydrate error", module.module_id, error);
+            return null;
+          }
+        })
+      );
+
+      const activeEntries = statuses.filter((status) => {
+        if (!status?.data?.queue_position_info) return false;
+        const info = status.data.queue_position_info;
+        const statusStr = String(info.status || "").toLowerCase();
+        const hasId = Boolean(info.queue_entry_id || info.task_id);
+        const isActive = statusStr === "waiting" || statusStr === "processing";
+        return hasId && isActive;
+      });
+
+      if (activeEntries.length === 0) {
+        return false;
+      }
+
+      const enrichedQueueEntries = activeEntries.map(({ module, data }) => {
+        const queueInfo = data.queue_position_info || {};
+        return {
+          module_id: module.module_id,
+          module_name: module.module_name,
+          queue_entry_id: queueInfo.queue_entry_id,
+          task_id: queueInfo.task_id,
+          position: Number.isFinite(Number(queueInfo.position))
+            ? Number(queueInfo.position)
+            : null,
+          status: String(queueInfo.status || "waiting").toLowerCase(),
+          moduleQueueStatus: data.module_queue_status,
+        };
+      });
+
+      const initialTasks = enrichedQueueEntries.map((entry) => {
+        const isProcessing = entry.status === "processing";
+        return {
+          task_id: isProcessing ? entry.task_id || null : null,
+          module_id: entry.module_id,
+          module_name: entry.module_name,
+          queue_entry_id: entry.queue_entry_id,
+          progress: 0,
+          processedRows: 0,
+          totalRows: 0,
+          status: isProcessing
+            ? "Processing..."
+            : entry.position != null
+            ? `In queue (Position: ${entry.position})`
+            : "Waiting in queue...",
+          completed: false,
+          score: null,
+          error: null,
+        };
+      });
+
+      setSubmissionId(subId);
+      setTasks(initialTasks);
+      tasksRef.current = initialTasks;
+      setQueueEntries(enrichedQueueEntries);
+      queueEntriesRef.current = enrichedQueueEntries;
+      setLoading(true);
+      persistProgressState(subId, {
+        tasks: initialTasks,
+        queueEntries: enrichedQueueEntries,
+      });
+      return true;
+    } catch (error) {
+      console.error("Failed to hydrate ongoing tasks", error);
+      return false;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen || !submission) return;
+    let ignore = false;
+
     const fetchUpdateData = async () => {
       try {
         const info = await BenchmarkService.getSubmissionUpdatesInfo(
           submission.id
         );
+        if (ignore) return;
         const modules = info.modules_to_update || [];
         setModulesToUpdate(modules);
 
-        // Build dataset list for modules that require dataset upload
-        const datasets = modules
+        const datasetModules = modules
           .filter(
             (module) =>
               module.requires_dataset_upload &&
@@ -100,32 +325,48 @@ const UpdateSubmissionModal = ({ isOpen, onClose, submission, onUpdated }) => {
             name: module.dataset_name,
             module_id: module.module_id,
             module_name: module.module_name,
-            reasons: module.reasons || [],
+            reasons: getModuleReasons(module),
           }));
-        setDatasets(datasets);
+        setDatasets(datasetModules);
 
-        // Reruns exclude any module that requires dataset upload
         const reruns = modules
           .filter((module) => !module.requires_dataset_upload)
           .map((module) => ({
             ...module,
-            reasons: module.reasons || [],
+            reasons: getModuleReasons(module),
           }));
         setRerunModules(reruns);
-        setSelectedRerunIds(new Set(reruns.map((module) => module.module_id))); // preselect all by default
+        setSelectedRerunIds(new Set(reruns.map((module) => module.module_id)));
+
+        const hydrated = await hydrateOngoingTasks(submission.id, modules);
+        if (!hydrated && tasksRef.current.length === 0) {
+          clearPersistedProgress(submission.id);
+          setLoading(false);
+          setAverageScore(null);
+          setNewModuleScores([]);
+          setFinalized(false);
+          setTasks([]);
+          tasksRef.current = [];
+          setQueueEntries([]);
+          queueEntriesRef.current = [];
+        }
       } catch (error) {
-        showSnackbar("Failed to fetch update info", "error");
-        setModulesToUpdate([]);
-        setDatasets([]);
-        setRerunModules([]);
-        setSelectedRerunIds(new Set());
+        if (!ignore) {
+          showSnackbar("Failed to fetch update info", "error");
+          setModulesToUpdate([]);
+          setDatasets([]);
+          setRerunModules([]);
+          setSelectedRerunIds(new Set());
+        }
       }
     };
 
     fetchUpdateData();
-  }, [isOpen, submission, showSnackbar]);
+    return () => {
+      ignore = true;
+    };
+  }, [isOpen, submission, hydrateOngoingTasks, showSnackbar]);
 
-  // Polling effect
   useEffect(() => {
     if (!loading || !submissionId || tasks.length === 0) return;
 
@@ -168,14 +409,11 @@ const UpdateSubmissionModal = ({ isOpen, onClose, submission, onUpdated }) => {
               queuePositionInfos.set(task.module_id, queuePositionInfo);
             }
 
-            // Only trust queue task_id when the queue says "processing"
             const qStatusRaw = String(
               queuePositionInfo?.status || ""
             ).toLowerCase();
             const qIsProcessing = qStatusRaw === "processing";
 
-            // Prefer an already-known task_id. Otherwise
-            // use queue-provided task_id only if processing.
             let activeTaskId = task.task_id || null;
             if (!activeTaskId && qIsProcessing && queuePositionInfo?.task_id) {
               activeTaskId = queuePositionInfo.task_id;
@@ -196,8 +434,6 @@ const UpdateSubmissionModal = ({ isOpen, onClose, submission, onUpdated }) => {
                     : Number(data.progress) || 0;
                 const state = data.state || data.status;
 
-                // if we got a SUCCESS but queue isn't processing yet and
-                // this task_id did not come from an already-known task, ignore it
                 if (
                   String(state).toUpperCase() === "SUCCESS" &&
                   !qIsProcessing &&
@@ -231,7 +467,6 @@ const UpdateSubmissionModal = ({ isOpen, onClose, submission, onUpdated }) => {
               }
             }
 
-            // No task id yet: infer waiting/processing only
             const statusStr = String(
               queuePositionInfo?.status || ""
             ).toLowerCase();
@@ -244,10 +479,9 @@ const UpdateSubmissionModal = ({ isOpen, onClose, submission, onUpdated }) => {
               ...task,
               status: isProcessing
                 ? "Processing..."
-                : `In queue (Position: ${Math.max(
-                    1,
-                    Number(queuePositionInfo?.position ?? 1)
-                  )})`,
+                : queuePositionInfo
+                ? `In queue (Position: ${queuePositionInfo.position ?? "—"})`
+                : "Waiting in queue...",
             };
           })
         );
@@ -255,32 +489,37 @@ const UpdateSubmissionModal = ({ isOpen, onClose, submission, onUpdated }) => {
         setTasks(updatedTasks);
         tasksRef.current = updatedTasks;
 
-        setQueueEntries((current) =>
-          (current || []).map((entry) => {
-            const correspondingTask = updatedTasks.find(
-              (t) => t.module_id === entry.module_id
-            );
-            const moduleStatus = moduleQueueStatuses.get(entry.module_id);
-            const newPositionInfo = queuePositionInfos.get(entry.module_id);
-            if (!correspondingTask) return entry;
+        const currentQueueEntries = queueEntriesRef.current || [];
+        const nextQueueEntries = currentQueueEntries.map((entry) => {
+          const correspondingTask = updatedTasks.find(
+            (t) => t.module_id === entry.module_id
+          );
+          const moduleStatus = moduleQueueStatuses.get(entry.module_id);
+          const newPositionInfo = queuePositionInfos.get(entry.module_id);
+          if (!correspondingTask) return entry;
 
-            let newStatus = "waiting";
-            if (correspondingTask.completed) newStatus = "completed";
-            else if (correspondingTask.error) newStatus = "failed";
-            else if (correspondingTask.task_id) newStatus = "processing";
+          let newStatus = "waiting";
+          if (correspondingTask.completed) newStatus = "completed";
+          else if (correspondingTask.error) newStatus = "failed";
+          else if (correspondingTask.task_id) newStatus = "processing";
 
-            return {
-              ...entry,
-              ...(newPositionInfo || {}),
-              position: Math.max(
-                1,
-                Number(newPositionInfo?.position ?? entry.position ?? 1)
-              ),
-              status: newStatus,
-              moduleQueueStatus: moduleStatus,
-            };
-          })
-        );
+          return {
+            ...entry,
+            ...(newPositionInfo || {}),
+            position: Math.max(
+              1,
+              Number(newPositionInfo?.position ?? entry.position ?? 1)
+            ),
+            status: newStatus,
+            moduleQueueStatus: moduleStatus,
+          };
+        });
+        queueEntriesRef.current = nextQueueEntries;
+        setQueueEntries(nextQueueEntries);
+        persistProgressState(submissionId, {
+          tasks: updatedTasks,
+          queueEntries: nextQueueEntries,
+        });
 
         const allFinished = updatedTasks.every((t) => t.completed || t.error);
         if (allFinished && !finalized) {
@@ -292,23 +531,52 @@ const UpdateSubmissionModal = ({ isOpen, onClose, submission, onUpdated }) => {
 
           const scores = updatedTasks
             .filter((t) => t.completed && t.score != null)
-            .map((t) => ({ module_name: t.module_name, score: t.score }));
+            .map((t) => ({
+              module_id: t.module_id,
+              module_name: t.module_name,
+              score: t.score,
+            }));
           setNewModuleScores(scores);
 
-          const oldScores = (submission.benchmarkScores || []).map(
-            (s) => s.score
+          const previousScoresMap = new Map(
+            (submission?.benchmarkScores || []).map((score) => [
+              score.benchmarkModule?.id,
+              score.score,
+            ])
           );
-          const combined = [...oldScores, ...scores.map((s) => s.score)];
-          setAverageScore(
-            combined.length
-              ? combined.reduce((a, b) => a + b, 0) / combined.length
-              : null
+          const updatedScoreMap = new Map(
+            scores.map((score) => [score.module_id, score.score])
           );
+
+          const mergedScores = (submission?.benchmarkScores || []).map(
+            (score) =>
+              updatedScoreMap.has(score.benchmarkModule?.id)
+                ? updatedScoreMap.get(score.benchmarkModule?.id)
+                : score.score
+          );
+          const brandNewModules = scores.filter(
+            (score) => !previousScoresMap.has(score.module_id)
+          );
+          const combined = [
+            ...mergedScores,
+            ...brandNewModules.map((moduleScore) => moduleScore.score),
+          ];
+
+          const calculatedAverage = combined.length
+            ? combined.reduce((a, b) => a + b, 0) / combined.length
+            : null;
+          setAverageScore(calculatedAverage);
 
           try {
             const result = await BenchmarkService.finalizeBenchmarkUpdate(
               submissionId
             );
+            const newScoreValue =
+              result?.new_score !== undefined ? Number(result.new_score) : null;
+            if (!Number.isNaN(newScoreValue) && newScoreValue !== null) {
+              setAverageScore(newScoreValue);
+            }
+            clearPersistedProgress(submissionId);
             showSnackbar(result.message || "Submission updated", "success");
           } catch (error) {
             showSnackbar(
@@ -336,39 +604,46 @@ const UpdateSubmissionModal = ({ isOpen, onClose, submission, onUpdated }) => {
         intervalRef.current = null;
       }
     };
-  }, [loading, submissionId, tasks.length]);
+  }, [
+    finalized,
+    loading,
+    onUpdated,
+    showSnackbar,
+    submission,
+    submissionId,
+    tasks.length,
+  ]);
 
   const isFormValid = () => {
-    // For dataset-required modules, ensure uploads exist
     const datasetOk =
       datasets.length === 0 ||
       datasets.every((dataset) => uploadedFiles[dataset.id]);
-    // For rerun modules, require at least one selection when reruns exist
     const rerunOk = rerunModules.length === 0 || selectedRerunIds.size > 0;
     return datasetOk && rerunOk;
   };
 
-  // Start the update process
   const updateSubmission = async () => {
+    if (!submission) return;
     if (!isFormValid()) {
       showSnackbar("Please upload required datasets", "error");
       return;
     }
 
     try {
-      setLoading(true);
+      setIsStartingUpdate(true);
+      setAverageScore(null);
+      setNewModuleScores([]);
+      setFinalized(false);
 
-      // Include dataset-required modules that now have an uploaded privatized dataset
       const datasetModuleIdsToQueue = (modulesToUpdate || [])
         .filter(
-          (m) =>
-            m.requires_dataset_upload &&
-            m.dataset_id &&
-            uploadedFiles[m.dataset_id]
+          (module) =>
+            module.requires_dataset_upload &&
+            module.dataset_id &&
+            uploadedFiles[module.dataset_id]
         )
-        .map((m) => m.module_id);
+        .map((module) => module.module_id);
 
-      // Union rerun selections and dataset-required modules
       const selectedIds = Array.from(
         new Set([...Array.from(selectedRerunIds), ...datasetModuleIdsToQueue])
       );
@@ -384,11 +659,19 @@ const UpdateSubmissionModal = ({ isOpen, onClose, submission, onUpdated }) => {
             "No modules were queued. Upload required datasets or select modules to update.",
           "warning"
         );
+        clearPersistedProgress(submission.id);
         setLoading(false);
+        setAverageScore(null);
+        setNewModuleScores([]);
+        setFinalized(false);
+        setTasks([]);
+        tasksRef.current = [];
+        setQueueEntries([]);
+        queueEntriesRef.current = [];
+        setIsStartingUpdate(false);
         return;
       }
 
-      // Initialize tasks state
       const allQueueEntries = response.queue_entries || [];
       const immediateTasks = response.immediate_tasks || [];
       const immediateIds = new Set(
@@ -422,11 +705,18 @@ const UpdateSubmissionModal = ({ isOpen, onClose, submission, onUpdated }) => {
         };
       });
 
+      const newSubmissionId = response.submission_id || submission.id;
+      setLoading(true);
+      setSubmissionId(newSubmissionId);
       setTasks(initialTasks);
       tasksRef.current = initialTasks;
       setQueueEntries(enrichedQueueEntries);
-      setSubmissionId(response.submission_id || submission.id);
+      queueEntriesRef.current = enrichedQueueEntries;
       setFinalized(false);
+      persistProgressState(newSubmissionId, {
+        tasks: initialTasks,
+        queueEntries: enrichedQueueEntries,
+      });
     } catch (error) {
       console.error("Error starting benchmark update:", error);
       showSnackbar(
@@ -434,19 +724,35 @@ const UpdateSubmissionModal = ({ isOpen, onClose, submission, onUpdated }) => {
         "error"
       );
       setLoading(false);
+    } finally {
+      setIsStartingUpdate(false);
     }
   };
 
-  const handleModalClose = (event, reason) => {
-    if (reason === "backdropClick" || reason === "escapeKeyDown") return;
-    if (loading) return;
+  const handleModalClose = () => {
     onClose && onClose();
   };
 
-  // Handle file selection for datasets
+const formatDatasetReasonText = (reasons = []) => {
+  const normalized = Array.isArray(reasons)
+    ? reasons
+    : typeof reasons === "string"
+    ? [reasons]
+    : [];
+  const seen = new Set();
+  return normalized
+    .filter((reason) => {
+      if (!reason || seen.has(reason)) return false;
+      seen.add(reason);
+        return true;
+      })
+      .map((reason) => REASON_DETAILS[reason]?.label || reason)
+      .join(", ");
+  };
+
   const handleFileSelect = async (event, originalDatasetId) => {
     const file = event.target.files[0];
-    if (!file) return;
+    if (!file || !submission) return;
 
     setUploadingDatasetId(originalDatasetId);
 
@@ -470,8 +776,8 @@ const UpdateSubmissionModal = ({ isOpen, onClose, submission, onUpdated }) => {
     }
   };
 
-  // Download missing datasets
   const handleDownloadMissingDatasets = async () => {
+    if (datasets.length === 0) return;
     try {
       await DatasetService.downloadDatasets(
         datasets.map((dataset) => dataset.name)
@@ -485,10 +791,11 @@ const UpdateSubmissionModal = ({ isOpen, onClose, submission, onUpdated }) => {
     }
   };
 
-  // Don't render if modal is closed or submission is null
-  if (!isOpen || !submission) {
+  if (!submission) {
     return null;
   }
+
+  const stepForRerun = datasets.length > 0 ? "2" : "1";
 
   return (
     <Modal
@@ -508,150 +815,338 @@ const UpdateSubmissionModal = ({ isOpen, onClose, submission, onUpdated }) => {
         <Divider sx={{ marginBottom: "10px" }} />
 
         <DialogContent sx={{ overflowX: "hidden" }}>
-          {/* Phase 1: File Upload */}
-          {tasks.length === 0 ? (
+          {loading ? (
             <>
-              <Box
-                sx={{
-                  mb: 3,
-                  flex: 1,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 2,
-                }}
-              >
-                <Typography level="h5" fontWeight="bold">
-                  Step 1: Download missing datasets
-                </Typography>
-                <Box sx={{ textAlign: "center" }}>
-                  <Button
-                    fullWidth
-                    variant="solid"
-                    startDecorator={<CloudDownload />}
-                    onClick={handleDownloadMissingDatasets}
-                    disabled={datasets.length === 0}
-                  >
-                    Download Missing Datasets
-                  </Button>
-                </Box>
-              </Box>
-
-              <Box
-                sx={{
-                  flex: 1,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 2,
-                }}
-              >
-                <Typography level="h5" fontWeight="bold">
-                  Step 2: Upload privatized datasets for new/updated modules
-                  module
-                </Typography>
-                <Typography
-                  sx={{ marginY: 2, p: 1 }}
-                  startDecorator={<InfoOutlined />}
-                  variant="soft"
-                  color="neutral"
-                  level="body1"
-                >
-                  A privatized .csv dataset is required for the modules below.
-                  If a module only had logic/requirements changes, no dataset
-                  upload is needed.
-                </Typography>
-                {datasets.length > 0 && (
-                  <DatasetTableUpdate
-                    datasets={datasets}
-                    uploadedFiles={uploadedFiles}
-                    uploadingDatasetId={uploadingDatasetId}
-                    onFileSelect={handleFileSelect}
-                  />
-                )}
-              </Box>
-
-              {/* Section for modules requiring only reruns */}
-              {rerunModules.length > 0 && (
+              <Typography level="h3">Evaluation in Progress</Typography>
+              {tasks.length > 0 ? (
+                <>
+                  <TaskProgressCard tasks={tasks} queueEntries={queueEntries} />
+                  <Typography level="body2" sx={{ mt: 2, textAlign: "center" }}>
+                    Processing continues even if you close this window. Reopen the
+                    modal from the submissions table at any time to check progress.
+                  </Typography>
+                </>
+              ) : (
                 <Box
                   sx={{
-                    flex: 1,
                     display: "flex",
                     flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    py: 8,
                     gap: 2,
-                    mt: 3,
                   }}
                 >
-                  <Typography level="h5" fontWeight="bold">
-                    Step 3: Select modules to rerun (logic/requirements changes)
+                  <CircularProgress />
+                  <Typography level="body-sm" color="text.secondary">
+                    Preparing update tasks...
                   </Typography>
-                  <Typography level="body-sm" sx={{ color: "text.tertiary" }}>
-                    Selected: {selectedRerunIds.size} / {rerunModules.length}
-                  </Typography>
-                  <Typography
-                    sx={{ marginY: 2, p: 1 }}
-                    startDecorator={<InfoOutlined />}
-                    variant="soft"
-                    color="neutral"
-                    level="body1"
-                  >
-                    These modules changed and only require rerunning the
-                    submission. No dataset upload is needed.
-                  </Typography>
-                  <List size="sm" sx={{ p: 0 }}>
-                    {rerunModules.map((module) => (
-                      <ListItem key={module.module_id} sx={{ px: 0 }}>
-                        <ListItemDecorator sx={{ mr: 1 }}>
-                          <Checkbox
-                            checked={selectedRerunIds.has(module.module_id)}
-                            onChange={(e) => {
-                              setSelectedRerunIds((prev) => {
-                                const next = new Set(prev);
-                                if (e.target.checked)
-                                  next.add(module.module_id);
-                                else next.delete(module.module_id);
-                                return next;
-                              });
-                            }}
-                          />
-                        </ListItemDecorator>
-                        <Typography>
-                          {module.module_name}
-                          {Array.isArray(module.reasons) &&
-                          module.reasons.length > 0
-                            ? ` — ${module.reasons.join(", ")}`
-                            : ""}
-                        </Typography>
-                      </ListItem>
-                    ))}
-                  </List>
                 </Box>
               )}
             </>
-          ) : /* Phase 2: Processing */
-          loading ? (
+          ) : tasks.length === 0 && averageScore === null ? (
             <>
-              <Typography level="h3">Evaluation in Progress</Typography>
-              <TaskProgressCard tasks={tasks} queueEntries={queueEntries} />
-              <Typography level="body2" sx={{ mt: 2, textAlign: "center" }}>
-                Your submission is queued or processing. This may take a few
-                minutes.
-              </Typography>
+              <Card variant="soft" color="primary" sx={{ mb: 3 }}>
+                <CardContent>
+                  <Typography level="h4" fontWeight="bold">
+                    Modules Requiring Action
+                  </Typography>
+                  <Typography level="body-sm" sx={{ mb: 2 }}>
+                    Review which modules changed, then upload datasets and rerun
+                    as needed.
+                  </Typography>
+                  <Box
+                    sx={{ display: "flex", gap: 1.5, flexWrap: "wrap", mb: 2 }}
+                  >
+                    <Chip
+                      startDecorator={<UploadFile />}
+                      color="primary"
+                      variant="solid"
+                    >
+                      Dataset updates: {datasets.length}
+                    </Chip>
+                    <Chip
+                      startDecorator={<PlayArrow />}
+                      color="success"
+                      variant="soft"
+                    >
+                      Logic/Rerun only: {rerunModules.length}
+                    </Chip>
+                  </Box>
+                  {modulesToUpdate.length === 0 ? (
+                    <Typography level="body-sm">
+                      Your submission is already aligned with the latest
+                      modules.
+                    </Typography>
+                  ) : (
+                    <List size="sm" sx={{ p: 0 }}>
+                      {modulesToUpdate.map((module) => (
+                        <ListItem key={module.module_id} sx={{ px: 1 }}>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: 0.5,
+                            }}
+                          >
+                            <Typography level="body-md" fontWeight="bold">
+                              {module.module_name}
+                            </Typography>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                flexWrap: "wrap",
+                                gap: 0.75,
+                              }}
+                            >
+                              {formatReasonChips(module).map((chip) => (
+                                <Chip
+                                  key={chip.key}
+                                  size="sm"
+                                  variant="soft"
+                                  color={chip.color}
+                                >
+                                  {chip.label}
+                                </Chip>
+                              ))}
+                            </Box>
+                          </Box>
+                        </ListItem>
+                      ))}
+                    </List>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card variant="outlined" sx={{ mb: 3 }}>
+                <CardContent>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      mb: 2,
+                    }}
+                  >
+                    <Chip color="primary" variant="solid" size="lg">
+                      1
+                    </Chip>
+                    <Typography level="h4" fontWeight="bold">
+                      Upload updated datasets
+                    </Typography>
+                  </Box>
+
+                  {datasets.length === 0 ? (
+                    <Typography level="body-sm" color="text.secondary">
+                      Great! No dataset uploads are required for this update.
+                    </Typography>
+                  ) : (
+                    <>
+                      <Typography
+                        sx={{ mb: 2, p: 1.5, borderRadius: "sm" }}
+                        startDecorator={<InfoOutlined />}
+                        variant="soft"
+                        color="neutral"
+                        level="body-md"
+                      >
+                        Download the original datasets, apply your privacy
+                        mechanism, then upload the privatized versions for the
+                        modules below.
+                      </Typography>
+
+                      <Sheet
+                        variant="soft"
+                        sx={{ p: 2, mb: 2, borderRadius: "sm" }}
+                      >
+                        <Typography
+                          level="body-sm"
+                          fontWeight="bold"
+                          sx={{ mb: 1 }}
+                        >
+                          Modules with dataset updates:
+                        </Typography>
+                        <List size="sm" sx={{ p: 0 }}>
+                          {datasets.map((dataset) => (
+                            <ListItem key={dataset.id} sx={{ px: 1, py: 0.5 }}>
+                              <Box>
+                                <Typography level="body-sm" fontWeight="bold">
+                                  {dataset.module_name}
+                                </Typography>
+                                <Typography
+                                  level="body-xs"
+                                  color="text.secondary"
+                                >
+                                  Dataset: {dataset.name}
+                                </Typography>
+                                {(() => {
+                                  const datasetReasonText =
+                                    formatDatasetReasonText(dataset.reasons);
+                                  return datasetReasonText ? (
+                                    <Chip
+                                      size="sm"
+                                      variant="soft"
+                                      color="warning"
+                                      sx={{ mt: 0.5 }}
+                                    >
+                                      {datasetReasonText}
+                                    </Chip>
+                                  ) : null;
+                                })()}
+                              </Box>
+                            </ListItem>
+                          ))}
+                        </List>
+                      </Sheet>
+
+                      <Box sx={{ mb: 3 }}>
+                        <Button
+                          fullWidth
+                          size="lg"
+                          variant="solid"
+                          color="primary"
+                          startDecorator={<CloudDownload />}
+                          onClick={handleDownloadMissingDatasets}
+                          disabled={datasets.length === 0}
+                        >
+                          Download Original Datasets
+                        </Button>
+                      </Box>
+
+                      <Divider sx={{ my: 2 }}>
+                        <Typography level="body-sm">
+                          Then upload privatized files
+                        </Typography>
+                      </Divider>
+
+                      <DatasetTableUpdate
+                        datasets={datasets}
+                        uploadedFiles={uploadedFiles}
+                        uploadingDatasetId={uploadingDatasetId}
+                        onFileSelect={handleFileSelect}
+                      />
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card variant="outlined">
+                <CardContent>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      mb: 2,
+                    }}
+                  >
+                    <Chip color="success" variant="solid" size="lg">
+                      {stepForRerun}
+                    </Chip>
+                    <Typography level="h4" fontWeight="bold">
+                      Rerun modules (logic/requirements updates)
+                    </Typography>
+                  </Box>
+
+                  {rerunModules.length === 0 ? (
+                    <Typography level="body-sm" color="text.secondary">
+                      No additional reruns are required.
+                    </Typography>
+                  ) : (
+                    <>
+                      <Typography
+                        level="body-sm"
+                        sx={{ color: "text.secondary", mb: 1 }}
+                      >
+                        Selected: {selectedRerunIds.size} /{" "}
+                        {rerunModules.length}
+                      </Typography>
+                      <Typography
+                        sx={{ mb: 2, p: 1.5, borderRadius: "sm" }}
+                        startDecorator={<InfoOutlined />}
+                        variant="soft"
+                        color="neutral"
+                        level="body-md"
+                      >
+                        These modules changed without requiring new datasets.
+                        Select which ones to rerun.
+                      </Typography>
+                      <List size="sm" sx={{ p: 0 }}>
+                        {rerunModules.map((module) => (
+                          <ListItem
+                            key={module.module_id}
+                            sx={{ px: 1, py: 0.5 }}
+                          >
+                            <ListItemDecorator>
+                              <Checkbox
+                                checked={selectedRerunIds.has(module.module_id)}
+                                onChange={(e) => {
+                                  setSelectedRerunIds((prev) => {
+                                    const next = new Set(prev);
+                                    if (e.target.checked)
+                                      next.add(module.module_id);
+                                    else next.delete(module.module_id);
+                                    return next;
+                                  });
+                                }}
+                              />
+                            </ListItemDecorator>
+                            <Box sx={{ flex: 1 }}>
+                              <Typography level="body-md" fontWeight="bold">
+                                {module.module_name}
+                              </Typography>
+                              {module.reasons?.length > 0 && (
+                                <Box
+                                  sx={{
+                                    mt: 0.5,
+                                    display: "flex",
+                                    gap: 0.75,
+                                    flexWrap: "wrap",
+                                  }}
+                                >
+                                  {module.reasons.map((reason, idx) => {
+                                    const meta = REASON_DETAILS[reason] || {
+                                      label: reason,
+                                      color: "neutral",
+                                    };
+                                    return (
+                                      <Chip
+                                        key={`${module.module_id}-${reason}-${idx}`}
+                                        size="sm"
+                                        variant="soft"
+                                        color={meta.color}
+                                      >
+                                        {meta.label}
+                                      </Chip>
+                                    );
+                                  })}
+                                </Box>
+                              )}
+                            </Box>
+                          </ListItem>
+                        ))}
+                      </List>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
             </>
-          ) : (
-            /* Phase 3: Results */
+          ) : averageScore !== null || newModuleScores.length > 0 ? (
             <>
               <Typography level="h3" mb={2}>
                 Updated Results
               </Typography>
               <ScoreOverviewCard
-                oldModulesScores={submission.benchmarkScores}
-                moduleScores={newModuleScores}
                 averageScore={averageScore}
+                previousAverage={
+                  submission?.overallScore ?? submission?.score ?? null
+                }
+                moduleScores={newModuleScores}
+                oldModulesScores={submission?.benchmarkScores || []}
               />
             </>
-          )}
+          ) : null}
         </DialogContent>
 
-        {/* Action buttons based on current phase */}
         {!loading && averageScore !== null && (
           <DialogActions>
             <Button
@@ -670,20 +1165,41 @@ const UpdateSubmissionModal = ({ isOpen, onClose, submission, onUpdated }) => {
           <DialogActions>
             <Button
               onClick={updateSubmission}
-              disabled={!isFormValid() || loading}
-              color={isFormValid() ? "success" : "primary"}
+              disabled={
+                !isFormValid() ||
+                loading ||
+                isStartingUpdate ||
+                modulesToUpdate.length === 0
+              }
+              color={
+                isFormValid() && modulesToUpdate.length > 0
+                  ? "success"
+                  : "primary"
+              }
               endDecorator={<Update />}
             >
-              Update Submission
+              Start Update Process
             </Button>
             <Button
               onClick={onClose}
               variant="soft"
               color="neutral"
-              disabled={loading}
               startDecorator={<Close />}
             >
-              {loading ? "Please wait..." : "Close"}
+              Close
+            </Button>
+          </DialogActions>
+        )}
+
+        {loading && tasks.length > 0 && (
+          <DialogActions>
+            <Button
+              onClick={handleModalClose}
+              variant="soft"
+              color="neutral"
+              startDecorator={<Close />}
+            >
+              Close and Continue in Background
             </Button>
           </DialogActions>
         )}
