@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { updateSubmissionVisibility } from "../../services/RankingsService";
 import * as rankingService from "../../services/RankingsService";
@@ -37,26 +37,7 @@ const UserSubmissions = () => {
   const { showSnackbar } = useSnackbar();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    fetchSubmissionsAndTemplates();
-  }, []);
-
-  useEffect(() => {
-    let ignore = false;
-    (async () => {
-      try {
-        const flag = await ModuleService.hasPendingModuleUpdates();
-        if (!ignore) setSubmissionsBlocked(flag);
-      } catch {
-        if (!ignore) setSubmissionsBlocked(false);
-      }
-    })();
-    return () => {
-      ignore = true;
-    };
-  }, []);
-
-  const fetchSubmissionsAndTemplates = async () => {
+  const fetchSubmissionsAndTemplates = useCallback(async () => {
     try {
       // Fetch submissions
       const submissionData = await rankingService.getUserSubmissions();
@@ -85,7 +66,34 @@ const UserSubmissions = () => {
     } catch (err) {
       showSnackbar(err.message || "Failed to fetch data");
     }
-  };
+  }, [showSnackbar]);
+
+  useEffect(() => {
+    fetchSubmissionsAndTemplates();
+  }, [fetchSubmissionsAndTemplates]);
+
+  useEffect(() => {
+    let ignore = false;
+    (async () => {
+      try {
+        const flag = await ModuleService.hasPendingModuleUpdates();
+        if (!ignore) setSubmissionsBlocked(flag);
+      } catch {
+        if (!ignore) setSubmissionsBlocked(false);
+      }
+    })();
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!inProgressSubmission) return;
+    const intervalId = setInterval(() => {
+      fetchSubmissionsAndTemplates();
+    }, 5000);
+    return () => clearInterval(intervalId);
+  }, [inProgressSubmission, fetchSubmissionsAndTemplates]);
 
   const handleSubmissionUpdated = () => {
     // Refresh list
