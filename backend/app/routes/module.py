@@ -103,8 +103,8 @@ def _find_existing_requirements_path(module: BenchmarkModule):
                 fallback_path = os.path.join(MODULES_FOLDER, entry_name)
                 if os.path.isfile(fallback_path):
                     return fallback_path
-    except Exception:
-        pass
+    except Exception as e:
+        logger.error(f"Error finding requirements path for module '{getattr(module, 'name', None)}': {e}")
 
     return None
 
