@@ -36,6 +36,7 @@ const createBenchmarkingModule = async (formData, onProgress) => {
 
     form.append("name", formData.name);
     form.append("description", formData.description);
+    form.append("deviceSpecification", formData.deviceSpecification || "cpu");
 
     if (formData.algorithmFile) {
       form.append("algorithmFile", formData.algorithmFile);
@@ -161,13 +162,118 @@ const fetchPendingModuleUpdates = async () => {
   return response.data;
 };
 
-const publishModuleUpdates = async (version, description) => {
+const hasPendingModuleUpdates = async () => {
+  const res = await axios.get(`${API_BASE_URL}/modules/updates/has-pending`, {
+    withCredentials: true,
+  });
+  return !!res.data?.hasPending;
+};
+
+const publishModuleUpdates = async (version, description, sendEmail = true) => {
   const response = await axios.post(
     `${API_BASE_URL}/modules/publish`,
-    { version, description },
+    {
+      version,
+      description,
+      send_email: sendEmail,
+    },
     { withCredentials: true }
   );
   return response.data;
+};
+
+const downloadModuleLogic = async (moduleId, moduleName) => {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/modules/${moduleId}/logic/download`,
+      {
+        credentials: "include",
+        cache: "no-cache",
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to download module logic");
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${moduleName}.py`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error("Error downloading module logic:", error);
+    throw error;
+  }
+};
+
+const updateModuleLogic = async (moduleId, formData) => {
+  try {
+    const response = await axios.post(
+      `${API_BASE_URL}/modules/update/logic/${moduleId}`,
+      formData,
+      {
+        withCredentials: true,
+        headers: { "Content-Type": "multipart/form-data" },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error updating module logic:", error);
+    throw error;
+  }
+};
+
+const updateModuleDataset = async (moduleId, formData) => {
+  try {
+    const response = await axios.post(
+      `${API_BASE_URL}/modules/update/dataset/${moduleId}`,
+      formData,
+      {
+        withCredentials: true,
+        headers: { "Content-Type": "multipart/form-data" },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error updating module dataset:", error);
+    throw error;
+  }
+};
+
+const updateModuleRequirements = async (moduleId, formData) => {
+  const res = await axios.post(
+    `${API_BASE_URL}/admin/modules/${moduleId}/requirements`,
+    formData,
+    {
+      withCredentials: true,
+      headers: { "Content-Type": "multipart/form-data" },
+    }
+  );
+  return res.data;
+};
+
+const downloadModuleRequirements = async (moduleId, moduleName = "module") => {
+  const res = await axios.get(
+    `${API_BASE_URL}/admin/modules/${moduleId}/requirements/download`,
+    { withCredentials: true, responseType: "blob" }
+  );
+  const blob = new Blob([res.data], { type: "text/plain;charset=utf-8" });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${moduleName}_requirements.txt`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
 };
 
 export const ModuleService = {
@@ -177,5 +283,11 @@ export const ModuleService = {
   createBenchmarkingModule,
   pollModuleStatus,
   fetchPendingModuleUpdates,
+  hasPendingModuleUpdates,
   publishModuleUpdates,
+  downloadModuleLogic,
+  updateModuleLogic,
+  updateModuleDataset,
+  updateModuleRequirements,
+  downloadModuleRequirements,
 };

@@ -10,7 +10,12 @@ class ModuleUpdate(db.Model):
     id = Column(Integer, primary_key=True)
     module_id = Column(Integer, ForeignKey("benchmark_module.id"), nullable=False)
     is_updated = Column(Boolean, default=True, nullable=False)
-    update_type = Column(String(50), nullable=False)  # 'new_module', 'modified'
+    update_type = Column(
+        String(50), nullable=False
+    )  # 'new_module', 'modified', 'deleted'
+    change_level = Column(
+        String(10), default="minor", nullable=False
+    )  # 'major' or 'minor'
     description = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
     version_id = Column(Integer, ForeignKey("app_version.id"), nullable=True)
@@ -25,6 +30,7 @@ class ModuleUpdate(db.Model):
             "module_id": self.module_id,
             "is_updated": self.is_updated,
             "update_type": self.update_type,
+            "change_level": self.change_level,
             "description": self.description,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "version_id": self.version_id,

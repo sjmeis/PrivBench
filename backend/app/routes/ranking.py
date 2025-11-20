@@ -9,6 +9,7 @@ from ..models import (
 )
 from .. import db
 from ..enums import SubmissionStatus, License
+from ..utils.version_utils import parse_version
 from sqlalchemy import or_, and_, distinct
 from flask_jwt_extended import (
     get_jwt_identity,
@@ -71,6 +72,13 @@ def get_ranking_filters():
         for version in version_scores_versions:
             if version[0]:
                 all_versions.add(version[0])
+
+        # Filter to only significant versions (x.y.0 where patch = 0)
+        significant_versions = []
+        for version in all_versions:
+            parsed = parse_version(version)
+            if parsed and parsed[2] == 0:
+                significant_versions.append(version)
 
         # Modules query based on version filter
         if version_filter:
@@ -271,10 +279,15 @@ def get_user_submissions():
 
             # Process submission_version_scores if they exist
             if submission.version_scores:
-                for vs in submission.version_scores:
+                for version_score in submission.version_scores:
+                    # Filter to only significant versions (x.y.0)
+                    parsed = parse_version(version_score.version)
+                    if not parsed or parsed[2] != 0:
+                        continue
+
                     # Get modules for this version and find their scores
                     version_modules = []
-                    for module in vs.modules:
+                    for module in version_score.modules:
                         # Find the corresponding score from benchmark_scores for this module
                         matching_score = None
                         for score in submission.benchmark_scores:
@@ -300,37 +313,39 @@ def get_user_submissions():
 
                     version_scores_list.append(
                         {
-                            "version": vs.version,
-                            "score": vs.score,
-                            "created_at": vs.created_at.isoformat(),
+                            "version": version_score.version,
+                            "score": version_score.score,
+                            "created_at": version_score.created_at.isoformat(),
                             "modules": version_modules,
                         }
                     )
 
-            # If no version_scores exist, create one from current submission data
+            # If no significant version_scores exist, check if current version is significant
             if not version_scores_list:
-                version_scores_list.append(
-                    {
-                        "version": submission.version,
-                        "score": submission.score,
-                        "created_at": submission.submission_date.isoformat(),
-                        "modules": [
-                            {
-                                "benchmarkModule": {
-                                    "id": score.benchmark_module.id,
-                                    "name": score.benchmark_module.name,
-                                    "title": score.benchmark_module.title,
-                                    "version": score.benchmark_module.version,
-                                    "isActive": score.benchmark_module.is_active,
-                                    "createdAt": score.benchmark_module.created_at.isoformat(),
-                                },
-                                "score": score.score,
-                                "createdAt": score.created_at.isoformat(),
-                            }
-                            for score in submission.benchmark_scores
-                        ],
-                    }
-                )
+                parsed = parse_version(submission.version)
+                if parsed and parsed[2] == 0:
+                    version_scores_list.append(
+                        {
+                            "version": submission.version,
+                            "score": submission.score,
+                            "created_at": submission.submission_date.isoformat(),
+                            "modules": [
+                                {
+                                    "benchmarkModule": {
+                                        "id": score.benchmark_module.id,
+                                        "name": score.benchmark_module.name,
+                                        "title": score.benchmark_module.title,
+                                        "version": score.benchmark_module.version,
+                                        "isActive": score.benchmark_module.is_active,
+                                        "createdAt": score.benchmark_module.created_at.isoformat(),
+                                    },
+                                    "score": score.score,
+                                    "createdAt": score.created_at.isoformat(),
+                                }
+                                for score in submission.benchmark_scores
+                            ],
+                        }
+                    )
 
             # Sort by version
             submission_detail["version_scores"] = sorted(

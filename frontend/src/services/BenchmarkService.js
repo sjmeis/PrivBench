@@ -51,11 +51,11 @@ const pollTasks = async (tasks, showSnackbar) => {
   );
 };
 
-const startBenchmarkUpdate = async (submissionId) => {
+const startBenchmarkUpdate = async (submissionId, selectedModuleIds = []) => {
   try {
     const response = await axios.post(
       `${API_BASE_URL}/run-benchmark/update`,
-      { submissionId: submissionId },
+      { submissionId, selectedModuleIds },
       { withCredentials: true }
     );
     return response.data;
@@ -93,9 +93,23 @@ const deleteLatestSubmission = async () => {
   }
 };
 
+const getSubmissionUpdatesInfo = async (submissionId) => {
+  try {
+    const res = await axios.get(
+      `${API_BASE_URL}/submission/${submissionId}/updates-info`,
+      { withCredentials: true }
+    );
+    return res.data;
+  } catch (error) {
+    console.error("Error fetching submission updates info:", error);
+    throw error;
+  }
+};
+
 export const BenchmarkService = {
   startBenchmarkUpdate,
   pollTasks,
   deleteLatestSubmission,
   finalizeBenchmarkUpdate,
+  getSubmissionUpdatesInfo,
 };

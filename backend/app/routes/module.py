@@ -1,7 +1,7 @@
 import os
 import logging
 import json
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, send_file
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from sqlalchemy import exists
 from ..models import (
@@ -22,6 +22,7 @@ from ..enums import SubmissionStatus
 from ..tasks.submission_outdated import mark_submissions_outdated_and_notify
 from ..tasks.add_module import install_and_load_module
 from ..utils.container_manager import container_manager
+from ..utils.version_utils import is_version_greater, recommend_next_version
 
 logger = logging.getLogger(__name__)
 
@@ -31,29 +32,6 @@ DATASET_FOLDER = os.path.join(PROJECT_ROOT, "data", "datasets")
 MODULES_FOLDER = os.path.join(PROJECT_ROOT, "modules")
 
 module_bp = Blueprint("benchmark_module", __name__)
-
-
-def _recommend_next_version(current: str) -> str:
-    major, minor, patch = map(int, current.split("."))
-    return f"{major}.{minor}.{patch + 1}"
-
-
-def _parse_version(v: str):
-    try:
-        parts = [int(p) for p in v.strip().split(".")]
-        if len(parts) != 3:
-            return None
-        return tuple(parts)
-    except Exception:
-        return None
-
-
-def _is_version_greater(new_v: str, cur_v: str) -> bool:
-    a = _parse_version(new_v)
-    b = _parse_version(cur_v)
-    if a is None or b is None:
-        return False
-    return a > b
 
 
 def _recalculate_version_scores_after_module_delete(module_id: int):
@@ -102,6 +80,41 @@ def _recalculate_version_scores_after_module_delete(module_id: int):
         raise
 
 
+def _find_existing_requirements_path(module: BenchmarkModule):
+    try:
+        safe_module_name = secure_filename(module.name)
+        module_dir = os.path.dirname(module.path) if module.path else MODULES_FOLDER
+
+        candidate_paths = [
+            os.path.join(MODULES_FOLDER, f"{safe_module_name}_requirements.txt"),
+            os.path.join(MODULES_FOLDER, f"{safe_module_name}.txt"),
+            os.path.join(module_dir, "requirements.txt"),
+        ]
+
+        for candidate_path in candidate_paths:
+            if candidate_path and os.path.isfile(candidate_path):
+                return candidate_path
+
+        # Fallback: any .txt containing module name in modules folder
+        for entry_name in os.listdir(MODULES_FOLDER):
+            is_text_file = entry_name.lower().endswith(".txt")
+            name_matches = safe_module_name.lower() in entry_name.lower()
+            if is_text_file and name_matches:
+                fallback_path = os.path.join(MODULES_FOLDER, entry_name)
+                if os.path.isfile(fallback_path):
+                    return fallback_path
+    except Exception as e:
+        logger.error(f"Error finding requirements path for module '{getattr(module, 'name', None)}': {e}")
+
+    return None
+
+
+def _stable_requirements_path(module: BenchmarkModule) -> str:
+    os.makedirs(MODULES_FOLDER, exist_ok=True)
+    safe_module_name = secure_filename(module.name)
+    return os.path.join(MODULES_FOLDER, f"{safe_module_name}_requirements.txt")
+
+
 @module_bp.route("/modules", methods=["GET"])
 def get_all_benchmark_modules():
     try:
@@ -123,6 +136,7 @@ def get_all_benchmark_modules():
                 "path": module.path,
                 "datasetId": module.dataset_id,
                 "description": module.description,
+                "deviceSpecification": module.device_specification,
                 "dataset": (
                     {
                         "id": dataset.id,
@@ -166,14 +180,18 @@ def list_pending_module_updates():
             .all()
         )
         current_version = AppVersion.get_current_version()
-        recommended_next = _recommend_next_version(current_version)
+
+        # Check if any pending update is major
+        has_major = any(update.change_level == "major" for update in pending)
+        recommended_next = recommend_next_version(current_version, has_major)
 
         return (
             jsonify(
                 {
                     "currentVersion": current_version,
                     "recommendedNext": recommended_next,
-                    "pending": [u.to_dict() for u in pending],
+                    "hasMajorChanges": has_major,
+                    "pending": [update.to_dict() for update in pending],
                 }
             ),
             200,
@@ -181,6 +199,21 @@ def list_pending_module_updates():
     except Exception as e:
         logger.error(f"Error listing pending updates: {e}")
         return jsonify({"message": str(e)}), 500
+
+
+@module_bp.route("/modules/updates/has-pending", methods=["GET"])
+@jwt_required()
+def has_pending_module_updates():
+    try:
+        pending_count = (
+            db.session.query(ModuleUpdate)
+            .filter(ModuleUpdate.is_updated == True, ModuleUpdate.version_id == None)
+            .count()
+        )
+        return jsonify({"hasPending": pending_count > 0}), 200
+    except Exception as e:
+        logger.error(f"Error checking pending module updates flag: {e}")
+        return jsonify({"hasPending": False, "error": str(e)}), 500
 
 
 @module_bp.route("/modules/publish", methods=["POST"])
@@ -195,6 +228,7 @@ def publish_module_updates():
         data = request.get_json() or {}
         version_str = data.get("version")  # required on publish
         description = data.get("description")
+        send_email = data.get("sendEmail", True)
 
         if (
             not version_str
@@ -204,7 +238,7 @@ def publish_module_updates():
             return jsonify({"message": "Version is required to publish"}), 400
 
         current_version = AppVersion.get_current_version()
-        if not _is_version_greater(version_str, current_version):
+        if not is_version_greater(version_str, current_version):
             return (
                 jsonify(
                     {
@@ -274,20 +308,19 @@ def publish_module_updates():
             if u.update_type == "modified" and u.module_id in module_by_id
         ]
 
-        # Only require users to update submissions and send emails if at least one new module was added
-        if new_modules:
-            try:
+        try:
+            if send_email:
                 notify_task = mark_submissions_outdated_and_notify.delay(
                     version_str,
                     {"new_modules": new_modules, "modified_modules": modified_modules},
                 )
                 logger.info(f"Outdated-mark notify task queued: {notify_task.id}")
-            except Exception as e:
-                logger.warning(f"Failed to enqueue notify task: {e}")
-        else:
-            logger.info(
-                "Publish completed with metadata-only changes; no submission updates required."
-            )
+            else:
+                logger.info(
+                    "Publish completed without sending emails (admin unchecked notification)."
+                )
+        except Exception as e:
+            logger.warning(f"Failed to enqueue notify task: {e}")
 
         return (
             jsonify(
@@ -296,7 +329,7 @@ def publish_module_updates():
                     "version": version_str,
                     "affectedModules": [m.id for m in modules],
                     "pendingUpdatesClosed": len(pending),
-                    "requiresSubmissionUpdate": bool(new_modules),
+                    "requiresSubmissionUpdate": send_email,
                 }
             ),
             200,
@@ -408,6 +441,7 @@ def create_benchmark_module():
             is_active=True,
             path=algo_path,
             dataset_id=dataset_ids[0],  # TODO: add support for multiple datasets
+            device_specification=device_spec or "cpu",
         )
 
         db.session.add(new_benchmark_module)
@@ -418,6 +452,7 @@ def create_benchmark_module():
             ModuleUpdate(
                 module_id=new_benchmark_module.id,
                 update_type="new_module",
+                change_level="major",
                 description=f"New module '{name}' added",
                 is_updated=True,
                 version_id=None,
@@ -443,6 +478,7 @@ def create_benchmark_module():
             module_path=algo_path,
             requirements_path=requirements_path if requirements_path else None,
             is_new_module=True,
+            device_specification=device_spec or "cpu",
         )
 
         return (
@@ -456,6 +492,7 @@ def create_benchmark_module():
                         "algorithmFilePath": algo_path,
                         "requirementsFilePath": requirements_path,
                         "uploadedDatasetPaths": uploaded_file_paths,
+                        "deviceSpecification": device_spec or "cpu",
                         "install_task_id": install_task.id,
                     },
                 }
@@ -554,6 +591,19 @@ def delete_benchmark_module(module_id):
         module = BenchmarkModule.query.get(module_id)
         if not module:
             return jsonify({"message": "Benchmark module not found"}), 404
+
+        # Record deletion as a pending update before removing the module
+        db.session.add(
+            ModuleUpdate(
+                module_id=module.id,
+                update_type="deleted",
+                change_level="major",
+                description=f"Module '{module.name}' deleted",
+                is_updated=True,
+                version_id=None,
+            )
+        )
+        db.session.flush()
 
         # Stop and remove the running Docker container for this module (if any)
         try:
@@ -665,6 +715,7 @@ def update_benchmark_module(module_id):
         new_name = data.get("name")
         new_description = data.get("description")
 
+        new_device_spec = data.get("deviceSpecification")
         changed_fields = []
         if new_name:
             module.name = new_name
@@ -672,6 +723,9 @@ def update_benchmark_module(module_id):
         if new_description and new_description != module.description:
             module.description = new_description
             changed_fields.append("description")
+        if new_device_spec and new_device_spec != module.device_specification:
+            module.device_specification = new_device_spec
+            changed_fields.append("device_specification")
 
         db.session.commit()
 
@@ -680,6 +734,7 @@ def update_benchmark_module(module_id):
                 ModuleUpdate(
                     module_id=module.id,
                     update_type="modified",
+                    change_level="minor",
                     description=f"Fields updated: {', '.join(changed_fields)}",
                     is_updated=True,
                     version_id=None,
@@ -692,6 +747,7 @@ def update_benchmark_module(module_id):
             "id": module.id,
             "name": module.name,
             "description": module.description,
+            "deviceSpecification": module.device_specification,
             "title": module.title,
             "version": module.version,
             "isActive": module.is_active,
@@ -704,3 +760,353 @@ def update_benchmark_module(module_id):
         logger.error(f"Error updating benchmark module: {e}")
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
+
+
+@module_bp.route("/modules/<int:module_id>/logic/download", methods=["GET"])
+@jwt_required()
+def download_module_logic(module_id):
+    try:
+        module = BenchmarkModule.query.get(module_id)
+        if not module:
+            return jsonify({"message": "Benchmark module not found"}), 404
+
+        if not module.path or not os.path.isfile(module.path):
+            return jsonify({"message": "Module logic file not found"}), 404
+
+        return send_file(
+            module.path,
+            as_attachment=True,
+            download_name=os.path.basename(module.path),
+        )
+    except Exception as e:
+        logger.error(f"Error downloading module logic: {e}")
+        return jsonify({"message": str(e)}), 500
+
+
+@module_bp.route("/modules/update/logic/<int:module_id>", methods=["POST"])
+@jwt_required()
+def update_module_logic(module_id):
+    try:
+        user_id = get_jwt_identity()
+        user = User.query.get(int(user_id))
+        if not user:
+            return jsonify({"message": "User not found"}), 404
+        if not user.admin:
+            return (
+                jsonify({"message": "User doesn't possess the necessary permissions."}),
+                403,
+            )
+
+        module = BenchmarkModule.query.get(module_id)
+        if not module:
+            return jsonify({"message": "Benchmark module not found"}), 404
+
+        file = request.files.get("file")
+        if not file or not file.filename:
+            return jsonify({"message": "No file provided"}), 400
+
+        filename = secure_filename(file.filename)
+        if not filename.lower().endswith(".py"):
+            return jsonify({"message": "Only .py files are accepted"}), 400
+
+        # Use a stable filename and overwrite if it exists
+        os.makedirs(MODULES_FOLDER, exist_ok=True)
+        stable_name = f"{secure_filename(module.name)}.py"
+        save_path = os.path.join(MODULES_FOLDER, stable_name)
+        file.save(save_path)
+
+        # Find existing requirements for this module (reuse, do not require re-upload)
+        requirements_path = _find_existing_requirements_path(module)
+
+        # Restart container and keep path stable
+        try:
+            container = container_manager.get_container(module.name)
+            if container:
+                container.stop()
+                container.remove(force=True)
+                container_manager.running_containers.pop(
+                    f"module-container-{module.name.lower()}",
+                    None,
+                )
+        except Exception as e:
+            logger.warning(f"Could not stop/remove container for {module.name}: {e}")
+
+        # Ensure DB path points to the stable file
+        if module.path != save_path:
+            module.path = save_path
+        db.session.commit()
+
+        db.session.add(
+            ModuleUpdate(
+                module_id=module.id,
+                update_type="modified",
+                change_level="major",
+                description="Logic updated",
+                is_updated=True,
+                version_id=None,
+            )
+        )
+        db.session.commit()
+
+        # Reinstall/reload in background
+        install_task = None
+        try:
+            install_task = install_and_load_module.delay(
+                module_id=module.id,
+                module_name=module.name,
+                module_path=save_path,
+                requirements_path=requirements_path,
+                is_new_module=False,
+                restart_container=True,
+            )
+        except Exception as e:
+            logger.warning(f"Failed to enqueue reinstall for {module.name}: {e}")
+
+        return (
+            jsonify(
+                {
+                    "message": "Module logic updated",
+                    "moduleId": module.id,
+                    "path": save_path,
+                    "install_task_id": install_task.id if install_task else None,
+                }
+            ),
+            200,
+        )
+
+    except Exception as e:
+        logger.error(f"Error updating module logic: {e}")
+        db.session.rollback()
+        return jsonify({"message": str(e)}), 500
+
+
+@module_bp.route("/modules/update/dataset/<int:module_id>", methods=["POST"])
+@jwt_required()
+def update_module_dataset(module_id):
+    try:
+        user_id = get_jwt_identity()
+        user = User.query.get(int(user_id))
+        if not user or not user.admin:
+            return jsonify({"message": "Forbidden"}), 403
+
+        module = BenchmarkModule.query.get(module_id)
+        if not module:
+            return jsonify({"message": "Benchmark module not found"}), 404
+
+        dataset = module.dataset
+        if not dataset:
+            return jsonify({"message": "Module dataset not configured"}), 400
+
+        uploaded = request.files.get("file")
+        if not uploaded or not uploaded.filename:
+            return jsonify({"message": "No file provided"}), 400
+
+        allowed_exts = (".csv", ".parquet", ".json", ".zip", ".txt")
+        filename = secure_filename(uploaded.filename)
+        if not filename.lower().endswith(allowed_exts):
+            return (
+                jsonify(
+                    {
+                        "message": f"Unsupported file type. Allowed: {', '.join(allowed_exts)}"
+                    }
+                ),
+                400,
+            )
+
+        # Overwrite in place and update Dataset row
+        os.makedirs(DATASET_FOLDER, exist_ok=True)
+        new_path = os.path.join(DATASET_FOLDER, filename)
+        uploaded.save(new_path)
+
+        dataset.name = filename
+        dataset.file_path = new_path
+
+        db.session.add(
+            ModuleUpdate(
+                module_id=module.id,
+                update_type="modified",
+                change_level="major",
+                description="Dataset updated",
+                is_updated=True,
+                version_id=None,
+            )
+        )
+        db.session.commit()
+
+        return (
+            jsonify(
+                {
+                    "message": "Dataset updated",
+                    "moduleId": module.id,
+                    "dataset": {
+                        "id": dataset.id,
+                        "name": dataset.name,
+                        "filePath": dataset.file_path,
+                        "createdAt": (
+                            dataset.created_at.isoformat()
+                            if dataset.created_at
+                            else None
+                        ),
+                        "isActive": dataset.is_active,
+                    },
+                }
+            ),
+            200,
+        )
+
+    except Exception as e:
+        logger.error(f"Error updating module dataset: {e}")
+        db.session.rollback()
+        return jsonify({"message": str(e)}), 500
+
+
+@module_bp.route("/admin/modules/<int:module_id>/requirements", methods=["POST"])
+@jwt_required()
+def update_module_requirements(module_id):
+    try:
+        user_id = get_jwt_identity()
+        user = User.query.get(int(user_id))
+        if not user or not user.admin:
+            return jsonify({"message": "Forbidden"}), 403
+
+        module = BenchmarkModule.query.get(module_id)
+        if not module:
+            return jsonify({"message": "Benchmark module not found"}), 404
+
+        uploaded = request.files.get("file")
+        if not uploaded or not uploaded.filename:
+            return jsonify({"message": "No file provided"}), 400
+
+        filename = secure_filename(uploaded.filename)
+        if not filename.lower().endswith((".txt", ".in")):
+            return jsonify({"message": "Only .txt or .in files are accepted"}), 400
+
+        # Save to stable location so future updates can find it
+        save_path = _stable_requirements_path(module)
+        uploaded.save(save_path)
+
+        db.session.add(
+            ModuleUpdate(
+                module_id=module.id,
+                update_type="modified",
+                change_level="major",
+                description="Requirements updated",
+                is_updated=True,
+                version_id=None,
+            )
+        )
+        db.session.commit()
+
+        # Restart container if exists (we'll reinstall requirements)
+        try:
+            container = container_manager.get_container(module.name)
+            if container:
+                container.stop()
+                container.remove(force=True)
+                container_manager.running_containers.pop(
+                    f"module-container-{module.name.lower()}",
+                    None,
+                )
+        except Exception as e:
+            logger.warning(f"Could not stop/remove container for {module.name}: {e}")
+
+        # Reinstall dependencies and reload module in background
+        install_task = None
+        try:
+            install_task = install_and_load_module.delay(
+                module_id=module.id,
+                module_name=module.name,
+                module_path=module.path,  # keep current logic file
+                requirements_path=save_path,
+                is_new_module=False,
+                restart_container=True,
+            )
+        except Exception as e:
+            logger.warning(f"Failed to enqueue reinstall for {module.name}: {e}")
+
+        return (
+            jsonify(
+                {
+                    "message": "Requirements updated",
+                    "moduleId": module.id,
+                    "requirementsPath": save_path,
+                    "install_task_id": install_task.id if install_task else None,
+                }
+            ),
+            200,
+        )
+
+    except Exception as e:
+        logger.error(f"Error updating module requirements: {e}")
+        db.session.rollback()
+        return jsonify({"message": str(e)}), 500
+
+
+@module_bp.route(
+    "/admin/modules/<int:module_id>/requirements/download", methods=["GET"]
+)
+@jwt_required()
+def download_module_requirements(module_id):
+    try:
+        user_id = get_jwt_identity()
+        user = User.query.get(int(user_id))
+        if not user or not user.admin:
+            return jsonify({"message": "Forbidden"}), 403
+
+        module = BenchmarkModule.query.get(module_id)
+        if not module:
+            return jsonify({"message": "Benchmark module not found"}), 404
+
+        req_path = _find_existing_requirements_path(module)
+        if not req_path or not os.path.isfile(req_path):
+            return jsonify({"message": "Requirements file not found"}), 404
+
+        return send_file(
+            req_path,
+            as_attachment=True,
+            download_name=os.path.basename(req_path),
+        )
+    except Exception as e:
+        logger.error(f"Error downloading requirements: {e}")
+        return jsonify({"message": str(e)}), 500
+
+
+@module_bp.route("/versions/history", methods=["GET"])
+@jwt_required()
+def get_version_history():
+    """
+    Returns all published versions with their associated module updates.
+    JWT required.
+    """
+    try:
+        versions = (
+            db.session.query(AppVersion).order_by(AppVersion.created_at.desc()).all()
+        )
+
+        result = []
+        for version in versions:
+            updates = (
+                db.session.query(ModuleUpdate)
+                .filter(ModuleUpdate.version_id == version.id)
+                .order_by(ModuleUpdate.created_at.asc())
+                .all()
+            )
+
+            result.append(
+                {
+                    "id": version.id,
+                    "version": version.version,
+                    "created_at": (
+                        version.created_at.isoformat() if version.created_at else None
+                    ),
+                    "updates": [update.to_dict() for update in updates],
+                }
+            )
+
+        return jsonify(result), 200
+    except Exception as e:
+        logger.error(f"Error fetching version history: {e}")
+        return (
+            jsonify({"message": "Failed to fetch version history", "error": str(e)}),
+            500,
+        )

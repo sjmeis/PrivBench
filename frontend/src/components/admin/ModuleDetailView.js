@@ -16,14 +16,16 @@ import {
 } from "@mui/joy";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import FormControl from "@mui/joy/FormControl";
-import React, { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import FileTableSmall from "./FileTableSmall";
 import { getDateString } from "../../utils/Date";
 import ModuleDeletionConfirmationDialog from "./ModuleDeletionConfirmationDialog";
 import { ModuleService } from "../../services/ModuleService";
+import { DatasetService } from "../../services/DatasetService";
 import { useSnackbar } from "../../contexts/SnackbarProvider";
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
 import { Save } from "@mui/icons-material";
+import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 
 const ModuleDetailView = ({
   selectedModule,
@@ -41,7 +43,18 @@ const ModuleDetailView = ({
   const [isDeleting, setIsDeleting] = useState(false);
   const DATASET_TABLE_TITLE = "Associated Dataset";
   const SCRIPT_TABLE_TITLE = "Python Benchmarking Module Logic";
+  const REQUIREMENTS_TABLE_TITLE = "Python Dependencies (requirements.txt)";
   const { showSnackbar } = useSnackbar();
+  const [logicFile, setLogicFile] = useState(null);
+  const [datasetFile, setDatasetFile] = useState(null);
+  const [requirementsFile, setRequirementsFile] = useState(null);
+  const [isUploadingLogic, setIsUploadingLogic] = useState(false);
+  const [isUploadingDataset, setIsUploadingDataset] = useState(false);
+  const [isUploadingRequirements, setIsUploadingRequirements] = useState(false);
+  const logicInputRef = useRef(null);
+  const datasetInputRef = useRef(null);
+  const requirementsInputRef = useRef(null);
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -107,6 +120,111 @@ const ModuleDetailView = ({
       showSnackbar("Benchmarking Module was Updated", "success");
     } catch (error) {
       showSnackbar("Error on updating module", "error");
+    }
+  };
+
+  const onSelectLogicFile = (e) => {
+    setLogicFile(e.target.files?.[0] || null);
+  };
+
+  const onSelectDatasetFile = (e) => {
+    setDatasetFile(e.target.files?.[0] || null);
+  };
+
+  const onSelectRequirementsFile = (e) => {
+    setRequirementsFile(e.target.files?.[0] || null);
+  };
+
+  const downloadLogic = async () => {
+    try {
+      await ModuleService.downloadModuleLogic(
+        selectedModule.id,
+        selectedModule.name
+      );
+    } catch (error) {
+      showSnackbar("Error downloading module logic", "error");
+    }
+  };
+
+  const downloadDataset = async () => {
+    try {
+      await DatasetService.downloadDatasets([selectedModule.dataset?.name]);
+    } catch (error) {
+      showSnackbar("Error downloading dataset", "error");
+    }
+  };
+
+  const downloadRequirements = async () => {
+    try {
+      await ModuleService.downloadModuleRequirements(
+        selectedModule.id,
+        selectedModule.name
+      );
+    } catch (error) {
+      showSnackbar("Error downloading requirements", "error");
+    }
+  };
+
+  const uploadLogic = async () => {
+    if (!logicFile) {
+      showSnackbar("Select a Python file first", "neutral");
+      return;
+    }
+    setIsUploadingLogic(true);
+    try {
+      const form = new FormData();
+      form.append("file", logicFile);
+      await ModuleService.updateModuleLogic(selectedModule.id, form);
+      showSnackbar("Module logic updated", "success");
+      setLogicFile(null);
+      if (logicInputRef.current) logicInputRef.current.value = "";
+      onUpdateOrDelete();
+    } catch (error) {
+      showSnackbar("Error updating module logic", "error");
+    } finally {
+      setIsUploadingLogic(false);
+    }
+  };
+
+  const uploadDataset = async () => {
+    if (!datasetFile) {
+      showSnackbar("Select a dataset file first", "neutral");
+      return;
+    }
+    setIsUploadingDataset(true);
+    try {
+      const form = new FormData();
+      form.append("file", datasetFile);
+      await ModuleService.updateModuleDataset(selectedModule.id, form);
+      showSnackbar("Dataset updated", "success");
+      setDatasetFile(null);
+      if (datasetInputRef.current) datasetInputRef.current.value = "";
+      onUpdateOrDelete();
+    } catch (error) {
+      showSnackbar("Error updating dataset", "error");
+    } finally {
+      setIsUploadingDataset(false);
+    }
+  };
+
+  const uploadRequirements = async () => {
+    if (!requirementsFile) {
+      showSnackbar("Select a requirements file first", "neutral");
+      return;
+    }
+    setIsUploadingRequirements(true);
+    try {
+      const form = new FormData();
+      form.append("file", requirementsFile);
+      await ModuleService.updateModuleRequirements(selectedModule.id, form);
+      showSnackbar("Requirements updated", "success");
+      setRequirementsFile(null);
+      if (requirementsInputRef.current) requirementsInputRef.current.value = "";
+      onUpdateOrDelete();
+    } catch (error) {
+      showSnackbar("Error updating requirements", "error");
+    } finally {
+      setIsUploadingRequirements(false);
     }
   };
 
@@ -262,13 +380,129 @@ const ModuleDetailView = ({
             }}
           >
             <Stack spacing={2}>
+              {/* Upload/Replace Module Logic */}
+              <Sheet variant="outlined" sx={{ p: 1.5, borderRadius: "sm" }}>
+                <Stack spacing={1}>
+                  <Typography level="title-sm">
+                    Update Module Logic (.py)
+                  </Typography>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Input
+                      type="file"
+                      sx={{ flex: 1, alignItems: "center" }}
+                      slotProps={{
+                        input: {
+                          ref: logicInputRef,
+                          accept: ".py",
+                          onChange: onSelectLogicFile,
+                        },
+                      }}
+                    />
+                    <Button
+                      variant="solid"
+                      color="primary"
+                      endDecorator={<CloudUploadIcon />}
+                      disabled={!logicFile || isUploadingLogic}
+                      loading={isUploadingLogic}
+                      onClick={uploadLogic}
+                    >
+                      {logicFile ? "Upload" : "Choose file"}
+                    </Button>
+                  </Stack>
+                  {logicFile && (
+                    <Typography level="body-sm" sx={{ color: "text.tertiary" }}>
+                      Selected: {logicFile.name}
+                    </Typography>
+                  )}
+                </Stack>
+              </Sheet>
               <FileTableSmall
-                datasets={[selectedModule]}
+                items={[selectedModule]}
                 title={SCRIPT_TABLE_TITLE}
+                onDownload={downloadLogic}
               />
+              {/* Upload/Replace Requirements */}
+              <Sheet variant="outlined" sx={{ p: 1.5, borderRadius: "sm" }}>
+                <Stack spacing={1}>
+                  <Typography level="title-sm">
+                    Update Requirements (requirements.txt)
+                  </Typography>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Input
+                      type="file"
+                      sx={{ flex: 1, alignItems: "center" }}
+                      slotProps={{
+                        input: {
+                          ref: requirementsInputRef,
+                          accept: ".txt,.in",
+                          onChange: onSelectRequirementsFile,
+                        },
+                      }}
+                    />
+                    <Button
+                      variant="solid"
+                      color="primary"
+                      endDecorator={<CloudUploadIcon />}
+                      disabled={!requirementsFile || isUploadingRequirements}
+                      loading={isUploadingRequirements}
+                      onClick={uploadRequirements}
+                    >
+                      {requirementsFile ? "Upload" : "Choose file"}
+                    </Button>
+                  </Stack>
+                  {requirementsFile && (
+                    <Typography level="body-sm" sx={{ color: "text.tertiary" }}>
+                      Selected: {requirementsFile.name}
+                    </Typography>
+                  )}
+                </Stack>
+              </Sheet>
               <FileTableSmall
-                datasets={[selectedModule.dataset]}
+                items={[selectedModule]}
+                title={REQUIREMENTS_TABLE_TITLE}
+                onDownload={downloadRequirements}
+              />
+              {/* Upload/Replace Dataset */}
+              <Sheet variant="outlined" sx={{ p: 1.5, borderRadius: "sm" }}>
+                <Stack spacing={1}>
+                  <Typography level="title-sm">
+                    Update Dataset (csv, parquet, json, zip)
+                  </Typography>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Input
+                      type="file"
+                      sx={{ flex: 1, alignItems: "center" }}
+                      slotProps={{
+                        input: {
+                          ref: datasetInputRef,
+                          accept: ".csv,.parquet,.json,.zip,.txt",
+                          onChange: onSelectDatasetFile,
+                        },
+                      }}
+                    />
+                    <Button
+                      variant="solid"
+                      color="primary"
+                      endDecorator={<CloudUploadIcon />}
+                      disabled={!datasetFile || isUploadingDataset}
+                      loading={isUploadingDataset}
+                      onClick={uploadDataset}
+                    >
+                      {datasetFile ? "Upload" : "Choose file"}
+                    </Button>
+                  </Stack>
+                  {datasetFile && (
+                    <Typography level="body-sm" sx={{ color: "text.tertiary" }}>
+                      Selected: {datasetFile.name}
+                    </Typography>
+                  )}
+                </Stack>
+              </Sheet>
+
+              <FileTableSmall
+                items={[selectedModule.dataset]}
                 title={DATASET_TABLE_TITLE}
+                onDownload={downloadDataset}
               />
             </Stack>
           </Box>

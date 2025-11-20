@@ -7,7 +7,6 @@ import {
   IconButton,
   Sheet,
   Grid,
-  AspectRatio,
 } from "@mui/joy";
 import { useTheme } from "@mui/joy";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
@@ -25,6 +24,9 @@ const Home = () => {
   const theme = useTheme();
   const navigate = useNavigate();
   const isLightMode = theme.palette.mode === "light";
+  const submissionsPreviewImage = isLightMode
+    ? "/images/submissions-light.jpeg"
+    : "/images/submissions-dark.jpeg";
 
   useEffect(() => {
     const handleScroll = () => {
@@ -439,7 +441,7 @@ const Home = () => {
             >
               <Box sx={{ width: "fit-content" }}>
                 <img
-                  src="/images/submissions.jpeg"
+                  src={submissionsPreviewImage}
                   alt="Dashboard Preview"
                   style={{
                     maxWidth: "100%",
