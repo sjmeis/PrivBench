@@ -1,9 +1,14 @@
 import os
+import shutil
 from celery import shared_task
 import logging
 from app.utils.module_manager import ModuleManager
 
 logger = logging.getLogger(__name__)
+
+
+def _gpu_available():
+    return shutil.which("nvidia-smi") is not None
 
 
 @shared_task(bind=True)
@@ -14,11 +19,29 @@ def install_and_load_module(
     module_path,
     requirements_path,
     is_new_module=False,
+    restart_container=False,
+    device_specification="cpu",
 ):
     """Celery task to install and load a module."""
     container_name = f"module-container-{module_name.lower()}"
     try:
         from app.utils.container_manager import container_manager
+
+        # Simple device handling
+        if device_specification == "gpu":
+            if not _gpu_available():
+                logger.error(
+                    f"GPU requested for {module_name} but no Nvidia driver found."
+                )
+                return {
+                    "status": "error",
+                    "message": "GPU requested but not available (nvidia-smi not found)",
+                    "module_id": module_id,
+                }
+            else:
+                logger.info(
+                    f"GPU available for module {module_name}. Building with GPU support."
+                )
 
         logger.info(f"Starting module installation for {module_name}")
         logger.debug(f"Module path: {module_path}")
@@ -33,19 +56,22 @@ def install_and_load_module(
 
         manager = ModuleManager()
         image_tag = manager.build_module_container(
-            module_id=module_id,
             module_path=module_path,
             module_name=module_name,
             requirements_path=requirements_path,
+            use_gpu=device_specification == "gpu",
         )
 
-        test_result = manager.test_module(image_tag, module_name)
+        test_result = manager.test_module(
+            image_tag, module_name, use_gpu=device_specification == "gpu"
+        )
 
         if test_result["success"]:
             logger.info(f"Module {module_name} image built and tested successfully")
 
-            # Only start the container if a new module is added.
-            if is_new_module:
+            should_start = is_new_module or restart_container
+
+            if should_start:
                 logger.info(
                     f"Flag 'is_new_module' is set. Attempting to start container for module: {module_name}"
                 )

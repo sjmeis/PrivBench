@@ -12,26 +12,31 @@ import {
   Stack,
   Typography,
   Textarea,
+  Checkbox,
 } from "@mui/joy";
 import { Save } from "@mui/icons-material";
 import { ModuleService } from "../../services/ModuleService";
 import { useSnackbar } from "../../contexts/SnackbarProvider";
 
-const compareVersions = (a, b) => {
-  if (!a || !b) return null;
-  const pa = a
+const compareVersions = (versionA, versionB) => {
+  if (!versionA || !versionB) return null;
+  const segmentsA = versionA
     .trim()
     .split(".")
     .map((n) => Number(n));
-  const pb = b
+  const segmentsB = versionB
     .trim()
     .split(".")
     .map((n) => Number(n));
-  if (pa.length !== 3 || pb.length !== 3 || pa.some(isNaN) || pb.some(isNaN))
-    return null;
+  const isValid =
+    segmentsA.length === 3 &&
+    segmentsB.length === 3 &&
+    !segmentsA.some(Number.isNaN) &&
+    !segmentsB.some(Number.isNaN);
+  if (!isValid) return null;
   for (let i = 0; i < 3; i++) {
-    if (pa[i] > pb[i]) return 1;
-    if (pa[i] < pb[i]) return -1;
+    if (segmentsA[i] > segmentsB[i]) return 1;
+    if (segmentsA[i] < segmentsB[i]) return -1;
   }
   return 0;
 };
@@ -44,6 +49,8 @@ const PublishDialog = ({ open, onClose, onPublished }) => {
   const [version, setVersion] = useState("");
   const [versionError, setVersionError] = useState("");
   const [description, setDescription] = useState("");
+  const [sendEmail, setSendEmail] = useState(true);
+  const [hasMajorChanges, setHasMajorChanges] = useState(false);
   const { showSnackbar } = useSnackbar();
 
   useEffect(() => {
@@ -55,6 +62,7 @@ const PublishDialog = ({ open, onClose, onPublished }) => {
         setPending(data.pending || []);
         setCurrentVersion(data.currentVersion || "");
         setRecommended(data.recommendedNext || "");
+        setHasMajorChanges(data.hasMajorChanges || false);
         const next = data.recommendedNext || "";
         setVersion(next);
         if (next && data.currentVersion) {
@@ -64,6 +72,23 @@ const PublishDialog = ({ open, onClose, onPublished }) => {
           );
         } else {
           setVersionError("");
+        }
+
+        // Prefill description with changes-to-publish summary if user hasn't typed anything
+        if (!description) {
+          const pendingList = (data.pending || [])
+            .map(
+              (update) =>
+                `- ${update.module_name}${
+                  update.description ? ` — ${update.description}` : ""
+                }`
+            )
+            .join("\n");
+          const changesHeader =
+            pendingList.length > 0
+              ? `Changes to publish:\n${pendingList}\n\n`
+              : "";
+          setDescription(changesHeader);
         }
       } catch (e) {
         showSnackbar(e.message || "Failed to load pending updates", "error");
@@ -103,15 +128,20 @@ const PublishDialog = ({ open, onClose, onPublished }) => {
       setLoading(true);
       const result = await ModuleService.publishModuleUpdates(
         version.trim(),
-        description.trim()
+        description.trim(),
+        sendEmail
       );
       const requiresUpdate = !!result?.requiresSubmissionUpdate;
-      showSnackbar(
-        requiresUpdate
-          ? "Published. Users need to update submissions (new module added)."
-          : "Published. No user submission updates required.",
-        "success"
-      );
+      let message = "Published successfully.";
+      if (requiresUpdate) {
+        message = sendEmail
+          ? "Published. Users will be notified via email about new modules."
+          : "Published. Users need to update submissions (new modules added). No emails sent.";
+      } else {
+        message = "Published. No user submission updates required.";
+      }
+
+      showSnackbar(message, "success");
       onPublished?.();
       onClose();
     } catch (e) {
@@ -144,11 +174,36 @@ const PublishDialog = ({ open, onClose, onPublished }) => {
               </Typography>
             )}
             <Textarea
-              placeholder="Optional: describe this release"
+              placeholder="Optional: describe this release (Detected changes prefilled based on pending updates)"
               minRows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
+
+            {/* Add checkbox for email notification */}
+            {hasMajorChanges && (
+              <Box
+                sx={{
+                  p: 1.5,
+                  bgcolor: "background.level1",
+                  borderRadius: "sm",
+                  border: "1px solid",
+                  borderColor: "divider",
+                }}
+              >
+                <Checkbox
+                  label="Send email notifications to users about outdated submissions"
+                  checked={sendEmail}
+                  onChange={(e) => setSendEmail(e.target.checked)}
+                />
+                <Typography level="body-xs" sx={{ ml: 3.5, mt: 0.5 }}>
+                  {sendEmail
+                    ? "Users will receive an email notification about new modules requiring submission updates."
+                    : "No email notifications will be sent. Users will only see updates on the platform."}
+                </Typography>
+              </Box>
+            )}
+
             <Box
               sx={{
                 border: "1px solid #eee",
@@ -168,7 +223,7 @@ const PublishDialog = ({ open, onClose, onPublished }) => {
                     sx={{ p: 1, borderBottom: "1px solid #f2f2f2" }}
                   >
                     <Typography level="body-sm">
-                      [{u.update_type}] {u.module_name} —{" "}
+                      [{u.update_type}] [{u.change_level}] {u.module_name} —{" "}
                       {u.description || "No details"}
                     </Typography>
                   </Box>

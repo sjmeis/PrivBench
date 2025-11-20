@@ -14,6 +14,8 @@ class BenchmarkModule(db.Model):
     path = db.Column(db.String(255), nullable=False)
     dataset_id = db.Column(db.Integer, db.ForeignKey("dataset.id"), nullable=False)
     description = db.Column(db.String(400), nullable=True)
+    # device specification ('cpu', 'gpu')
+    device_specification = db.Column(db.String(50), default="cpu")
 
     # One-to-many relationships
     benchmark_scores = db.relationship(

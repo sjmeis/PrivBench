@@ -1,5 +1,4 @@
-import * as React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { updateSubmissionVisibility } from "../../services/RankingsService";
 import * as rankingService from "../../services/RankingsService";
@@ -24,6 +23,8 @@ import UserSubmissionsTableRow from "./UserSubmissionsTableRow";
 import UpdateSubmissionModal from "./UpdateSubmissionModal";
 import { useSnackbar } from "../../contexts/SnackbarProvider";
 import { SubmissionStatus } from "../../enums/SubmissionStatus";
+import { API_BASE_URL } from "../../config";
+import { ModuleService } from "../../services/ModuleService";
 
 const UserSubmissions = () => {
   const [submissions, setSubmissions] = useState([]);
@@ -32,10 +33,11 @@ const UserSubmissions = () => {
   const [inProgressSubmission, setInProgressSubmission] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [submission, setSubmission] = useState(null);
+  const [submissionsBlocked, setSubmissionsBlocked] = useState(false);
   const { showSnackbar } = useSnackbar();
   const navigate = useNavigate();
 
-  const fetchSubmissionsAndTemplates = async () => {
+  const fetchSubmissionsAndTemplates = useCallback(async () => {
     try {
       // Fetch submissions
       const submissionData = await rankingService.getUserSubmissions();
@@ -52,7 +54,7 @@ const UserSubmissions = () => {
 
       // Fetch templates
       const templateResponse = await fetch(
-        "http://localhost:5000/metadata/templates",
+        `${API_BASE_URL}/metadata/templates`,
         { credentials: "include" }
       );
       if (templateResponse.ok) {
@@ -64,11 +66,39 @@ const UserSubmissions = () => {
     } catch (err) {
       showSnackbar(err.message || "Failed to fetch data");
     }
-  };
+  }, [showSnackbar]);
 
   useEffect(() => {
     fetchSubmissionsAndTemplates();
+  }, [fetchSubmissionsAndTemplates]);
+
+  useEffect(() => {
+    let ignore = false;
+    (async () => {
+      try {
+        const flag = await ModuleService.hasPendingModuleUpdates();
+        if (!ignore) setSubmissionsBlocked(flag);
+      } catch {
+        if (!ignore) setSubmissionsBlocked(false);
+      }
+    })();
+    return () => {
+      ignore = true;
+    };
   }, []);
+
+  useEffect(() => {
+    if (!inProgressSubmission) return;
+    const intervalId = setInterval(() => {
+      fetchSubmissionsAndTemplates();
+    }, 5000);
+    return () => clearInterval(intervalId);
+  }, [inProgressSubmission, fetchSubmissionsAndTemplates]);
+
+  const handleSubmissionUpdated = () => {
+    // Refresh list
+    fetchSubmissionsAndTemplates();
+  };
 
   const onTogglePublic = async (submissionId, newVisibility) => {
     try {
@@ -120,6 +150,8 @@ const UserSubmissions = () => {
   const hasActiveSubmission = !!pendingSubmission || !!inProgressSubmission;
 
   const getTooltipTitle = () => {
+    if (submissionsBlocked)
+      return "Submissions are disabled until admin publishes pending module updates.";
     if (inProgressSubmission)
       return "A submission is processing. Please wait until it is complete.";
     if (pendingSubmission)
@@ -209,7 +241,9 @@ const UserSubmissions = () => {
                     arrow
                     placement="top"
                     disableHoverListener={
-                      templates.length > 0 && !hasActiveSubmission
+                      templates.length > 0 &&
+                      !hasActiveSubmission &&
+                      !submissionsBlocked
                     }
                   >
                     {/* This Box acts as a wrapper for the Tooltip to work on a disabled element */}
@@ -220,7 +254,9 @@ const UserSubmissions = () => {
                           variant="soft"
                           color="primary"
                           disabled={
-                            templates.length === 0 || hasActiveSubmission
+                            templates.length === 0 ||
+                            hasActiveSubmission ||
+                            submissionsBlocked
                           }
                           sx={{ width: 160 }}
                         >
@@ -239,18 +275,34 @@ const UserSubmissions = () => {
                       </Dropdown>
                     </Box>
                   </Tooltip>
-                  <Button
-                    onClick={handleNewOrContinueSubmission}
-                    size="sm"
-                    color="success"
-                    variant="soft"
-                    sx={{ minWidth: 160 }}
-                    disabled={!!inProgressSubmission && !pendingSubmission}
+                  <Tooltip
+                    title={getTooltipTitle()}
+                    variant="outlined"
+                    arrow
+                    placement="top"
+                    disableHoverListener={
+                      !submissionsBlocked &&
+                      !(!!inProgressSubmission && !pendingSubmission)
+                    }
                   >
-                    {pendingSubmission
-                      ? "Continue Submission"
-                      : "New Submission"}
-                  </Button>
+                    <span>
+                      <Button
+                        onClick={handleNewOrContinueSubmission}
+                        size="sm"
+                        color="success"
+                        variant="soft"
+                        sx={{ minWidth: 160 }}
+                        disabled={
+                          (!!inProgressSubmission && !pendingSubmission) ||
+                          submissionsBlocked
+                        }
+                      >
+                        {pendingSubmission
+                          ? "Continue Submission"
+                          : "New Submission"}
+                      </Button>
+                    </span>
+                  </Tooltip>
                 </CardActions>
               </CardOverflow>
             </Card>
@@ -261,6 +313,7 @@ const UserSubmissions = () => {
         isOpen={isModalOpen}
         submission={submission}
         onClose={onClose}
+        onUpdated={handleSubmissionUpdated}
       />
     </>
   );

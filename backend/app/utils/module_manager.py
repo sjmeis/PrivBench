@@ -4,6 +4,7 @@ from pathlib import Path
 import json
 import logging
 import shutil
+from docker.types import DeviceRequest
 
 logger = logging.getLogger(__name__)
 
@@ -11,21 +12,46 @@ logger = logging.getLogger(__name__)
 class ModuleManager:
     def __init__(self):
         self.docker_client = docker.from_env()
-        self.base_image = "python:3.9-slim"
+        self.base_image_cpu = "python:3.9-slim"
+        # CUDA runtime; requires host NVIDIA driver + toolkit
+        self.base_image_gpu = "nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04"
 
-    def create_dockerfile(self, requirements_path):
+    def create_dockerfile(self, requirements_filename, use_gpu=False):
         """Create a Dockerfile for the module container"""
+        if not use_gpu:
+            return f"""
+            FROM {self.base_image_cpu}
+            WORKDIR /app
+            ENV PYTHONPATH=/app
+            COPY {requirements_filename} /app/requirements.txt
+            RUN pip install --no-cache-dir -r requirements.txt
+            COPY . /app
+            """
+        # GPU: install Python 3.9 on top of CUDA runtime image
         return f"""
-        FROM {self.base_image}
+        FROM {self.base_image_gpu}
+        ENV DEBIAN_FRONTEND=noninteractive
         WORKDIR /app
+        RUN apt-get update && apt-get install -y --no-install-recommends \\
+              software-properties-common curl ca-certificates \\
+            && add-apt-repository -y ppa:deadsnakes/ppa \\
+            && apt-get update && apt-get install -y --no-install-recommends \\
+              python3.9 python3.9-venv python3.9-distutils \\
+            && curl -sS https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py \\
+            && python3.9 /tmp/get-pip.py \\
+            && ln -sf /usr/bin/python3.9 /usr/bin/python \\
+            && ln -sf /usr/local/bin/pip3.9 /usr/bin/pip \\
+            && rm -rf /var/lib/apt/lists/* /tmp/get-pip.py
         ENV PYTHONPATH=/app
-        COPY requirements.txt /app/requirements.txt
-        RUN pip install --no-cache-dir -r requirements.txt
+        ENV NVIDIA_VISIBLE_DEVICES=all
+        ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
+        COPY {requirements_filename} /app/requirements.txt
+        RUN python -m pip install --no-cache-dir -r requirements.txt
         COPY . /app
         """
 
     def build_module_container(
-        self, module_id, module_path, module_name, requirements_path
+        self, module_path, module_name, requirements_path, use_gpu=False
     ):
         """Build a Docker container for the module"""
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -68,12 +94,13 @@ class ModuleManager:
             else:
                 requirements_dest.write_text("")
 
-            dockerfile_content = self.create_dockerfile(requirements_dest.name)
+            dockerfile_content = self.create_dockerfile(
+                requirements_dest.name, use_gpu=use_gpu
+            )
             (temp_path / "Dockerfile").write_text(dockerfile_content)
 
             logger.debug(f"Temp directory contents: {list(temp_path.glob('*'))}")
 
-            # tag = f"module-{module_id}"
             tag = f"module-{module_name.lower()}"
             _, build_logs = self.docker_client.images.build(
                 path=str(temp_path), tag=tag, rm=True
@@ -86,7 +113,7 @@ class ModuleManager:
 
             return tag
 
-    def test_module(self, image_tag, module_name):
+    def test_module(self, image_tag, module_name, use_gpu=False):
         """Test if the module can be loaded and instantiated"""
         test_script = f"""
 import importlib.util
@@ -132,8 +159,16 @@ except Exception as e:
     print(json.dumps({{"success": False, "error": f"Test script error: {{str(e)}}\\nTraceback: {{traceback.format_exc()}}"}}))
 """
         try:
+            run_kwargs = {}
+            if use_gpu:
+                run_kwargs["device_requests"] = [
+                    DeviceRequest(count=-1, capabilities=[["gpu"]])
+                ]
             container = self.docker_client.containers.run(
-                image_tag, command=["python", "-c", test_script], remove=True
+                image_tag,
+                command=["python", "-c", test_script],
+                remove=True,
+                **run_kwargs,
             )
 
             output = container.decode("utf-8")

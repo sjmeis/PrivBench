@@ -29,9 +29,6 @@ import { Add, Save } from "@mui/icons-material";
 const DEVICE_SPECIFICATIONS = [
   { value: "cpu", label: "CPU Only" },
   { value: "gpu", label: "GPU Required" },
-  { value: "cpu_gpu", label: "CPU + GPU" },
-  { value: "tpu", label: "TPU Required" },
-  { value: "any", label: "Any Device" },
 ];
 
 const AddModuleModal = ({ isOpen, onClose, onSubmit, onError }) => {
@@ -40,7 +37,7 @@ const AddModuleModal = ({ isOpen, onClose, onSubmit, onError }) => {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    deviceSpecification: "",
+    deviceSpecification: "cpu",
     algorithmFile: null,
     requirementsFile: null,
     selectedDatasets: [],
@@ -51,7 +48,7 @@ const AddModuleModal = ({ isOpen, onClose, onSubmit, onError }) => {
     setFormData({
       name: "",
       description: "",
-      deviceSpecification: "",
+      deviceSpecification: "cpu",
       algorithmFile: null,
       requirementsFile: null,
       selectedDatasets: [],

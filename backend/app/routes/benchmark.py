@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
-
-from ..services.queue_service import QueueService
+from sqlalchemy import exists, and_
+from ..services import QueueService, BenchmarkService, run_benchmark_task
 from ..extensions import db, celery
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from ..models import (
@@ -14,405 +14,118 @@ from ..models import (
     QueueStatus,
     AppVersion,
     SubmissionVersionScore,
+    ModuleUpdate,
 )
 from ..enums import SubmissionStatus
 from datetime import datetime
-from app.tasks.run_benchmark import run_benchmark
-from app.utils.dataset_loader import load_dataset
-from app.utils.email_sender import send_email
+from ..utils.email_sender import send_email
+from ..utils.version_utils import get_significant_version, is_version_greater
 from celery.utils.log import get_task_logger
 from datetime import datetime
-from sqlalchemy.dialects.postgresql import insert
-from sqlalchemy import select, func, cast, Numeric
 from ..config import Config
 
 logger = get_task_logger(__name__)
 
+benchmark_bp = Blueprint("benchmark", __name__)
 
-# //fixme: put this in dedicated service
-@celery.task(bind=True)
-def run_benchmark_task(
-    self,
-    module_path,
-    module_name,
-    dataset_path,
-    priv_dataset_path,
-    privatized_dataset_id,
-    submission_id,
-    module_id,
-    user_id,
-    queue_entry_id=None,  # Add queue entry ID parameter
-):
-    """Run a benchmark module as a Celery task with queue support."""
-    logger.info(
-        f"Starting benchmark task for module {module_name}, queue_entry: {queue_entry_id}"
-    )
 
-    try:
-        total_steps = 100
-        total_rows = None
+def _compute_modules_to_update(submission: Submission):
+    """Return list of modules requiring update with reason and dataset requirement."""
+    active_modules = BenchmarkModule.query.filter_by(is_active=True).all()
 
-        # Stage 1: Initialization (10%)
-        logger.info(f"Module {module_name}: Initialization stage")
-        self.update_state(
-            state="PROGRESS",
-            meta={
-                "current": 10,
-                "total": total_steps,
-                "status": "Initializing benchmark environment...",
-                "processedRows": 0,
-                "totalRows": 0,
-            },
-        )
+    # Build AppVersion lookup for ModuleUpdate.version_id
+    versions_by_id = {
+        version.id: version for version in db.session.query(AppVersion).all()
+    }
 
-        # Stage 2: Loading Module (30%)
-        logger.info(f"Loading benchmark module from {module_path}")
-        self.update_state(
-            state="PROGRESS",
-            meta={
-                "current": 15,
-                "total": total_steps,
-                "status": "Loading benchmark module...",
-                "processedRows": 0,
-                "totalRows": 0,
-            },
-        )
-
-        # Load datasets to get total row count
-        dataset = load_dataset(dataset_path)
-        total_rows = len(dataset)
-
-        # Stage 3: Loading Datasets (50%)
-        logger.info(f"Loading datasets from {dataset_path} and {priv_dataset_path}")
-        self.update_state(
-            state="PROGRESS",
-            meta={
-                "current": 20,
-                "total": total_steps,
-                "status": f"Loading datasets (0/{total_rows} rows)...",
-                "processedRows": 0,
-                "totalRows": total_rows,
-            },
-        )
-
-        # Stage 4: Running Benchmark (80%)
-        logger.info(f"Starting benchmark execution")
-        self.update_state(
-            state="PROGRESS",
-            meta={
-                "current": 30,
-                "total": total_steps,
-                "status": f"Processing 0/{total_rows} rows...",
-                "processedRows": 0,
-                "totalRows": total_rows,
-            },
-        )
-
-        # Create a progress callback for the benchmark
-        def progress_callback(processed_rows, score=None):
-            current_meta = {
-                "current": 30 + int((processed_rows / total_rows) * 70),
-                "total": total_steps,
-                "status": f"Processing {processed_rows}/{total_rows} rows...",
-                "processedRows": processed_rows,
-                "totalRows": total_rows,
-                "score": score,  # Include score in state update
-            }
-            self.update_state(state="PROGRESS", meta=current_meta)
-
-        # Run benchmark and get score
-        score = run_benchmark(
-            module_path,
-            module_id,
-            module_name,
-            dataset_path,
-            priv_dataset_path,
-            progress_callback,
-        )
-
-        # Immediately update the task state with the score
-        self.update_state(
-            state="PROGRESS",
-            meta={
-                "current": 90,
-                "total": total_steps,
-                "status": "Processing complete, saving results...",
-                "processedRows": total_rows,
-                "totalRows": total_rows,
-                "score": float(score),
-            },
-        )
-
-        logger.info(f"Benchmark completed with score: {score}")
-
-        if score is None:
-            raise ValueError("Benchmark returned None score")
-
-        # Insert or update benchmark score in the database
-        stmt = (
-            insert(BenchmarkScore)
-            .values(
-                submission_id=submission_id,
-                module_id=module_id,
-                privatized_dataset_id=privatized_dataset_id,
-                score=float(score),
-                created_at=datetime.utcnow(),
-            )
-            .on_conflict_do_update(
-                index_elements=[
-                    "submission_id",
-                    "module_id",
-                ],  # Columns that make the row unique
-                set_={"score": float(score), "created_at": datetime.utcnow()},
-            )
-        )
-
-        db.session.execute(stmt)
-        db.session.commit()
-        logger.info(
-            f"Benchmark score upserted to the database for submission {submission_id}, module {module_id}"
-        )
-
-        # Mark queue entry as completed and process next in queue
-        if queue_entry_id:
-            QueueService.complete_processing(queue_entry_id, success=True)
-            logger.info(f"Queue entry {queue_entry_id} marked as completed")
-
-            # Process next in queue for this module
-            next_result = process_next_in_queue(module_id)
-            if next_result:
-                logger.info(f"Started next task in queue: {next_result['task_id']}")
-            else:
-                logger.info(f"No more entries in queue for module {module_id}")
-
-        # Check if all modules for the submission have completed
-        total_modules = (
-            db.session.query(BenchmarkModule).filter_by(is_active=True).count()
-        )
-        completed_scores = (
+    results = []
+    for module in active_modules:
+        score = (
             db.session.query(BenchmarkScore)
-            .filter_by(submission_id=submission_id)
-            .count()
-        )
-
-        submission = (
-            db.session.query(Submission).filter_by(id=submission_id).one_or_none()
-        )
-        if (
-            total_modules == completed_scores
-            and submission
-            and submission.status == SubmissionStatus.COMPLETED
-        ):
-            logger.info(
-                f"All modules completed and submission {submission_id} is already marked as COMPLETED. Skipping further steps."
-            )
-        else:
-            if total_modules == completed_scores:
-                query = select(
-                    func.round(cast(func.avg(BenchmarkScore.score), Numeric(10, 2)), 2)
-                ).where(BenchmarkScore.submission_id == submission_id)
-
-                # Execute the query and fetch the overall score
-                overall_score = db.session.execute(query).scalar()
-
-                submission.score = overall_score
-                submission.status = SubmissionStatus.COMPLETED
-
-                # Check if version entry already exists before creating
-                existing_version = (
-                    db.session.query(SubmissionVersionScore)
-                    .filter_by(submission_id=submission.id, version=submission.version)
-                    .first()
-                )
-
-                if not existing_version:
-                    # Get all modules that were part of this run
-                    modules_in_run = (
-                        db.session.query(BenchmarkModule)
-                        .join(BenchmarkScore)
-                        .filter(BenchmarkScore.submission_id == submission_id)
-                        .all()
-                    )
-                    # Create the first version score entry only if it doesn't exist
-                    version_score = SubmissionVersionScore(
-                        submission_id=submission.id,
-                        version=submission.version,
-                        score=overall_score,
-                        modules=modules_in_run,
-                    )
-                    db.session.add(version_score)
-                    logger.info(
-                        f"Created new version entry for submission {submission_id}, version {submission.version}"
-                    )
-                else:
-                    logger.info(
-                        f"Version entry already exists for submission {submission_id}, version {submission.version}"
-                    )
-
-                db.session.commit()
-                logger.info(f"Submission {submission_id} marked as Completed")
-
-                user = User.query.get(user_id)
-                if user and user.mail_address:
-                    user_email = user.mail_address
-                    subject = "Benchmark Completed"
-                    frontend_url = Config.FRONTEND_URL
-                    body = f"""
-Dear {user.username},<br><br>
-
-Your latest submission has been evaluated successfully.<br>
-
-You can now visit the platform and see how your model performed.<br><br>
-
-Best regards,<br>
-PrivBench Team
-"""
-
-                    try:
-                        send_email(
-                            user_email,
-                            subject,
-                            body,
-                            redirect_url=f"{frontend_url}/profile?state=submissions",
-                        )
-                        logger.info(f"Email sent successfully to {user_email}")
-                    except Exception as e:
-                        logger.error(f"Failed to send email to {user_email}: {str(e)}")
-
-        # Stage 5: Completion (100%)
-        result = {
-            "current": total_steps,
-            "total": total_steps,
-            "status": "Benchmark completed successfully!",
-            "score": float(score),
-            "processedRows": total_rows,
-            "totalRows": total_rows,
-            "state": "SUCCESS",
-        }
-
-        logger.info(f"Task completed successfully with result: {result}")
-        return result
-
-    except Exception as e:
-        logger.error(
-            f"Benchmark task failed for module {module_name}: {str(e)}", exc_info=True
-        )
-
-        # Mark queue entry as failed and still process next in queue
-        if queue_entry_id:
-            QueueService.complete_processing(queue_entry_id, success=False)
-            logger.info(f"Queue entry {queue_entry_id} marked as failed")
-
-            # Still process next in queue even if this one failed
-            next_result = process_next_in_queue(module_id)
-            if next_result:
-                logger.info(
-                    f"Started next task in queue after failure: {next_result['task_id']}"
-                )
-
-        result = {
-            "current": 0,
-            "total": total_steps,
-            "status": f"Task failed: {str(e)}",
-            "processedRows": 0,
-            "totalRows": total_rows if "total_rows" in locals() else 0,
-            "state": "FAILURE",
-        }
-        raise Exception(str(e))
-
-
-def process_module_queue_entry(queue_entry, module, dataset, privatized_dataset):
-    """Process a specific queue entry by starting the benchmark task"""
-    try:
-        logger.info(
-            f"Starting task for module {module.name} (queue entry {queue_entry.id})"
-        )
-
-        # Start the benchmark task with queue entry ID
-        task = run_benchmark_task.delay(
-            str(module.path),
-            module.name,
-            str(dataset.file_path),
-            str(privatized_dataset.file_path),
-            privatized_dataset.id,
-            queue_entry.submission_id,
-            module.id,
-            queue_entry.user_id,
-            queue_entry_id=queue_entry.id,  # Pass queue entry ID
-        )
-
-        # Mark as processing in queue
-        QueueService.start_processing(queue_entry.id, task.id)
-
-        logger.info(f"Task created for module {module.name}: {task.id}")
-
-        return {
-            "task_id": task.id,
-            "module_id": module.id,
-            "module_name": module.name,
-            "queue_entry_id": queue_entry.id,
-        }
-
-    except Exception as e:
-        logger.error(f"Error starting task for module {module.name}: {e}")
-        # Mark queue entry as failed
-        QueueService.complete_processing(queue_entry.id, success=False)
-        return None
-
-
-def process_next_in_queue(module_id):
-    """Process the next entry in queue for a specific module"""
-    try:
-        next_entry = QueueService.get_next_in_queue(module_id)
-        if not next_entry:
-            logger.info(f"No more entries in queue for module {module_id}")
-            return None
-
-        # Get the module and related data
-        module = db.session.query(BenchmarkModule).get(module_id)
-        dataset = db.session.query(Dataset).filter_by(id=module.dataset_id).first()
-
-        if not dataset:
-            logger.error(f"Dataset not found for module {module.name}")
-            QueueService.complete_processing(next_entry.id, success=False)
-            return None
-
-        privatized_dataset = (
-            db.session.query(PrivatizedDataset)
-            .filter_by(
-                submission_id=next_entry.submission_id,
-                original_dataset_id=module.dataset_id,
-            )
+            .filter_by(submission_id=submission.id, module_id=module.id)
             .first()
         )
 
-        if not privatized_dataset:
-            logger.error(
-                f"Privatized dataset not found for submission {next_entry.submission_id}"
+        if not score:
+            # New module for this submission
+            dataset = (
+                Dataset.query.get(module.dataset_id) if module.dataset_id else None
             )
-            QueueService.complete_processing(next_entry.id, success=False)
-            return None
+            results.append(
+                {
+                    "module_id": module.id,
+                    "module_name": module.name,
+                    "reason": "new",
+                    "requires_dataset_upload": True,
+                    "dataset_id": dataset.id if dataset else None,
+                    "dataset_name": dataset.name if dataset else None,
+                }
+            )
+            continue
 
-        # Process this queue entry
-        result = process_module_queue_entry(
-            next_entry, module, dataset, privatized_dataset
+        # Find published updates for this module after the submission's version
+        published_updates = (
+            db.session.query(ModuleUpdate)
+            .filter(
+                ModuleUpdate.module_id == module.id,
+                ModuleUpdate.version_id.isnot(None),
+            )
+            .all()
         )
 
-        if result:
-            logger.info(
-                f"Started processing next queue entry {next_entry.id} for module {module.name}"
+        # Collect flags, then decide a single reason
+        has_dataset_update = False
+        has_logic_update = False
+        has_requirements_update = False
+        has_other_major_modified = False
+
+        for update in published_updates:
+            app_version = versions_by_id.get(update.version_id)
+            if not app_version:
+                continue
+            # Only consider updates published after the user's submission version
+            if submission.version and not is_version_greater(
+                app_version.version, submission.version
+            ):
+                continue
+
+            desc = (update.description or "").lower()
+            if "dataset updated" in desc:
+                has_dataset_update = True
+            if "requirements updated" in desc:
+                has_requirements_update = True
+            if "logic updated" in desc:
+                has_logic_update = True
+            if update.change_level == "major" and update.update_type == "modified":
+                has_other_major_modified = True
+
+        # Build reasons array
+        reasons = []
+        if has_logic_update:
+            reasons.append("logic")
+        if has_requirements_update:
+            reasons.append("requirements")
+        if has_dataset_update:
+            reasons.append("dataset")
+        if has_other_major_modified:
+            reasons.append("modified")
+
+        if reasons:
+            dataset = (
+                Dataset.query.get(module.dataset_id) if module.dataset_id else None
             )
-        else:
-            logger.error(f"Failed to start processing next queue entry {next_entry.id}")
+            results.append(
+                {
+                    "module_id": module.id,
+                    "module_name": module.name,
+                    "reasons": reasons,
+                    "requires_dataset_upload": has_dataset_update,
+                    "dataset_id": dataset.id if dataset else None,
+                    "dataset_name": dataset.name if dataset else None,
+                }
+            )
 
-        return result
-
-    except Exception as e:
-        logger.error(f"Error processing next in queue for module {module_id}: {e}")
-        return None
-
-
-benchmark_bp = Blueprint("benchmark", __name__)
+    return results
 
 
 @benchmark_bp.route("/run-benchmark", methods=["POST"])
@@ -432,6 +145,27 @@ def benchmark():
         # Handle preflight OPTIONS request
         if request.method == "OPTIONS":
             return ("", 204, response_headers)
+
+        # Guard: block starting benchmark if unpublished module updates exist
+        pending_block = db.session.query(
+            exists().where(
+                and_(
+                    ModuleUpdate.is_updated == True,
+                    ModuleUpdate.version_id == None,
+                )
+            )
+        ).scalar()
+
+        if pending_block:
+            return (
+                jsonify(
+                    {
+                        "message": "Submissions disabled: admin must publish pending benchmark module updates."
+                    }
+                ),
+                423,
+                response_headers,
+            )
 
         user_id = get_jwt_identity()
         user = User.query.get(user_id)
@@ -472,9 +206,9 @@ def benchmark():
         # Only update status if it's PENDING
         if submission.status == SubmissionStatus.PENDING:
             submission.status = SubmissionStatus.IN_PROGRESS
-            submission.version = (
-                AppVersion.get_current_version()
-            )  # Set the version here
+            # Get current version and ensure it's a significant version (x.y.0)
+            current_version = AppVersion.get_current_version()
+            submission.version = get_significant_version(current_version)
             db.session.commit()
             logger.info(f"Updated submission {submission.id} status to IN_PROGRESS")
         else:
@@ -535,7 +269,7 @@ def benchmark():
                     logger.info(
                         f"Starting immediate processing for module {module.name} at position 1"
                     )
-                    task_result = process_module_queue_entry(
+                    task_result = BenchmarkService.process_module_queue_entry(
                         queue_entry, module, dataset, privatized_dataset
                     )
                     if task_result:
@@ -786,7 +520,7 @@ def task_status(task_id):
 @benchmark_bp.route("/run-benchmark/update", methods=["POST"])
 @jwt_required()
 def benchmark_update():
-    """Endpoint to add new modules to the queue for an existing submission."""
+    """Queue selected modules for update for an OUTDATED submission."""
     try:
         response_headers = {
             "Access-Control-Allow-Origin": "http://localhost:3000",
@@ -799,124 +533,117 @@ def benchmark_update():
             logger.info("CORS preflight request received")
             return ("", 204, response_headers)
 
-        logger.info("Parsing request data for benchmark update")
-        request_data = request.get_json()
-        if not request_data or "submissionId" not in request_data:
-            logger.warning("Missing 'submissionId' in request body for update")
+        request_data = request.get_json() or {}
+        submission_id = request_data.get("submissionId")
+        selected_module_ids = request_data.get("selectedModuleIds")  # optional
+
+        if not submission_id:
             return (
                 jsonify({"message": "Missing submission_id in request body"}),
                 400,
                 response_headers,
             )
 
-        submission_id = request_data["submissionId"]
-        logger.info(f"Parsed submission_id for update: {submission_id}")
-
         user_id = get_jwt_identity()
-        logger.info(f"Retrieved user_id from JWT: {user_id}")
-
-        logger.info(f"Fetching submission with ID {submission_id}")
         submission = Submission.query.get(submission_id)
         if not submission:
-            logger.warning(
-                f"Submission with ID {submission_id} not found in the database"
-            )
             return jsonify({"message": "Submission not found"}), 404, response_headers
 
-        # Verify the submission belongs to the user
-        if str(submission.user_id) != user_id:
+        if str(submission.user_id) != str(user_id):
             return jsonify({"message": "Unauthorized"}), 403, response_headers
 
-        # Get modules that don't have scores for this submission
-        logger.info("Fetching completed module IDs for the submission")
-        completed_module_ids = {
-            score.module_id for score in submission.benchmark_scores
-        }
-        logger.info(f"Completed module IDs: {completed_module_ids}")
+        if submission.status != SubmissionStatus.OUTDATED:
+            return jsonify({"message": "Submission is already up-to-date"}), 200
 
-        logger.info("Fetching new modules for benchmarking")
-        new_modules = BenchmarkModule.query.filter(
-            BenchmarkModule.is_active == True,
-            (
-                ~BenchmarkModule.id.in_(completed_module_ids)
-                if completed_module_ids
-                else True
-            ),
-        ).all()
-        logger.info(f"Found {len(new_modules)} new modules to benchmark")
+        # Compute modules needing update, then filter by selection if provided
+        computed = _compute_modules_to_update(submission)
+        by_id = {module["module_id"]: module for module in computed}
 
-        if not new_modules:
-            logger.info("No new modules to benchmark for this submission")
-            return (
-                jsonify({"message": "No new modules to benchmark"}),
-                200,
-                response_headers,
-            )
+        if selected_module_ids:
+            modules_to_update = [
+                by_id[mid] for mid in selected_module_ids if mid in by_id
+            ]
+        else:
+            modules_to_update = computed
 
-        # Add new modules to the queue
+        if not modules_to_update:
+            return jsonify({"message": "No modules to update"}), 200, response_headers
+
+        # Add to queue
         queue_entries = []
         immediate_tasks = []
 
-        for module in new_modules:
-            logger.info(f"Processing module for queue: {module.name} (ID: {module.id})")
-            dataset = Dataset.query.get(module.dataset_id)
-            if not dataset:
-                logger.warning(
-                    f"Dataset with ID {module.dataset_id} not found for module {module.name}"
-                )
+        # Preload modules to reduce queries
+        module_ids = [m["module_id"] for m in modules_to_update]
+        modules = (
+            db.session.query(BenchmarkModule)
+            .filter(BenchmarkModule.id.in_(module_ids))
+            .all()
+        )
+        modules_map = {m.id: m for m in modules}
+
+        for info in modules_to_update:
+            module = modules_map.get(info["module_id"])
+            if not module:
                 continue
 
-            privatized_dataset = PrivatizedDataset.query.filter_by(
-                submission_id=submission_id, original_dataset_id=module.dataset_id
-            ).first()
-            if not privatized_dataset:
+            dataset = (
+                Dataset.query.get(module.dataset_id) if module.dataset_id else None
+            )
+
+            privatized_dataset = None
+            if dataset:
+                privatized_dataset = PrivatizedDataset.query.filter_by(
+                    submission_id=submission_id, original_dataset_id=module.dataset_id
+                ).first()
+
+            # If dataset upload is required, ensure privatized dataset exists
+            if info["requires_dataset_upload"] and not privatized_dataset:
                 logger.warning(
-                    f"Privatized dataset not found for submission {submission_id} and dataset {module.dataset_id}"
+                    f"Required privatized dataset missing for submission {submission_id}, module {module.id}"
                 )
+                # Skip queueing this module
                 continue
 
-            # Add submission to the queue for this new module
             queue_entry = QueueService.add_to_queue(
                 submission_id=submission_id, module_id=module.id, user_id=user_id
             )
+            if not queue_entry:
+                continue
 
-            if queue_entry:
-                position_info = QueueService.get_queue_position(
-                    submission_id, module.id
-                )
-                queue_entries.append(
-                    {
-                        "module_id": module.id,
-                        "module_name": module.name,
-                        "queue_entry_id": queue_entry.id,
-                        "position": (
-                            position_info.get("position") if position_info else None
-                        ),
-                        "status": (
-                            position_info.get("status") if position_info else "waiting"
-                        ),
-                    }
-                )
+            position_info = QueueService.get_queue_position(submission_id, module.id)
+            queue_entries.append(
+                {
+                    "module_id": module.id,
+                    "module_name": module.name,
+                    "queue_entry_id": queue_entry.id,
+                    "position": (
+                        position_info.get("position") if position_info else None
+                    ),
+                    "status": (
+                        position_info.get("status") if position_info else "waiting"
+                    ),
+                }
+            )
 
-                # If this is the first item in the queue for this new module, start it
-                if position_info and position_info.get("position") == 1:
-                    logger.info(
-                        f"Starting immediate processing for new module {module.name} at position 1"
-                    )
-                    task_result = process_module_queue_entry(
-                        queue_entry, module, dataset, privatized_dataset
-                    )
-                    if task_result:
-                        immediate_tasks.append(task_result)
-                        for item in queue_entries:
-                            if item["queue_entry_id"] == queue_entry.id:
-                                item["status"] = "processing"
-                                break
+            if position_info and position_info.get("position") == 1:
+                task_result = BenchmarkService.process_module_queue_entry(
+                    queue_entry, module, dataset, privatized_dataset
+                )
+                if task_result:
+                    immediate_tasks.append(task_result)
+                    for item in queue_entries:
+                        if item["queue_entry_id"] == queue_entry.id:
+                            item["status"] = "processing"
+                            break
 
         if not queue_entries:
-            logger.warning("No new modules could be queued for this submission")
             return (
-                jsonify({"message": "No new modules could be queued"}),
+                jsonify(
+                    {
+                        "message": "No modules could be queued. Some modules may require dataset upload first."
+                    }
+                ),
                 400,
                 response_headers,
             )
@@ -925,16 +652,11 @@ def benchmark_update():
             "submission_id": submission_id,
             "queue_entries": queue_entries,
             "immediate_tasks": immediate_tasks,
-            "message": f"Added {len(queue_entries)} new modules to the benchmark queue.",
+            "message": f"Queued {len(queue_entries)} module(s) for update.",
         }
-
-        # If some tasks started immediately, include their task IDs for the frontend
         if immediate_tasks:
             response_data["task_ids"] = immediate_tasks
 
-        logger.info(
-            f"Successfully queued {len(queue_entries)} new modules for submission {submission_id}"
-        )
         return jsonify(response_data), 202, response_headers
 
     except Exception as e:
@@ -966,11 +688,12 @@ def finalize_submission_update():
     new_overall_score = new_scores_sum / new_module_count
 
     current_app_version_str = AppVersion.get_current_version()
+    significant_version = get_significant_version(current_app_version_str)
 
     # Check if version entry already exists
     existing_version = (
         db.session.query(SubmissionVersionScore)
-        .filter_by(submission_id=submission.id, version=current_app_version_str)
+        .filter_by(submission_id=submission.id, version=significant_version)
         .first()
     )
 
@@ -979,7 +702,7 @@ def finalize_submission_update():
         # Create the new version score entry only if it doesn't exist
         new_version_entry = SubmissionVersionScore(
             submission_id=submission.id,
-            version=current_app_version_str,
+            version=significant_version,
             score=new_overall_score,
             modules=all_modules_for_new_version,
         )
@@ -990,7 +713,7 @@ def finalize_submission_update():
 
     # Update the main submission
     submission.score = new_overall_score
-    submission.version = current_app_version_str
+    submission.version = significant_version
     submission.status = SubmissionStatus.COMPLETED
     db.session.commit()
 
@@ -998,7 +721,7 @@ def finalize_submission_update():
         jsonify(
             {
                 "message": "Submission updated to new version successfully",
-                "new_version": current_app_version_str,
+                "new_version": significant_version,
                 "new_score": new_overall_score,
             }
         ),
@@ -1066,7 +789,7 @@ def cancel_benchmark(submission_id):
         # Process next entries in queue for each affected module
         for module_id in affected_modules:
             try:
-                next_result = process_next_in_queue(module_id)
+                next_result = BenchmarkService.process_next_in_queue(module_id)
                 if next_result:
                     logger.info(
                         f"Started next task in queue for module {module_id}: {next_result['task_id']}"
@@ -1136,4 +859,48 @@ def delete_latest_submission():
     except Exception as e:
         logger.error(f"Error deleting latest submission: {str(e)}")
         db.session.rollback()
+        return jsonify({"message": str(e)}), 500
+
+
+@benchmark_bp.route("/submission/<int:submission_id>/updates-info", methods=["GET"])
+@jwt_required()
+def get_submission_updates_info(submission_id: int):
+    """Return which modules for this submission require updates and why."""
+    try:
+        user_id = get_jwt_identity()
+
+        submission = (
+            db.session.query(Submission)
+            .filter_by(id=submission_id, user_id=user_id)
+            .first()
+        )
+        if not submission:
+            return jsonify({"message": "Submission not found"}), 404
+
+        if submission.status != SubmissionStatus.OUTDATED:
+            return jsonify({"message": "Submission is already up-to-date"}), 200
+
+        modules_to_update = _compute_modules_to_update(submission)
+
+        return (
+            jsonify(
+                {
+                    "submission_id": submission.id,
+                    "modules_to_update": modules_to_update,
+                    "dataset_modules": [
+                        module
+                        for module in modules_to_update
+                        if module["requires_dataset_upload"]
+                    ],
+                    "rerun_modules": [
+                        module
+                        for module in modules_to_update
+                        if not module["requires_dataset_upload"]
+                    ],
+                }
+            ),
+            200,
+        )
+    except Exception as e:
+        logger.error(f"Error getting submission updates info: {e}")
         return jsonify({"message": str(e)}), 500
