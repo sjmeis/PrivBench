@@ -341,14 +341,6 @@ PrivBench Team
                         f"Started next task in queue after failure: {next_result['task_id']}"
                     )
 
-            result = {
-                "current": 0,
-                "total": total_steps,
-                "status": f"Task failed: {str(e)}",
-                "processedRows": 0,
-                "totalRows": total_rows if total_rows else 0,
-                "state": "FAILURE",
-            }
             raise Exception(str(e))
 
     @staticmethod
