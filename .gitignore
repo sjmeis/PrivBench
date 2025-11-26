@@ -160,6 +160,5 @@ coverage/
 /.idea/dataSources.xml
 /.idea/misc.xml
 /.idea/modules.xml
-/frontend/package-lock.json
 /.idea/PrivBench.iml
 /.idea/vcs.xml
