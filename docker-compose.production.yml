@@ -85,6 +85,9 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      # Pass the variable during the BUILD process
+      args:
+        REACT_APP_API_URL: http://privbench.test/api
     # ports:
       # - "3000:3000"
     environment:
