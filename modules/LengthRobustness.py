@@ -19,7 +19,7 @@ class LengthRobustness(BaseBenchmark):
         - If scores are great for short texts but collapse for longer ones,
           robustness is low.
 
-    This implementation uses ExactMatch as the default base metric for
+    This implementation uses AttributeInference as the default base metric for
     demonstration, but you can swap it for another benchmark that implements
     the same `score(original, private)` interface.
     """
