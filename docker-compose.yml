@@ -14,7 +14,7 @@ services:
       - ./benchmarks:/benchmarks
       - /var/run/docker.sock:/var/run/docker.sock
     user: root
-    environment:
+    args:
       - FLASK_ENV=development
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       - JWT_SECRET_KEY=REDACTED_JWT_KEY
@@ -26,6 +26,7 @@ services:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB}
+      - REACT_APP_API_URL=https://privbench.com/api
     depends_on:
       db:
         condition: service_healthy
