@@ -1,19 +1,11 @@
-FROM node:20
-
+FROM node:20 as build-stage
 WORKDIR /app
-
-# Copy only package manifests to leverage Docker caching
-COPY package.json package-lock.json ./
-
-# Install dependencies
+COPY package*.json ./
 RUN npm install
-
-# Copy the rest of the code
 COPY . .
-
-# Build the frontend app
 RUN npm run build
 
-EXPOSE 3000
-
-CMD ["npm", "start"]
+FROM nginx:stable-alpine
+COPY --from=build-stage /app/build /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
