@@ -9,6 +9,7 @@ from .utils.container_manager import container_manager
 from .config import Config
 from .extensions import db
 import logging
+import os
 
 jwt = JWTManager()
 migrate = Migrate()
@@ -45,7 +46,7 @@ def create_app():
         app,
         resources={
             r"/*": {
-                "origins": ["http://localhost:3000"],
+                "origins": ["https://privbench.com"],
                 "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
                 "allow_headers": ["Content-Type", "Authorization"],
                 "supports_credentials": True,

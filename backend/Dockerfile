@@ -60,3 +60,5 @@ EXPOSE 5000
 
 # Default entrypoint (can be overridden in docker-compose)
 ENTRYPOINT ["/app/entrypoint.sh"]
+
+CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "app:app"]
