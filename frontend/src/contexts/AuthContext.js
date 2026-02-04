@@ -1,11 +1,12 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import { API_BASE_URL } from '../../config';
 
 const AuthContext = createContext(null);
 
 
 const axiosInstance = axios.create({
-    baseURL: 'http://localhost:5000',
+    baseURL: `${API_BASE_URL}/register`,
     withCredentials: true, // Automatically send cookies for cross-origin requests
 });
 

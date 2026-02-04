@@ -16,6 +16,7 @@ import { useNavigate } from "react-router-dom";
 import BenchmarkCard from "../components/ranking/BenchmarkCard";
 import { motion } from "framer-motion";
 import { ModuleService } from "../services/ModuleService";
+import { API_BASE_URL } from './../config';
 
 const stepVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -37,7 +38,7 @@ const Information = () => {
   useEffect(() => {
     const fetchModules = async () => {
       try {
-        const response = await axios.get("http://localhost:5000/modules");
+        const response = await axios.get(`${API_BASE_URL}/modules`);
         setModules(response.data);
       } catch (err) {
         console.error(err);

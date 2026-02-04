@@ -84,7 +84,7 @@ const uploadPrivatizedDataset = async ({
         formData.append("original_dataset_id", String(originalDatasetId));
 
         await axios.post(
-            "http://localhost:5000/upload-privatized-dataset",
+            `${API_BASE_URL}/upload-privatized-dataset`,
             formData,
             {
                 headers: {

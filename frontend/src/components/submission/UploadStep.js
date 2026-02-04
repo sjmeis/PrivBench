@@ -4,6 +4,7 @@ import axios from "axios";
 import { useSnackbar } from "../../contexts/SnackbarProvider";
 import UploadTable from "./UploadTable";
 import { InfoOutlined } from "@mui/icons-material";
+import { API_BASE_URL } from '../../config';
 
 const UploadStep = ({ submissionId, datasets, uploadedFiles, onFileUploaded }) => {
     const [uploadingDatasetId, setUploadingDatasetId] = useState(null);
@@ -26,7 +27,7 @@ const UploadStep = ({ submissionId, datasets, uploadedFiles, onFileUploaded }) =
             formData.append("original_dataset_id", String(originalDatasetId));
 
             await axios.post(
-                "http://localhost:5000/upload-privatized-dataset",
+                `${API_BASE_URL}/upload-privatized-dataset`,
                 formData,
                 {
                     headers: {
