@@ -49,7 +49,7 @@ wait_for_flask() {
 run_db_scripts() {
     # Ensure the database is ready before running the scripts
     echo "Waiting for the database to be ready..."
-    until pg_isready -h db -p 5432 -U user; do
+    until pg_isready -h db -p 5432 -U "$POSTGRES_USER"; do
       sleep 1
     done
 
@@ -71,7 +71,7 @@ run_db_scripts() {
 setup_database() {
     if [ "$FLASK_ENV" = "development" ] && [ "$CLEAN_DB" = "true" ]; then
         echo "Resetting DB and migrations..."
-        PGPASSWORD=$POSTGRES_PASSWORD psql -h db -U user -d dbname -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+        PGPASSWORD=$POSTGRES_PASSWORD psql -h db -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
         rm -rf migrations
     fi
 
