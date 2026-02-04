@@ -10,6 +10,7 @@ import {
 } from "@mui/joy";
 import axios from "axios";
 import MetadataTemplateSelector from "./MetadataTemplateSelector";
+import { API_BASE_URL } from '../../config';
 
 const MetadataStep = ({
   metadata,
@@ -26,7 +27,7 @@ const MetadataStep = ({
   // Fetch the license options from the backend
   useEffect(() => {
     axios
-      .get("http://localhost:5000/licenses")
+      .get(`${API_BASE_URL}/licenses`)
       .then((response) => {
         setLicenseOptions(response.data.licenses);
       })

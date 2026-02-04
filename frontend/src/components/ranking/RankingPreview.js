@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, Typography, Table, Chip, Box, Button } from '@mui/joy';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { API_BASE_URL } from '../../config';
 
 const RankingsPreview = () => {
   const [rankings, setRankings] = useState([]);
@@ -11,7 +12,7 @@ const RankingsPreview = () => {
   useEffect(() => {
     const fetchRankings = async () => {
       try {
-        const response = await axios.post('http://localhost:5000/ranking', {
+        const response = await axios.post(`${API_BASE_URL}/ranking`, {
           page: 1,
           limit: 5,
           sortBy: 'score',

@@ -12,6 +12,7 @@ import LoadingSpinner from "../shared/LoadingSpinner";
 import PublishDialog from "./PublishDialog";
 import Tooltip from "@mui/joy/Tooltip";
 import { ModuleService } from "../../services/ModuleService";
+import { API_BASE_URL } from '../../config';
 
 const ModuleManagement = () => {
   const [modules, setModules] = useState([]);
@@ -34,7 +35,7 @@ const ModuleManagement = () => {
 
   const fetchModules = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/modules"); // Adjust endpoint as needed
+      const response = await axios.get(`${API_BASE_URL}/modules`); // Adjust endpoint as needed
       setModules(response.data);
     } catch (err) {
       console.error(err);
