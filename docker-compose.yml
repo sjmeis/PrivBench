@@ -23,7 +23,7 @@ services:
       # Set CLEAN_DB=true to reset database and migrations (development)
       # Set CLEAN_DB=false to preserve database and migrations (production)
       - CLEAN_DB=false
-      - POSTGRES_PASSWORD=password
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     depends_on:
       db:
         condition: service_healthy
