@@ -206,7 +206,7 @@ const Home = () => {
               animation: "fadeIn 1s ease-out 0.3s backwards",
             }}
           >
-            The Premier Platform for Text Privacy Benchmarking
+            The Premier Platform for Benchmarking Text-to-Text Privatization
           </Typography>
 
           <Box sx={{ height: "100px", position: "relative", mt: 4 }}>
