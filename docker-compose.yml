@@ -61,11 +61,11 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        - REACT_APP_API_URL=https://privbench.com
+        - REACT_APP_API_URL=https://privbench.com/api
     expose:
       - "80"
     environment:
-      - REACT_APP_API_URL=https://privbench.com
+      - REACT_APP_API_URL=https://privbench.com/api
 
   nginx:
     image: nginx:latest
