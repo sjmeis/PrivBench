@@ -6,7 +6,7 @@ const AuthContext = createContext(null);
 
 
 const axiosInstance = axios.create({
-    baseURL: `${API_BASE_URL}/register`,
+    baseURL: API_BASE_URL,
     withCredentials: true, // Automatically send cookies for cross-origin requests
 });
 
