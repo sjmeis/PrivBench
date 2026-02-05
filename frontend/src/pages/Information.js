@@ -16,7 +16,7 @@ import { useNavigate } from "react-router-dom";
 import BenchmarkCard from "../components/ranking/BenchmarkCard";
 import { motion } from "framer-motion";
 import { ModuleService } from "../services/ModuleService";
-import { API_BASE_URL } from './../config';
+import { API_BASE_URL } from '../config';
 
 const stepVariants = {
   hidden: { opacity: 0, y: 20 },
