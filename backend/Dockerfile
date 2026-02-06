@@ -17,7 +17,6 @@ RUN apt-get update && apt-get install -y \
 
 # 2. Setup Requirements (Root)
 COPY requirements.txt .
-COPY modules/ ./modules/ 
 RUN cat modules/*-reqs.txt >> requirements.txt || true
 
 # 3. Install Python packages (Root)
