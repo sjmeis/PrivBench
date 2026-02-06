@@ -2,7 +2,7 @@ FROM python:3.9
 
 WORKDIR /app
 
-# Install system dependencies
+# 1. Install system dependencies (Root)
 RUN apt-get update && apt-get install -y \
     build-essential \
     gcc \
@@ -13,53 +13,40 @@ RUN apt-get update && apt-get install -y \
     netcat-traditional \
     redis-tools \
     postgresql-client \
-    python3-venv \
     && rm -rf /var/lib/apt/lists/*
 
-COPY . .
-
-# Make entrypoint scripts executable
-RUN chmod +x /app/entrypoint.sh /app/celery_entrypoint.sh
-
-# Create a non-root user for security
-RUN useradd -m celeryuser
-
-# Create /data directory as root and set ownership to celeryuser
-RUN mkdir -p /data/privatized_datasets && chown -R celeryuser:celeryuser /data
-
-# Install Python packages globally before switching to non-root user
+# 2. Setup Requirements (Root)
 COPY requirements.txt .
+COPY modules/ ./modules/ 
+RUN cat modules/*-reqs.txt >> requirements.txt || true
 
-# Combine all module requirements into one file
-RUN cat /modules/*-reqs.txt >> requirements.txt || true
-
-# Install all requirements including ML/DL dependencies
+# 3. Install Python packages (Root)
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt && \
     pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.5.0/en_core_web_sm-3.5.0-py3-none-any.whl
 
-# Switch to non-root user
+# 4. Create User and Data Directories (Root)
+RUN useradd -m celeryuser && \
+    mkdir -p /data/privatized_datasets && \
+    chown -R celeryuser:celeryuser /data /app
+
+# 5. Copy Application Code & Fix Permissions (Root)
+COPY . .
+RUN chmod +x /app/entrypoint.sh /app/celery_entrypoint.sh && \
+    chown -R celeryuser:celeryuser /app
+
+# 6. Switch to non-root user
 USER celeryuser
 
-# Copy application code
-COPY --chown=celeryuser:celeryuser . .
+# 7. Environment Variables
+ENV FLASK_APP=app \
+    FLASK_DEBUG=1 \
+    C_FORCE_ROOT=true \
+    PYTHONPATH=/app \
+    PATH="/home/celeryuser/.local/bin:${PATH}" \
+    PYTHONUNBUFFERED=1
 
-# Copy entrypoint scripts
-COPY --chown=celeryuser:celeryuser entrypoint.sh /app/entrypoint.sh
-COPY --chown=celeryuser:celeryuser celery_entrypoint.sh /app/celery_entrypoint.sh
-
-# Set environment variables
-ENV FLASK_APP=app
-ENV FLASK_DEBUG=1
-ENV C_FORCE_ROOT=true
-ENV PYTHONPATH=/app
-ENV PATH="/home/celeryuser/.local/bin:${PATH}"
-ENV PYTHONUNBUFFERED=1
-
-# Expose port 5000 for Flask
 EXPOSE 5000
 
-# Default entrypoint (can be overridden in docker-compose)
 ENTRYPOINT ["/app/entrypoint.sh"]
-
 CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "app:app"]
