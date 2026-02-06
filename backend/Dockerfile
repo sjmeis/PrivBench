@@ -16,6 +16,11 @@ RUN apt-get update && apt-get install -y \
     python3-venv \
     && rm -rf /var/lib/apt/lists/*
 
+COPY . .
+
+# Make entrypoint scripts executable
+RUN chmod +x /app/entrypoint.sh /app/celery_entrypoint.sh
+
 # Create a non-root user for security
 RUN useradd -m celeryuser
 
@@ -32,10 +37,6 @@ RUN cat /modules/*-reqs.txt >> requirements.txt || true
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt && \
     pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.5.0/en_core_web_sm-3.5.0-py3-none-any.whl
-
-
-# Make entrypoint scripts executable
-RUN chmod +x /app/entrypoint.sh /app/celery_entrypoint.sh
 
 # Switch to non-root user
 USER celeryuser
