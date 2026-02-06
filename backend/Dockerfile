@@ -34,6 +34,9 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.5.0/en_core_web_sm-3.5.0-py3-none-any.whl
 
 
+# Make entrypoint scripts executable
+RUN chmod +x /app/entrypoint.sh /app/celery_entrypoint.sh
+
 # Switch to non-root user
 USER celeryuser
 
@@ -43,9 +46,6 @@ COPY --chown=celeryuser:celeryuser . .
 # Copy entrypoint scripts
 COPY --chown=celeryuser:celeryuser entrypoint.sh /app/entrypoint.sh
 COPY --chown=celeryuser:celeryuser celery_entrypoint.sh /app/celery_entrypoint.sh
-
-# Make entrypoint scripts executable
-RUN chmod +x /app/entrypoint.sh /app/celery_entrypoint.sh
 
 # Set environment variables
 ENV FLASK_APP=app
