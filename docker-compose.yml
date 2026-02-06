@@ -30,7 +30,7 @@ services:
       db:
         condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
     entrypoint: ["/app/entrypoint.sh"]
 
   celery_worker:
