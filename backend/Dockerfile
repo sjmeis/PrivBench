@@ -32,7 +32,8 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.5.0/en_core_web_sm-3.5.0-py3-none-any.whl
 
 # 5. Copy Application Code & Fix Permissions (Root)
-COPY . .
+#COPY . .
+COPY backend/ .
 RUN chmod +x /app/entrypoint.sh /app/celery_entrypoint.sh && \
     chown -R celeryuser:celeryuser /app
 
