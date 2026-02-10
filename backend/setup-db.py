@@ -11,8 +11,11 @@ logger = logging.getLogger(__name__)
 
 # Get the project root directory
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../"))
-DATASET_FOLDER = os.path.join(PROJECT_ROOT, "data/datasets")
-MODULE_FOLDER = os.path.join(PROJECT_ROOT, "modules")
+# DATASET_FOLDER = os.path.join(PROJECT_ROOT, "data/datasets")
+# MODULE_FOLDER = os.path.join(PROJECT_ROOT, "modules")
+
+DATASET_FOLDER = "/data/datasets"
+MODULE_FOLDER = "/app/modules"
 
 # Debug logs
 logger.info("=== Debug Information ===")
@@ -28,7 +31,7 @@ app = create_app()
 
 with app.app_context():
     # Drop all tables and recreate them
-    db.drop_all()
+    #db.drop_all()
     db.create_all()
 
     # Initialize app version
