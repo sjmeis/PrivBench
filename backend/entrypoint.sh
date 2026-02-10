@@ -108,8 +108,7 @@ setup_database
 
 echo "Starting the Flask application..."
 #python -m flask run --host=0.0.0.0 &
-echo "Starting application..."
-exec "$@"
+gunicorn -w 4 -b 0.0.0.0:5000 app:app &
 FLASK_PID=$!
 
 # Wait for Flask to be ready
