@@ -23,13 +23,13 @@ RUN useradd -m celeryuser && \
     chown -R celeryuser:celeryuser /data /app
 
 # 2. Setup Requirements (Root)
-COPY requirements.txt .
+COPY backend/requirements.txt .
+COPY modules/ ./modules/
 RUN cat modules/*-reqs.txt >> requirements.txt || true
 
 # 3. Setup Requirements 
 COPY requirements.txt .
-# CRITICAL: Copy modules folder so the 'cat' command actually finds the files
-COPY modules/ ./modules/ 
+COPY modules ./modules 
 RUN cat modules/*-reqs.txt >> requirements.txt || true
 
 # 3. Install Python packages (Root)
