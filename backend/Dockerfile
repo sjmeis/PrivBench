@@ -13,7 +13,6 @@ RUN apt-get update && apt-get install -y \
     liblapack-dev \
     netcat-traditional \
     redis-tools \
-    docker-io \
     postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
