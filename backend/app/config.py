@@ -6,7 +6,7 @@ load_dotenv()
 
 
 class Config:
-    FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+    FRONTEND_URL = os.getenv("FRONTEND_URL", "https://privbench.com")
     SECRET_KEY = os.getenv("SECRET_KEY", "supersecretkey")
     SQLALCHEMY_DATABASE_URI = os.getenv(
         "DATABASE_URL", "postgresql://user:password@db:5432/dbname"
@@ -15,9 +15,9 @@ class Config:
     JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "jwtsecretkey")
     # JWT settings
     JWT_TOKEN_LOCATION = ["cookies"]
-    # JWT_COOKIE_SECURE = os.getenv("FLASK_ENV", "development") == "production"  # Only True in production
-    JWT_COOKIE_SECURE = False
-    JWT_COOKIE_CSRF_PROTECT = False  # remove this later one
+    JWT_COOKIE_SECURE = os.getenv("FLASK_ENV", "development") == "production"  # Only True in production
+    #JWT_COOKIE_SECURE = False
+    #JWT_COOKIE_CSRF_PROTECT = False  # remove this later one
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(days=1)
 
     # Celery settings
