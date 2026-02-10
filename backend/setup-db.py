@@ -32,7 +32,7 @@ app = create_app()
 
 with app.app_context():
     # Drop all tables and recreate them
-    #db.drop_all()
+    db.drop_all()
     db.create_all()
 
     # Initialize app version
@@ -51,7 +51,7 @@ with app.app_context():
         "Mauve",
         "NearestNeighbor",
         "NERpriv",
-        "Similarity",
+        "Similarity"
     ]
     module_file_names = [
         "AttributeInference.py",
@@ -66,18 +66,23 @@ with app.app_context():
         "Similarity.py",
     ]
     module_requirement_file_names = [
-        "attribute-inference-reqs",
-        "carlini-exposure-reqs",
+        "attribute-inference-reqs.txt",
+        "carlini-exposure-reqs.txt",
         "coh-reqs.txt",
-        "length-robustness-reqs",
-        "length-variation-reqs",
+        "length-robustness-reqs.txt",
+        "length-variation-reqs.txt",
         "masked-token-reqs.txt",
-        "mauve-reqs",
+        "mauve-reqs.txt",
         "nearest-neighbor-reqs.txt",
         "ner_requirements.txt",
         "similarity-reqs.txt",
     ]
     dataset_names = [
+        "demo_nerpriv.csv",
+        "demo_coherence.csv",
+        "demo_nearestneighbor.csv",
+        "demo_similarity.csv",
+        "demo_maskedtokeninf.csv",
         "demo_nerpriv.csv",
         "demo_coherence.csv",
         "demo_nearestneighbor.csv",
@@ -108,7 +113,7 @@ with app.app_context():
         "MAUVE. Test.",
         "TN. Test.",
         "On the surface, text privatization should pay particular attention to named entities, or words or groups of words that point to some real-world object, person, organization, etc. Ensuring that such entities are not leaked into the privatized text, while also balancing the preservation of semantics, is the mark of an effective privatization method.",
-        "Semantic similarity measures the likeness between two pieces of text, commonly used in search engines, clustering, and recommendation tasks.",
+        "Semantic similarity measures the likeness between two pieces of text, commonly used in search engines, clustering, and recommendation tasks."
     ]
 
     # Create a dictionary to store datasets
