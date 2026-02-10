@@ -27,11 +27,6 @@ COPY backend/requirements.txt .
 COPY modules/ ./modules/
 RUN cat modules/*-reqs.txt >> requirements.txt || true
 
-# 3. Setup Requirements 
-COPY requirements.txt .
-COPY modules ./modules 
-RUN cat modules/*-reqs.txt >> requirements.txt || true
-
 # 3. Install Python packages (Root)
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt && \
