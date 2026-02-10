@@ -5,6 +5,7 @@ WORKDIR /app
 # 1. Install system dependencies (Root)
 RUN apt-get update && apt-get install -y \
     build-essential \
+    curl \
     gcc \
     g++ \
     python3-dev \
@@ -12,22 +13,29 @@ RUN apt-get update && apt-get install -y \
     liblapack-dev \
     netcat-traditional \
     redis-tools \
+    docker-io \
     postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
+# 2. Create User and Data Directories (Root)
+RUN useradd -m celeryuser && \
+    mkdir -p /data/privatized_datasets && \
+    chown -R celeryuser:celeryuser /data /app
+
 # 2. Setup Requirements (Root)
 COPY requirements.txt .
+RUN cat modules/*-reqs.txt >> requirements.txt || true
+
+# 3. Setup Requirements 
+COPY requirements.txt .
+# CRITICAL: Copy modules folder so the 'cat' command actually finds the files
+COPY modules/ ./modules/ 
 RUN cat modules/*-reqs.txt >> requirements.txt || true
 
 # 3. Install Python packages (Root)
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt && \
     pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.5.0/en_core_web_sm-3.5.0-py3-none-any.whl
-
-# 4. Create User and Data Directories (Root)
-RUN useradd -m celeryuser && \
-    mkdir -p /data/privatized_datasets && \
-    chown -R celeryuser:celeryuser /data /app
 
 # 5. Copy Application Code & Fix Permissions (Root)
 COPY . .

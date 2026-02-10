@@ -108,7 +108,7 @@ setup_database
 
 echo "Starting the Flask application..."
 #python -m flask run --host=0.0.0.0 &
-gunicorn -w 4 -b 0.0.0.0:5000 app:app &
+"$@" &
 FLASK_PID=$!
 
 # Wait for Flask to be ready
@@ -116,6 +116,7 @@ wait_for_flask
 
 # Start module containers
 echo "Starting module containers..."
+chmod 666 /var/run/docker.sock || echo "Warning: Could not set socket permissions"
 python -m flask start-containers
 
 # Bring Flask process back to foreground
