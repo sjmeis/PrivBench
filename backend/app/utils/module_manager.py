@@ -161,7 +161,7 @@ except Exception as e:
                 image_tag,
                 command=["python", "-c", test_script],
                 remove=True,
-                network="privbench_default"
+                network="privbench_default",
                 **run_kwargs,
             )
 

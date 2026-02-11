@@ -1,4 +1,5 @@
-FROM python:3.9
+FROM nvidia/cuda:11.8.0-base-ubuntu22.04
+#FROM python:3.9
 
 WORKDIR /app
 
