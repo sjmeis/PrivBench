@@ -9,13 +9,18 @@ RUN apt-get update && apt-get install -y \
     curl \
     gcc \
     g++ \
-    python3-dev \
+    python3.9 \
+    python3-pip \
+    python3.9-dev \
     libblas-dev \
     liblapack-dev \
     netcat-traditional \
     redis-tools \
     postgresql-client \
     && rm -rf /var/lib/apt/lists/*
+
+RUN ln -sf /usr/bin/python3.9 /usr/bin/python && \
+    ln -sf /usr/bin/pip3 /usr/bin/pip
 
 # 2. Create User and Data Directories (Root)
 RUN useradd -m celeryuser && \
