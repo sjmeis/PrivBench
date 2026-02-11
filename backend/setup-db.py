@@ -193,6 +193,7 @@ with app.app_context():
                 module_name=module_name,
                 module_path=module_path,
                 requirements_path=requirements_path,
+                use_gpu=module_requires_gpu[i]
             )
             install_tasks.append(install_task)  # Store the task
             db.session.add(new_benchmark_module)

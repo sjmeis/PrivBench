@@ -94,7 +94,7 @@ class ModuleManager:
 
             tag = f"module-{module_name.lower()}"
             _, build_logs = self.docker_client.images.build(
-                path=str(temp_path), tag=tag, rm=True
+                path=str(temp_path), tag=tag, rm=True, pull=False
             )
 
             # Log build output
