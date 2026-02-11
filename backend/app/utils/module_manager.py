@@ -12,42 +12,34 @@ logger = logging.getLogger(__name__)
 class ModuleManager:
     def __init__(self):
         self.docker_client = docker.from_env()
-        self.base_image_cpu = "python:3.9-slim"
+        #self.base_image_cpu = "python:3.9-slim"
         # CUDA runtime; requires host NVIDIA driver + toolkit
-        self.base_image_gpu = "nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04"
+        #self.base_image_gpu = "nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04"
+        self.base_image_cpu = "privbench-base-cpu:latest"
+        self.base_image_gpu = "privbench-base-gpu:latest"
 
     def create_dockerfile(self, requirements_filename, use_gpu=False):
         """Create a Dockerfile for the module container"""
-        if not use_gpu:
-            return f"""
-            FROM {self.base_image_cpu}
-            WORKDIR /app
-            ENV PYTHONPATH=/app
-            COPY {requirements_filename} /app/requirements.txt
-            RUN pip install --no-cache-dir -r requirements.txt
-            COPY . /app
-            """
-        # GPU: install Python 3.9 on top of CUDA runtime image
+        base = self.base_image_gpu if use_gpu else self.base_image_cpu
+
+        # if not use_gpu:
+        #     return f"""
+        #     FROM {self.base_image_cpu}
+        #     WORKDIR /app
+        #     ENV PYTHONPATH=/app
+        #     COPY {requirements_filename} /app/requirements.txt
+        #     RUN pip install --no-cache-dir -r requirements.txt
+        #     COPY . /app
+        #     """
+            
         return f"""
-        FROM {self.base_image_gpu}
-        ENV DEBIAN_FRONTEND=noninteractive
+        FROM {base}
         WORKDIR /app
-        RUN apt-get update && apt-get install -y --no-install-recommends \\
-              software-properties-common curl ca-certificates \\
-            && add-apt-repository -y ppa:deadsnakes/ppa \\
-            && apt-get update && apt-get install -y --no-install-recommends \\
-              python3.9 python3.9-venv python3.9-distutils \\
-            && curl -sS https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py \\
-            && python3.9 /tmp/get-pip.py \\
-            && ln -sf /usr/bin/python3.9 /usr/bin/python \\
-            && ln -sf /usr/local/bin/pip3.9 /usr/bin/pip \\
-            && rm -rf /var/lib/apt/lists/* /tmp/get-pip.py
         ENV PYTHONPATH=/app
-        ENV NVIDIA_VISIBLE_DEVICES=all
-        ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
         COPY {requirements_filename} /app/requirements.txt
-        RUN python -m pip install --no-cache-dir -r requirements.txt
+        RUN pip install --no-cache-dir -r requirements.txt || true
         COPY . /app
+        RUN ln -s /app /app/modules || true && touch /app/__init__.py
         """
 
     def build_module_container(
@@ -66,7 +58,7 @@ class ModuleManager:
 
             # Copy files from benchmarks folder
             benchmarks_path = Path(
-                "../benchmarks"
+                "/app/benchmarks"
             )  # This is the mounted path in the container
             logger.debug(f"Benchmarks path: {benchmarks_path}")
             if benchmarks_path.exists():
@@ -103,7 +95,7 @@ class ModuleManager:
 
             tag = f"module-{module_name.lower()}"
             _, build_logs = self.docker_client.images.build(
-                path=str(temp_path), tag=tag, rm=True
+                path=str(temp_path), tag=tag, rm=True, pull=False
             )
 
             # Log build output
@@ -111,67 +103,68 @@ class ModuleManager:
                 if "stream" in log:
                     logger.debug(f"Build log: {log['stream'].strip()}")
 
+            self.docker_client.images.prune(filters={'dangling': True})
+
             return tag
 
     def test_module(self, image_tag, module_name, use_gpu=False):
         """Test if the module can be loaded and instantiated"""
+        
+        # Update: We force the PYTHONPATH inside the test script too
         test_script = f"""
-import importlib.util
 import sys
 import json
-from pathlib import Path
 import traceback
+from pathlib import Path
+sys.path.append('/app')
 
 def test_module():
     try:
+        import importlib.util
         module_path = Path('/app/{module_name}.py')
-        
-        # Debug output
-        print(f"Debug: Current directory contents: {{list(Path('/app').glob('*'))}}")
-        print(f"Debug: Module path exists: {{module_path.exists()}}")
         
         if not module_path.exists():
             return f"Module file not found at {{module_path}}"
         
-        print(f"Debug: Module contents: {{module_path.read_text()}}")
-        
         spec = importlib.util.spec_from_file_location(module_path.stem, module_path)
-        if spec is None:
-            return "Failed to create module specification"
-            
         module = importlib.util.module_from_spec(spec)
         sys.modules[module_path.stem] = module
         spec.loader.exec_module(module)
         
-        # Debug output
-        print(f"Debug: Module dir contents: {{dir(module)}}")
-        
         cls = getattr(module, '{module_name}')
         instance = cls()
+        
+        # Optional: Verify GPU if expected
+        if {use_gpu}:
+            import torch
+            if not torch.cuda.is_available():
+                return "GPU requested but torch.cuda.is_available() is False"
+                
         return True
     except Exception as e:
         return f"{{str(e)}}\\nTraceback: {{traceback.format_exc()}}"
 
-try:
-    result = test_module()
-    print(json.dumps({{"success": result == True, "error": str(result) if result != True else None}}))
-except Exception as e:
-    print(json.dumps({{"success": False, "error": f"Test script error: {{str(e)}}\\nTraceback: {{traceback.format_exc()}}"}}))
+result = test_module()
+print(json.dumps({{"success": result == True, "error": str(result) if result != True else None}}))
 """
         try:
-            run_kwargs = {}
+            device_requests = []
             if use_gpu:
-                run_kwargs["device_requests"] = [
+                device_requests = [
                     DeviceRequest(count=-1, capabilities=[["gpu"]])
                 ]
-            container = self.docker_client.containers.run(
+
+            container_output = self.docker_client.containers.run(
                 image_tag,
-                command=["python", "-c", test_script],
+                command=["python3", "-c", test_script],
                 remove=True,
-                **run_kwargs,
+                network="privbench_default", 
+                device_requests=device_requests,
+                stdout=True,
+                stderr=True
             )
 
-            output = container.decode("utf-8")
+            output = container_output.decode("utf-8")
             logger.debug(f"Container output: {output}")
 
             # Try to parse JSON from the last line of output

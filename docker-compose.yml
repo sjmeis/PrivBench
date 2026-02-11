@@ -15,6 +15,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     user: root
     environment:
+      - PYTHONPATH=/app
       - FLASK_ENV=development
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       - JWT_SECRET_KEY=REDACTED_JWT_KEY
@@ -22,7 +23,7 @@ services:
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       # Set CLEAN_DB=true to reset database and migrations (development)
       # Set CLEAN_DB=false to preserve database and migrations (production)
-      - CLEAN_DB=false
+      - CLEAN_DB=true
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB}
@@ -44,15 +45,30 @@ services:
       - ./modules:/app/modules
       - ./benchmarks:/app/benchmarks
       - /var/run/docker.sock:/var/run/docker.sock
+    privileged: true
     user: root
+    working_dir: /app
     environment:
+      - PYTHONPATH=/app
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
       - C_FORCE_ROOT=true
+      - HAS_GPU=true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     depends_on:
-      - redis
-      - backend
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     entrypoint: ["/app/celery_entrypoint.sh"]
     tty: true
 
