@@ -39,7 +39,7 @@ class ModuleManager:
         COPY {requirements_filename} /app/requirements.txt
         RUN pip install --no-cache-dir -r requirements.txt || true
         COPY . /app
-        RUN ln -s /app /app/modules || true
+        RUN ln -s /app /app/modules || true && touch /app/__init__.py
         """
 
     def build_module_container(
