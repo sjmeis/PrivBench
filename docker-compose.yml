@@ -22,7 +22,7 @@ services:
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       # Set CLEAN_DB=true to reset database and migrations (development)
       # Set CLEAN_DB=false to preserve database and migrations (production)
-      - CLEAN_DB=false
+      - CLEAN_DB=true
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB}
