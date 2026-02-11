@@ -18,11 +18,10 @@ RUN apt-get update && apt-get install -y \
     postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
-RUN ln -sf /usr/bin/python3.9 /usr/bin/python && \
-    ln -sf /usr/bin/python3.9 /usr/bin/python3 && \
-    ln -sf /usr/bin/pip3 /usr/bin/pip
+RUN ln -sf $(which python3) /usr/bin/python && \
+    ln -sf $(which pip3) /usr/bin/pip
 
-RUN chmod +x /usr/bin/python /usr/bin/pip
+RUN python --version && pip --version
 
 # 2. Create User and Data Directories (Root)
 RUN useradd -m celeryuser && \
