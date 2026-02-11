@@ -39,6 +39,7 @@ class ModuleManager:
         COPY {requirements_filename} /app/requirements.txt
         RUN pip install --no-cache-dir -r requirements.txt || true
         COPY . /app
+        RUN ln -s /app /app/modules || true
         """
 
     def build_module_container(
@@ -114,6 +115,8 @@ import sys
 import json
 from pathlib import Path
 import traceback
+sys.path.append('/app')
+import importlib.util
 
 def test_module():
     try:
