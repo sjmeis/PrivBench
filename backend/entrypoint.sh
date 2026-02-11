@@ -5,7 +5,7 @@ FLASK_PID=""
 # Trap SIGINT and SIGTERM to stop containers gracefully
 cleanup() {
     echo "Stopping module containers..."
-    python -m flask stop-containers || echo "Failed to stop containers"
+    python3 -m flask stop-containers || echo "Failed to stop containers"
 
     echo "Stopping Flask server..."
     if [ -n "$FLASK_PID" ]; then
@@ -39,11 +39,12 @@ wait_for_postgres() {
 }
 
 wait_for_flask() {
-    echo "Waiting for Flask to be ready..."
-    until curl -s http://localhost:5000/health > /dev/null; do
-        sleep 1
+    echo "Waiting for Flask to be ready on port 5000..."
+    # Check if something is listening on port 5000
+    while ! nc -z localhost 5000; do
+      sleep 1
     done
-    echo "Flask is up!"
+    echo "Flask is up and listening!"
 }
 
 # Function to run database setup and population scripts
