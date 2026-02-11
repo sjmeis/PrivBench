@@ -107,7 +107,7 @@ class ModuleManager:
 
             return tag
 
-def test_module(self, image_tag, module_name, use_gpu=False):
+    def test_module(self, image_tag, module_name, use_gpu=False):
         """Test if the module can be loaded and instantiated"""
         
         # Update: We force the PYTHONPATH inside the test script too
