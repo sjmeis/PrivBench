@@ -12,41 +12,32 @@ logger = logging.getLogger(__name__)
 class ModuleManager:
     def __init__(self):
         self.docker_client = docker.from_env()
-        self.base_image_cpu = "python:3.9-slim"
+        #self.base_image_cpu = "python:3.9-slim"
         # CUDA runtime; requires host NVIDIA driver + toolkit
-        self.base_image_gpu = "nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04"
+        #self.base_image_gpu = "nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04"
+        self.base_image_cpu = "privbench-base-cpu:latest"
+        self.base_image_gpu = "privbench-base-gpu:latest"
 
     def create_dockerfile(self, requirements_filename, use_gpu=False):
         """Create a Dockerfile for the module container"""
-        if not use_gpu:
-            return f"""
-            FROM {self.base_image_cpu}
-            WORKDIR /app
-            ENV PYTHONPATH=/app
-            COPY {requirements_filename} /app/requirements.txt
-            RUN pip install --no-cache-dir -r requirements.txt
-            COPY . /app
-            """
-        # GPU: install Python 3.9 on top of CUDA runtime image
+        base = self.base_image_gpu if use_gpu else self.base_image_cpu
+
+        # if not use_gpu:
+        #     return f"""
+        #     FROM {self.base_image_cpu}
+        #     WORKDIR /app
+        #     ENV PYTHONPATH=/app
+        #     COPY {requirements_filename} /app/requirements.txt
+        #     RUN pip install --no-cache-dir -r requirements.txt
+        #     COPY . /app
+        #     """
+            
         return f"""
-        FROM {self.base_image_gpu}
-        ENV DEBIAN_FRONTEND=noninteractive
+        FROM {base}
         WORKDIR /app
-        RUN apt-get update && apt-get install -y --no-install-recommends \\
-              software-properties-common curl ca-certificates \\
-            && add-apt-repository -y ppa:deadsnakes/ppa \\
-            && apt-get update && apt-get install -y --no-install-recommends \\
-              python3.9 python3.9-venv python3.9-distutils \\
-            && curl -sS https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py \\
-            && python3.9 /tmp/get-pip.py \\
-            && ln -sf /usr/bin/python3.9 /usr/bin/python \\
-            && ln -sf /usr/local/bin/pip3.9 /usr/bin/pip \\
-            && rm -rf /var/lib/apt/lists/* /tmp/get-pip.py
         ENV PYTHONPATH=/app
-        ENV NVIDIA_VISIBLE_DEVICES=all
-        ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
         COPY {requirements_filename} /app/requirements.txt
-        RUN python -m pip install --no-cache-dir -r requirements.txt
+        RUN pip install --no-cache-dir -r requirements.txt || true
         COPY . /app
         """
 
@@ -66,7 +57,7 @@ class ModuleManager:
 
             # Copy files from benchmarks folder
             benchmarks_path = Path(
-                "../benchmarks"
+                "/app/benchmarks"
             )  # This is the mounted path in the container
             logger.debug(f"Benchmarks path: {benchmarks_path}")
             if benchmarks_path.exists():
@@ -110,6 +101,8 @@ class ModuleManager:
             for log in build_logs:
                 if "stream" in log:
                     logger.debug(f"Build log: {log['stream'].strip()}")
+
+            self.docker_client.images.prune(filters={'dangling': True})
 
             return tag
 
@@ -168,6 +161,7 @@ except Exception as e:
                 image_tag,
                 command=["python", "-c", test_script],
                 remove=True,
+                network="privbench_default"
                 **run_kwargs,
             )
 

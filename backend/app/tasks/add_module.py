@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 def _gpu_available():
-    return shutil.which("nvidia-smi") is not None
+    return shutil.which("nvidia-smi") is not None or os.getenv("HAS_GPU") == "true"
 
 
 @shared_task(bind=True)
@@ -21,6 +21,7 @@ def install_and_load_module(
     is_new_module=False,
     restart_container=False,
     device_specification="cpu",
+    use_gpu=False
 ):
     """Celery task to install and load a module."""
     container_name = f"module-container-{module_name.lower()}"
@@ -28,7 +29,8 @@ def install_and_load_module(
         from app.utils.container_manager import container_manager
 
         # Simple device handling
-        if device_specification == "gpu":
+        #if device_specification == "gpu":
+        if use_gpu == True:
             if not _gpu_available():
                 logger.error(
                     f"GPU requested for {module_name} but no Nvidia driver found."
@@ -51,19 +53,20 @@ def install_and_load_module(
             raise FileNotFoundError(f"Module file not found at {module_path}")
 
         # Log module contents
-        with open(module_path, "r") as f:
-            logger.debug(f"Module contents:\n{f.read()}")
+        # with open(module_path, "r") as f:
+        #     logger.debug(f"Module contents:\n{f.read()}")
 
         manager = ModuleManager()
         image_tag = manager.build_module_container(
             module_path=module_path,
             module_name=module_name,
             requirements_path=requirements_path,
-            use_gpu=device_specification == "gpu",
+            #use_gpu=device_specification == "gpu",
+            use_gpu=use_gpu
         )
 
         test_result = manager.test_module(
-            image_tag, module_name, use_gpu=device_specification == "gpu"
+            image_tag, module_name, use_gpu=use_gpu
         )
 
         if test_result["success"]:
