@@ -104,7 +104,10 @@ setup_database() {
 echo "Starting Flask backend..."
 wait_for_redis
 wait_for_postgres
+
+set +e
 setup_database
+set -e
 
 echo "Starting the Flask application..."
 #python -m flask run --host=0.0.0.0 &

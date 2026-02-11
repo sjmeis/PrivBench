@@ -36,10 +36,11 @@ with app.app_context():
     #db.create_all()
 
     # Initialize app version
-    initial_version = AppVersion(version="1.0.0")
-    db.session.add(initial_version)
-    db.session.commit()
-    logger.info("Initialized app version to 1.0.0")
+    if not AppVersion.query.filter_by(version="1.0.0").first():
+        initial_version = AppVersion(version="1.0.0")
+        db.session.add(initial_version)
+        db.session.commit()
+        logger.info("Initialized app version to 1.0.0")
 
     module_names = [
         "AttributeInference",
@@ -116,6 +117,19 @@ with app.app_context():
         "Semantic similarity measures the likeness between two pieces of text, commonly used in search engines, clustering, and recommendation tasks."
     ]
 
+    module_requires_gpu = [
+        True, # AttributeInference 
+        True,  # CarliniExposure 
+        True, # Coherence
+        False, # LengthRobustness
+        False, # LengthVariation
+        True,  # MaskedTokenInference 
+        True,  # Mauve
+        True, # NearestNeighbor
+        False, # NERpriv
+        True  # Similarity
+    ]
+
     # Create a dictionary to store datasets
     datasets = {}
     install_tasks = []  # Store tasks to wait for them
@@ -123,8 +137,15 @@ with app.app_context():
     # Iterate over all files in the dataset folder
     #if os.path.exists(DATASET_FOLDER) and os.path.exists(MODULE_FOLDER):
     # First create all datasets
-    for dataset_name in dataset_names:
+    unique_dataset_names = list(set(dataset_names))
+    for dataset_name in unique_dataset_names:
         file_path = os.path.join(DATASET_FOLDER, dataset_name)
+
+        existing_ds = Dataset.query.filter_by(name=dataset_name).first()
+        if existing_ds:
+            datasets[dataset_name] = existing_ds
+            continue
+
         if os.path.isfile(file_path):
             logger.info(f"Adding dataset: {dataset_name} at path: {file_path}")
 
@@ -141,6 +162,10 @@ with app.app_context():
 
     # Then create all modules
     for i, module_name in enumerate(module_names):
+        if BenchmarkModule.query.filter_by(name=module_name).first():
+            logger.info(f"Module {module_name} already exists. Skipping.")
+            continue
+
         module_title = module_titles[i]
         module_file_name = module_file_names[i]
         module_path = os.path.join(MODULE_FOLDER, module_file_name)
@@ -160,6 +185,7 @@ with app.app_context():
                 is_active=True,
                 path=module_path,
                 dataset_id=datasets[corresponding_dataset].id,
+                use_gpu=module_requires_gpu[i]
             )
 
             install_task = install_and_load_module.delay(
