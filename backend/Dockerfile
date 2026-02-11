@@ -1,4 +1,5 @@
-FROM python:3.9
+FROM nvidia/cuda:11.8.0-base-ubuntu22.04
+#FROM python:3.9
 
 WORKDIR /app
 
@@ -8,13 +9,19 @@ RUN apt-get update && apt-get install -y \
     curl \
     gcc \
     g++ \
-    python3-dev \
+    python3.9 \
+    python3-pip \
     libblas-dev \
     liblapack-dev \
     netcat-traditional \
     redis-tools \
     postgresql-client \
     && rm -rf /var/lib/apt/lists/*
+
+RUN ln -sf $(which python3) /usr/bin/python && \
+    ln -sf $(which pip3) /usr/bin/pip
+
+RUN python --version && pip --version
 
 # 2. Create User and Data Directories (Root)
 RUN useradd -m celeryuser && \

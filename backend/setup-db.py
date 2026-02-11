@@ -4,6 +4,7 @@ from app.tasks.add_module import install_and_load_module
 from datetime import datetime
 import os
 import logging
+import time
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -32,14 +33,15 @@ app = create_app()
 
 with app.app_context():
     # Drop all tables and recreate them
-    db.drop_all()
-    db.create_all()
+    #db.drop_all()
+    #db.create_all()
 
     # Initialize app version
-    initial_version = AppVersion(version="1.0.0")
-    db.session.add(initial_version)
-    db.session.commit()
-    logger.info("Initialized app version to 1.0.0")
+    if not AppVersion.query.filter_by(version="1.0.0").first():
+        initial_version = AppVersion(version="1.0.0")
+        db.session.add(initial_version)
+        db.session.commit()
+        logger.info("Initialized app version to 1.0.0")
 
     module_names = [
         "AttributeInference",
@@ -116,6 +118,19 @@ with app.app_context():
         "Semantic similarity measures the likeness between two pieces of text, commonly used in search engines, clustering, and recommendation tasks."
     ]
 
+    module_requires_gpu = [
+        True, # AttributeInference 
+        True,  # CarliniExposure 
+        True, # Coherence
+        False, # LengthRobustness
+        False, # LengthVariation
+        True,  # MaskedTokenInference 
+        True,  # Mauve
+        True, # NearestNeighbor
+        False, # NERpriv
+        True  # Similarity
+    ]
+
     # Create a dictionary to store datasets
     datasets = {}
     install_tasks = []  # Store tasks to wait for them
@@ -123,8 +138,15 @@ with app.app_context():
     # Iterate over all files in the dataset folder
     #if os.path.exists(DATASET_FOLDER) and os.path.exists(MODULE_FOLDER):
     # First create all datasets
-    for dataset_name in dataset_names:
+    unique_dataset_names = list(set(dataset_names))
+    for dataset_name in unique_dataset_names:
         file_path = os.path.join(DATASET_FOLDER, dataset_name)
+
+        existing_ds = Dataset.query.filter_by(name=dataset_name).first()
+        if existing_ds:
+            datasets[dataset_name] = existing_ds
+            continue
+
         if os.path.isfile(file_path):
             logger.info(f"Adding dataset: {dataset_name} at path: {file_path}")
 
@@ -139,67 +161,63 @@ with app.app_context():
             db.session.flush()
             datasets[dataset_name] = new_dataset
 
-    # Then create all modules
+    # 2. Create and Install Modules One-by-One
     for i, module_name in enumerate(module_names):
-        module_title = module_titles[i]
-        module_file_name = module_file_names[i]
-        module_path = os.path.join(MODULE_FOLDER, module_file_name)
-        module_description = module_descriptions[i]
-        requirements_file_name = module_requirement_file_names[i]
-        requirements_path = os.path.join(MODULE_FOLDER, requirements_file_name)
-        corresponding_dataset = dataset_names[i]
-
-        logger.info(f"Adding module: {module_name} at path: {module_path}")
-
-        if corresponding_dataset in datasets:
-            new_benchmark_module = BenchmarkModule(
+        module_record = BenchmarkModule.query.filter_by(name=module_name).first()
+        
+        if module_record and module_record.is_installed:
+            logger.info(f"Module {module_name} already installed. Skipping.")
+            continue
+        
+        if not module_record:
+            logger.info(f"Creating record for {module_name}...")
+            module_record = BenchmarkModule(
                 name=module_name,
-                title=module_title,
-                description=module_description,
+                title=module_titles[i],
+                description=module_descriptions[i],
                 version="1.0.0",
                 is_active=True,
-                path=module_path,
-                dataset_id=datasets[corresponding_dataset].id,
+                path=os.path.join(MODULE_FOLDER, module_file_names[i]),
+                dataset_id=datasets[dataset_names[i]].id,
+                use_gpu=module_requires_gpu[i]
             )
+            db.session.add(module_record)
+            db.session.commit()
 
-            install_task = install_and_load_module.delay(
-                module_id=new_benchmark_module.id,
-                module_name=module_name,
-                module_path=module_path,
-                requirements_path=requirements_path,
-            )
-            install_tasks.append(install_task)  # Store the task
-            db.session.add(new_benchmark_module)
-            logger.info(f"Module {module_name} queued for installation")
-        else:
-            logger.error(
-                f"Dataset {corresponding_dataset} not found for module {module_name}"
-            )
-
-    db.session.commit()
-
-    # Wait for all installation tasks to complete
-    logger.info("Waiting for all module installations to complete...")
-    for i, task in enumerate(install_tasks):
-        module_name = module_names[i]
-        logger.info(f"Waiting for {module_name} installation...")
-
-        try:
-            result = task.get(timeout=600)  # 10 minute timeout per module
-            if result["status"] == "success":
-                logger.info(f"Module {module_name} installed successfully")
-            else:
-                logger.error(
-                    f"Module {module_name} installation failed: {result['message']}"
+        # 3. Safe Installation Loop with Retries and Delay
+        success = False
+        retries = 3
+        while retries > 0 and not success:
+            logger.info(f"Installing {module_name} (Attempt {4-retries}/3)...")
+            try:
+                task = install_and_load_module.delay(
+                    module_id=module_record.id,
+                    module_name=module_name,
+                    module_path=module_record.path,
+                    requirements_path=os.path.join(MODULE_FOLDER, module_requirement_file_names[i]),
+                    use_gpu=module_requires_gpu[i]
                 )
-                raise Exception(f"Module {module_name} installation failed")
-        except Exception as e:
-            logger.error(f"Failed to install module {module_name}: {e}")
-            raise
+                
+                result = task.get(timeout=600)
+                if result.get("status") == "success":
+                    logger.info(f"Successfully installed {module_name}")
+                    success = True
+                else:
+                    logger.error(f"Installation failed for {module_name}: {result.get('message')}")
+                    retries -= 1
+                    if retries > 0:
+                        logger.info("Waiting 10s before retry...")
+                        time.sleep(10)
+            except Exception as e:
+                logger.error(f"Error during installation of {module_name}: {e}")
+                retries -= 1
+                time.sleep(10)
 
-    logger.info("All datasets and modules have been added to the database.")
-    logger.info(
-        "All modules have been installed successfully. Docker images are ready."
-    )
-    #else:
-    #    logger.error("Dataset folder does not exist. Please check the path.")
+        if not success:
+            logger.error(f"Module {module_name} could not be installed after 3 attempts.")
+            # Depending on requirements, you can choose to exit or continue
+            # raise Exception(f"Fatal error installing {module_name}")
+
+        # CRITICAL: Pause between modules to let the Docker Engine "breathe"
+        logger.info("Cooling down Docker Engine for 5s...")
+        time.sleep(5)
