@@ -2,7 +2,7 @@ import * as React from 'react';
 import Box from '@mui/joy/Box';
 import StepIndicator, {stepIndicatorClasses} from "@mui/joy/StepIndicator";
 import {Step, stepClasses, Stepper, Typography} from "@mui/joy";
-import {BarChart, CloudUploadRounded, GetAppRounded, InfoRounded} from "@mui/icons-material";
+import {BarChart, CloudUploadRounded, GetAppRounded, InfoRounded, ListAlt} from "@mui/icons-material";
 
 export function SideNaveSubmission({ currentStep, handleStepClick }) {
 
@@ -34,7 +34,7 @@ export function SideNaveSubmission({ currentStep, handleStepClick }) {
                     paddingTop: '35px',
                     paddingX: '12px',
                     "--StepIndicator-size": "3rem",
-                    "--Stepper-verticalGap": "5rem",
+                    "--Stepper-verticalGap": "4rem",
                     "--Step-connectorThickness": "5px",
                     [`& .${stepIndicatorClasses.root}`]: {
                         borderWidth: 4,
@@ -68,11 +68,11 @@ export function SideNaveSubmission({ currentStep, handleStepClick }) {
                             color={currentStep === 0 ? "primary" : "neutral"}
                             onClick={() => handleStepClick(0)}
                         >
-                            <GetAppRounded />
+                            <ListAlt />
                         </StepIndicator>
                     }
                 >
-                    <Typography sx={{marginLeft: '10px'}} color={currentStep === 0 ? 'primary': ''}>Download Datasets</Typography>
+                    <Typography sx={{marginLeft: '10px'}} color={currentStep === 0 ? 'primary': ''}>Select Datasets</Typography>
                 </Step>
                 <Step
                     completed={currentStep > 1}
@@ -83,11 +83,11 @@ export function SideNaveSubmission({ currentStep, handleStepClick }) {
                             color={currentStep === 1 ? "primary" : "neutral"}
                             onClick={() => handleStepClick(1)}
                         >
-                            <InfoRounded />
+                            <GetAppRounded />
                         </StepIndicator>
                     }
                 >
-                    <Typography sx={{marginLeft: '10px'}} color={currentStep === 1 ? 'primary': ''}>Privatization Method</Typography>
+                    <Typography sx={{marginLeft: '10px'}} color={currentStep === 1 ? 'primary': ''}>Download Datasets</Typography>
                 </Step>
                 <Step
                     completed={currentStep > 2}
@@ -98,22 +98,37 @@ export function SideNaveSubmission({ currentStep, handleStepClick }) {
                             color={currentStep === 2 ? "primary" : "neutral"}
                             onClick={() => handleStepClick(2)}
                         >
-                            <CloudUploadRounded />
+                            <InfoRounded />
                         </StepIndicator>
                     }
                 >
-                    <Typography sx={{marginLeft: '10px'}} color={currentStep === 2 ? 'primary': ''}>Upload Privatized Datasets</Typography>
+                    <Typography sx={{marginLeft: '10px'}} color={currentStep === 2 ? 'primary': ''}>Privatization Method</Typography>
                 </Step>
                 <Step
                     completed={currentStep > 3}
                     active={currentStep === 3}
                     indicator={
-                        <StepIndicator variant="soft" color={currentStep === 3 ? "primary" : "neutral"}>
+                        <StepIndicator
+                            variant="soft"
+                            color={currentStep === 3 ? "primary" : "neutral"}
+                            onClick={() => handleStepClick(3)}
+                        >
+                            <CloudUploadRounded />
+                        </StepIndicator>
+                    }
+                >
+                    <Typography sx={{marginLeft: '10px'}} color={currentStep === 3 ? 'primary': ''}>Upload Privatized Datasets</Typography>
+                </Step>
+                <Step
+                    completed={currentStep > 4}
+                    active={currentStep === 4}
+                    indicator={
+                        <StepIndicator variant="soft" color={currentStep === 4 ? "primary" : "neutral"}>
                             <BarChart />
                         </StepIndicator>
                     }
                 >
-                    <Typography sx={{marginLeft: '10px'}} color={currentStep === 3 ? 'primary': ''}>Model Evaluation</Typography>
+                    <Typography sx={{marginLeft: '10px'}} color={currentStep === 4 ? 'primary': ''}>Model Evaluation</Typography>
                 </Step>
             </Stepper>
         </Box>

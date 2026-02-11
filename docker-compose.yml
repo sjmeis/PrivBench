@@ -33,6 +33,7 @@ services:
       redis:
         condition: service_healthy
     entrypoint: ["/app/entrypoint.sh"]
+    command: ["gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "app:app"]
 
   celery_worker:
     build:
@@ -77,11 +78,11 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        - REACT_APP_API_URL=https://privbench.com/api
+        - REACT_APP_API_URL=http://localhost/api
     expose:
       - "80"
     environment:
-      - REACT_APP_API_URL=https://privbench.com/api
+      - REACT_APP_API_URL=http://localhost/api
 
   nginx:
     image: nginx:latest

@@ -40,3 +40,10 @@ class Submission(db.Model):
     datasets = db.relationship(
         "Dataset", secondary=submission_datasets, back_populates="submissions"
     )
+
+    # Per-module dataset choices for this submission
+    dataset_choices = db.relationship(
+        "ModuleDatasetChoice",
+        back_populates="submission",
+        cascade="all, delete-orphan",
+    )

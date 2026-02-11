@@ -15,6 +15,7 @@ from ..models import (
     AppVersion,
     SubmissionVersionScore,
     ModuleUpdate,
+    ModuleDatasetChoice,
 )
 from ..enums import SubmissionStatus
 from datetime import datetime
@@ -47,10 +48,13 @@ def _compute_modules_to_update(submission: Submission):
         )
 
         if not score:
-            # New module for this submission
-            dataset = (
-                Dataset.query.get(module.dataset_id) if module.dataset_id else None
+            # New module for this submission — check user's dataset choice
+            choice = (
+                db.session.query(ModuleDatasetChoice)
+                .filter_by(submission_id=submission.id, module_id=module.id)
+                .first()
             )
+            dataset = Dataset.query.get(choice.dataset_id) if choice else None
             results.append(
                 {
                     "module_id": module.id,
@@ -111,9 +115,12 @@ def _compute_modules_to_update(submission: Submission):
             reasons.append("modified")
 
         if reasons:
-            dataset = (
-                Dataset.query.get(module.dataset_id) if module.dataset_id else None
+            choice = (
+                db.session.query(ModuleDatasetChoice)
+                .filter_by(submission_id=submission.id, module_id=module.id)
+                .first()
             )
+            dataset = Dataset.query.get(choice.dataset_id) if choice else None
             results.append(
                 {
                     "module_id": module.id,
@@ -223,7 +230,18 @@ def benchmark():
 
         for module in benchmark_modules:
             logger.info(f"Processing module: {module.name}")
-            dataset = db.session.query(Dataset).filter_by(id=module.dataset_id).first()
+
+            # Look up the user's dataset choice for this module
+            choice = (
+                db.session.query(ModuleDatasetChoice)
+                .filter_by(submission_id=submission.id, module_id=module.id)
+                .first()
+            )
+            if not choice:
+                logger.error(f"No dataset choice found for module {module.name}")
+                continue
+
+            dataset = db.session.query(Dataset).filter_by(id=choice.dataset_id).first()
             if not dataset:
                 logger.error(f"Dataset not found for module {module.name}")
                 continue
@@ -231,7 +249,7 @@ def benchmark():
             privatized_dataset = (
                 db.session.query(PrivatizedDataset)
                 .filter_by(
-                    submission_id=submission.id, original_dataset_id=module.dataset_id
+                    submission_id=submission.id, original_dataset_id=choice.dataset_id
                 )
                 .first()
             )
@@ -587,14 +605,17 @@ def benchmark_update():
             if not module:
                 continue
 
-            dataset = (
-                Dataset.query.get(module.dataset_id) if module.dataset_id else None
+            choice = (
+                db.session.query(ModuleDatasetChoice)
+                .filter_by(submission_id=submission_id, module_id=module.id)
+                .first()
             )
+            dataset = Dataset.query.get(choice.dataset_id) if choice else None
 
             privatized_dataset = None
             if dataset:
                 privatized_dataset = PrivatizedDataset.query.filter_by(
-                    submission_id=submission_id, original_dataset_id=module.dataset_id
+                    submission_id=submission_id, original_dataset_id=dataset.id
                 ).first()
 
             # If dataset upload is required, ensure privatized dataset exists

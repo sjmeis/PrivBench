@@ -164,6 +164,36 @@ def get_all_benchmark_modules():
         )
 
 
+@module_bp.route("/modules/with-datasets", methods=["GET"])
+def get_modules_with_compatible_datasets():
+    """Return active modules with their compatible datasets."""
+    try:
+        modules = BenchmarkModule.query.filter_by(is_active=True).all()
+
+        result = []
+        for module in modules:
+            result.append({
+                "id": module.id,
+                "name": module.name,
+                "title": module.title,
+                "description": module.description,
+                "compatibleDatasets": [
+                    {
+                        "id": ds.id,
+                        "name": ds.name,
+                    }
+                    for ds in module.compatible_datasets
+                ],
+            })
+
+        return jsonify(result), 200
+    except Exception as e:
+        return (
+            jsonify({"error": "Failed to fetch modules with datasets", "details": str(e)}),
+            500,
+        )
+
+
 @module_bp.route("/modules/updates/pending", methods=["GET"])
 @jwt_required()
 def list_pending_module_updates():
@@ -440,12 +470,17 @@ def create_benchmark_module():
             version=current_ver,
             is_active=True,
             path=algo_path,
-            dataset_id=dataset_ids[0],  # TODO: add support for multiple datasets
+            dataset_id=None,
             device_specification=device_spec or "cpu",
         )
 
         db.session.add(new_benchmark_module)
         db.session.flush()
+
+        # Link compatible datasets via many-to-many
+        if dataset_ids:
+            compatible = Dataset.query.filter(Dataset.id.in_(dataset_ids)).all()
+            new_benchmark_module.compatible_datasets = compatible
 
         # Record a pending update entry
         db.session.add(
