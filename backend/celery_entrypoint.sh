@@ -25,9 +25,10 @@ wait_for_redis
 wait_for_postgres
 
 # Start Celery worker
+export PYTHONPATH=$PYTHONPATH:/app
 echo "Starting Celery worker with debug logging..."
 echo "PATH: $PATH"
 echo "Python version: $(python --version)"
 echo "Celery version: $(python -m celery --version)"
 
-exec python3 -m celery -A celery_worker.celery worker --loglevel=debug
+exec python3 -m celery -A celery_app.celery worker --loglevel=debug
