@@ -39,12 +39,15 @@ wait_for_postgres() {
 }
 
 wait_for_flask() {
-    echo "Waiting for Flask to be ready on port 5000..."
-    # Check if something is listening on port 5000
-    while ! nc -z localhost 5000; do
-      sleep 1
+    echo "Waiting for Flask to be ready on 0.0.0.0:5000..."
+    for i in {1..30}; do
+        if bash -c 'cat < /dev/null > /dev/tcp/127.0.0.1/5000' 2>/dev/null; then
+            echo "Flask is up!"
+            return 0
+        fi
+        sleep 1
     done
-    echo "Flask is up and listening!"
+    echo "Warning: Flask wait timed out, continuing anyway..."
 }
 
 # Function to run database setup and population scripts
