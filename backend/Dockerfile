@@ -11,7 +11,6 @@ RUN apt-get update && apt-get install -y \
     g++ \
     python3.9 \
     python3-pip \
-    python3.9-dev \
     libblas-dev \
     liblapack-dev \
     netcat-traditional \
@@ -20,7 +19,10 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 RUN ln -sf /usr/bin/python3.9 /usr/bin/python && \
+    ln -sf /usr/bin/python3.9 /usr/bin/python3 && \
     ln -sf /usr/bin/pip3 /usr/bin/pip
+
+RUN chmod +x /usr/bin/python /usr/bin/pip
 
 # 2. Create User and Data Directories (Root)
 RUN useradd -m celeryuser && \
