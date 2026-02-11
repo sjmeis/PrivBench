@@ -1,5 +1,6 @@
 from app import create_app, db
 from app.models import Dataset, BenchmarkModule, AppVersion
+from app.models.benchmark_module import module_dataset_compatibility
 from app.tasks.add_module import install_and_load_module
 from datetime import datetime
 import os
@@ -10,23 +11,14 @@ import time
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-# Get the project root directory
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../"))
-# DATASET_FOLDER = os.path.join(PROJECT_ROOT, "data/datasets")
-# MODULE_FOLDER = os.path.join(PROJECT_ROOT, "modules")
-
 DATASET_FOLDER = "/data/datasets"
 MODULE_FOLDER = "/app/modules"
 
-# Debug logs
 logger.info("=== Debug Information ===")
 logger.info(f"DATASET_FOLDER is: {DATASET_FOLDER}")
 logger.info(f"Attempting to access {DATASET_FOLDER} and {MODULE_FOLDER}")
-# if os.path.exists(DATASET_FOLDER):
 logger.info("Contents of DATASET_FOLDER:")
 logger.info(os.listdir(DATASET_FOLDER))
-# else:
-#     logger.error("DATASET_FOLDER does not exist!")
 
 # Initialize the app
 app = create_app()
@@ -43,103 +35,16 @@ with app.app_context():
         db.session.commit()
         logger.info("Initialized app version to 1.0.0")
 
-    module_names = [
-        "AttributeInference",
-        "CarliniExposure",
-        "Coherence",
-        "LengthRobustness",
-        "LengthVariation",
-        "MaskedTokenInference",
-        "Mauve",
-        "NearestNeighbor",
-        "NERpriv",
-        "Similarity"
-    ]
-    module_file_names = [
-        "AttributeInference.py",
-        "CarliniExposure.py",
-        "Coherence.py",
-        "LengthRobustness.py",
-        "LengthVariation.py",
-        "MaskedTokenInference.py",
-        "Mauve.py",
-        "NearestNeighbor.py",
-        "NERpriv.py",
-        "Similarity.py",
-    ]
-    module_requirement_file_names = [
-        "attribute-inference-reqs.txt",
-        "carlini-exposure-reqs.txt",
-        "coh-reqs.txt",
-        "length-robustness-reqs.txt",
-        "length-variation-reqs.txt",
-        "masked-token-reqs.txt",
-        "mauve-reqs.txt",
-        "nearest-neighbor-reqs.txt",
-        "ner_requirements.txt",
-        "similarity-reqs.txt",
-    ]
-    dataset_names = [
-        "demo_nerpriv.csv",
-        "demo_coherence.csv",
-        "demo_nearestneighbor.csv",
-        "demo_similarity.csv",
-        "demo_maskedtokeninf.csv",
-        "demo_nerpriv.csv",
-        "demo_coherence.csv",
-        "demo_nearestneighbor.csv",
-        "demo_similarity.csv",
-        "demo_maskedtokeninf.csv",
+    # ── Datasets ──────────────────────────────────────────────────────────
+    dataset_defs = [
+        "yelp.csv",
+        "imdb.csv",
+        "wikitext.csv",
+        "glue.csv",
     ]
 
-    module_titles = [
-        "Attribute Inference Protection",
-        "Exposure Defense",
-        "Text Coherence",
-        "Private Text Length Robustness",
-        "Private Text Length Variance",
-        "Masked Token Inference Protection",
-        "Distribution Preservation",
-        "Nearest Neighbor Privacy",
-        "Private Entity Masking",
-        "Semantic Similarity",
-    ]
-
-    module_descriptions = [
-        "Attribute. Test.",
-        "Exposure. Test.",
-        "This module evaluates the coherence of text, ensuring logical flow and semantic connectivity between sentences and paragraphs.",
-        "Robustness. Test.",
-        "Variance. Test.",
-        "In this module, we test for a privatization method's ability to defend against masked token prediction. Here, an attacker is simulated who attempts to infer tokens from the original text by leveraging the surrounding context. An effective privatization method should therefore not divulge information about the original content given the private context.",
-        "MAUVE. Test.",
-        "TN. Test.",
-        "On the surface, text privatization should pay particular attention to named entities, or words or groups of words that point to some real-world object, person, organization, etc. Ensuring that such entities are not leaked into the privatized text, while also balancing the preservation of semantics, is the mark of an effective privatization method.",
-        "Semantic similarity measures the likeness between two pieces of text, commonly used in search engines, clustering, and recommendation tasks."
-    ]
-
-    module_requires_gpu = [
-        True, # AttributeInference 
-        True,  # CarliniExposure 
-        True, # Coherence
-        False, # LengthRobustness
-        False, # LengthVariation
-        True,  # MaskedTokenInference 
-        True,  # Mauve
-        True, # NearestNeighbor
-        False, # NERpriv
-        True  # Similarity
-    ]
-
-    # Create a dictionary to store datasets
     datasets = {}
-    install_tasks = []  # Store tasks to wait for them
-
-    # Iterate over all files in the dataset folder
-    #if os.path.exists(DATASET_FOLDER) and os.path.exists(MODULE_FOLDER):
-    # First create all datasets
-    unique_dataset_names = list(set(dataset_names))
-    for dataset_name in unique_dataset_names:
+    for dataset_name in dataset_defs:
         file_path = os.path.join(DATASET_FOLDER, dataset_name)
 
         existing_ds = Dataset.query.filter_by(name=dataset_name).first()
@@ -149,75 +54,194 @@ with app.app_context():
 
         if os.path.isfile(file_path):
             logger.info(f"Adding dataset: {dataset_name} at path: {file_path}")
-
-            new_dataset = Dataset(
+            ds = Dataset(
                 name=dataset_name,
                 file_path=file_path,
                 created_at=datetime.utcnow(),
                 is_active=True,
             )
-
-            db.session.add(new_dataset)
+            db.session.add(ds)
             db.session.flush()
-            datasets[dataset_name] = new_dataset
+            datasets[dataset_name] = ds
+        else:
+            logger.warning(f"Dataset file not found: {file_path} — skipping")
 
-    # 2. Create and Install Modules One-by-One
-    for i, module_name in enumerate(module_names):
-        module_record = BenchmarkModule.query.filter_by(name=module_name).first()
-        
+    # ── Modules ───────────────────────────────────────────────────────────
+    # Each entry: (name, file_name, reqs_file, title, description)
+    module_defs = [
+        (
+            "Similarity",
+            "Similarity.py",
+            "similarity-reqs.txt",
+            "Semantic Similarity",
+            "Semantic similarity measures the likeness between two pieces of text, commonly used in search engines, clustering, and recommendation tasks.",
+        ),
+        (
+            "MaskedTokenInference",
+            "MaskedTokenInference.py",
+            "masked-token-reqs.txt",
+            "Masked Token Inference Protection",
+            "In this module, we test for a privatization method's ability to defend against masked token prediction. Here, an attacker is simulated who attempts to infer tokens from the original text by leveraging the surrounding context. An effective privatization method should therefore not divulge information about the original content given the private context.",
+        ),
+        (
+            "AttributeInference",
+            "AttributeInference.py",
+            "attribute-inference-reqs.txt",
+            "Attribute Inference Protection",
+            "This module evaluates whether a privatization method can prevent attribute inference attacks. An attacker uses a text classifier to predict implicit attributes (e.g., sentiment, authorship) from privatized text. Effective privatization should obfuscate these attributes.",
+        ),
+        (
+            "CarliniExposure",
+            "CarliniExposure.py",
+            "carlini-exposure-reqs.txt",
+            "Exposure Defense",
+            "This module measures a privatization method's resilience against exposure attacks, where an adversary attempts to determine whether specific text was part of the training data.",
+        ),
+        (
+            "Coherence",
+            "Coherence.py",
+            "coh-reqs.txt",
+            "Text Coherence",
+            "This module evaluates the coherence of text, ensuring logical flow and semantic connectivity between sentences and paragraphs.",
+        ),
+        (
+            "LengthRobustness",
+            "LengthRobustness.py",
+            "length-robustness-reqs.txt",
+            "Private Text Length Robustness",
+            "This module evaluates how robust a privatization method is across different text lengths, measuring whether privacy guarantees hold for both short and long inputs.",
+        ),
+        (
+            "LengthVariation",
+            "LengthVariation.py",
+            "length-variation-reqs.txt",
+            "Private Text Length Variance",
+            "This module measures how much the length of text changes after privatization, assessing the degree of structural alteration introduced by the method.",
+        ),
+        (
+            "Mauve",
+            "Mauve.py",
+            "mauve-reqs.txt",
+            "Distribution Preservation",
+            "This module computes the MAUVE score to quantify how well the distribution of privatized text matches the original text distribution.",
+        ),
+        (
+            "NearestNeighbor",
+            "NearestNeighbor.py",
+            "nearest-neighbor-reqs.txt",
+            "Nearest Neighbor Privacy",
+            "This module evaluates privacy by checking whether the nearest neighbor of a privatized text is the corresponding original text, indicating potential information leakage.",
+        ),
+        (
+            "NERpriv",
+            "NERpriv.py",
+            "nerpriv_requirements.txt",
+            "Private Entity Masking",
+            "Text privatization should pay particular attention to named entities — words or groups of words that point to real-world objects, persons, or organizations. Ensuring that such entities are not leaked into the privatized text, while also balancing the preservation of semantics, is the mark of an effective privatization method.",
+        ),
+    ]
+
+    # ── Dataset-Module Compatibility Mapping ──────────────────────────────
+    compatibility_map = {
+        "Similarity":          ["yelp.csv", "glue.csv"],
+        "MaskedTokenInference": ["wikitext.csv"],
+        "AttributeInference":  ["yelp.csv", "imdb.csv"],
+        "CarliniExposure":     ["wikitext.csv"],
+        "Coherence":           ["imdb.csv", "wikitext.csv"],
+        "LengthRobustness":    ["yelp.csv"],
+        "LengthVariation":     ["yelp.csv", "wikitext.csv"],
+        "Mauve":               ["yelp.csv", "wikitext.csv"],
+        "NearestNeighbor":     ["yelp.csv", "wikitext.csv"],
+        "NERpriv":             ["wikitext.csv"],
+    }
+
+    modules = {}
+
+    # Create and install modules one-by-one with retries
+    for name, file_name, reqs_file, title, description in module_defs:
+        module_path = os.path.join(MODULE_FOLDER, file_name)
+        requirements_path = os.path.join(MODULE_FOLDER, reqs_file)
+
+        module_record = BenchmarkModule.query.filter_by(name=name).first()
+
         if module_record and module_record.is_installed:
-            logger.info(f"Module {module_name} already installed. Skipping.")
+            logger.info(f"Module {name} already installed. Skipping.")
+            modules[name] = module_record
             continue
-        
+
         if not module_record:
-            logger.info(f"Creating record for {module_name}...")
+            logger.info(f"Creating record for {name}...")
             module_record = BenchmarkModule(
-                name=module_name,
-                title=module_titles[i],
-                description=module_descriptions[i],
+                name=name,
+                title=title,
+                description=description,
                 version="1.0.0",
                 is_active=True,
-                path=os.path.join(MODULE_FOLDER, module_file_names[i]),
-                dataset_id=datasets[dataset_names[i]].id,
-                use_gpu=module_requires_gpu[i]
+                path=module_path,
+                dataset_id=None,
             )
             db.session.add(module_record)
             db.session.commit()
 
-        # 3. Safe Installation Loop with Retries and Delay
+        modules[name] = module_record
+
+        # Safe installation loop with retries and delay
         success = False
         retries = 3
         while retries > 0 and not success:
-            logger.info(f"Installing {module_name} (Attempt {4-retries}/3)...")
+            logger.info(f"Installing {name} (Attempt {4-retries}/3)...")
             try:
                 task = install_and_load_module.delay(
                     module_id=module_record.id,
-                    module_name=module_name,
+                    module_name=name,
                     module_path=module_record.path,
-                    requirements_path=os.path.join(MODULE_FOLDER, module_requirement_file_names[i]),
-                    use_gpu=module_requires_gpu[i]
+                    requirements_path=requirements_path,
                 )
-                
+
                 result = task.get(timeout=600)
                 if result.get("status") == "success":
-                    logger.info(f"Successfully installed {module_name}")
+                    logger.info(f"Successfully installed {name}")
                     success = True
                 else:
-                    logger.error(f"Installation failed for {module_name}: {result.get('message')}")
+                    logger.error(f"Installation failed for {name}: {result.get('message')}")
                     retries -= 1
                     if retries > 0:
                         logger.info("Waiting 10s before retry...")
                         time.sleep(10)
             except Exception as e:
-                logger.error(f"Error during installation of {module_name}: {e}")
+                logger.error(f"Error during installation of {name}: {e}")
                 retries -= 1
                 time.sleep(10)
 
         if not success:
-            logger.error(f"Module {module_name} could not be installed after 3 attempts.")
-            # Depending on requirements, you can choose to exit or continue
-            # raise Exception(f"Fatal error installing {module_name}")
+            logger.error(f"Module {name} could not be installed after 3 attempts.")
 
-        # CRITICAL: Pause between modules to let the Docker Engine "breathe"
+        # Pause between modules to let the Docker Engine breathe
         logger.info("Cooling down Docker Engine for 5s...")
         time.sleep(5)
+
+    # Populate compatibility junction table
+    for module_name, dataset_names in compatibility_map.items():
+        if module_name not in modules:
+            continue
+        module = modules[module_name]
+        for ds_name in dataset_names:
+            if ds_name in datasets:
+                db.session.execute(
+                    module_dataset_compatibility.insert().values(
+                        module_id=module.id,
+                        dataset_id=datasets[ds_name].id,
+                    )
+                )
+                logger.info(f"  {module_name} <-> {ds_name}")
+            else:
+                logger.warning(
+                    f"Dataset {ds_name} not found for compatibility with {module_name}"
+                )
+
+    db.session.commit()
+
+    logger.info("All datasets and modules have been added to the database.")
+    logger.info(
+        "All modules have been installed successfully. Docker images are ready."
+    )
