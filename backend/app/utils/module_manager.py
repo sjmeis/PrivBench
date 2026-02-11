@@ -107,68 +107,64 @@ class ModuleManager:
 
             return tag
 
-    def test_module(self, image_tag, module_name, use_gpu=False):
+def test_module(self, image_tag, module_name, use_gpu=False):
         """Test if the module can be loaded and instantiated"""
+        
+        # Update: We force the PYTHONPATH inside the test script too
         test_script = f"""
-import importlib.util
 import sys
 import json
-from pathlib import Path
 import traceback
+from pathlib import Path
 sys.path.append('/app')
-import importlib.util
 
 def test_module():
     try:
+        import importlib.util
         module_path = Path('/app/{module_name}.py')
-        
-        # Debug output
-        print(f"Debug: Current directory contents: {{list(Path('/app').glob('*'))}}")
-        print(f"Debug: Module path exists: {{module_path.exists()}}")
         
         if not module_path.exists():
             return f"Module file not found at {{module_path}}"
         
-        print(f"Debug: Module contents: {{module_path.read_text()}}")
-        
         spec = importlib.util.spec_from_file_location(module_path.stem, module_path)
-        if spec is None:
-            return "Failed to create module specification"
-            
         module = importlib.util.module_from_spec(spec)
         sys.modules[module_path.stem] = module
         spec.loader.exec_module(module)
         
-        # Debug output
-        print(f"Debug: Module dir contents: {{dir(module)}}")
-        
         cls = getattr(module, '{module_name}')
         instance = cls()
+        
+        # Optional: Verify GPU if expected
+        if {use_gpu}:
+            import torch
+            if not torch.cuda.is_available():
+                return "GPU requested but torch.cuda.is_available() is False"
+                
         return True
     except Exception as e:
         return f"{{str(e)}}\\nTraceback: {{traceback.format_exc()}}"
 
-try:
-    result = test_module()
-    print(json.dumps({{"success": result == True, "error": str(result) if result != True else None}}))
-except Exception as e:
-    print(json.dumps({{"success": False, "error": f"Test script error: {{str(e)}}\\nTraceback: {{traceback.format_exc()}}"}}))
+result = test_module()
+print(json.dumps({{"success": result == True, "error": str(result) if result != True else None}}))
 """
         try:
-            run_kwargs = {}
+            device_requests = []
             if use_gpu:
-                run_kwargs["device_requests"] = [
+                device_requests = [
                     DeviceRequest(count=-1, capabilities=[["gpu"]])
                 ]
-            container = self.docker_client.containers.run(
+
+            container_output = self.docker_client.containers.run(
                 image_tag,
-                command=["python", "-c", test_script],
+                command=["python3", "-c", test_script],
                 remove=True,
-                network="privbench_default",
-                **run_kwargs,
+                network="privbench_default", 
+                device_requests=device_requests,
+                stdout=True,
+                stderr=True
             )
 
-            output = container.decode("utf-8")
+            output = container_output.decode("utf-8")
             logger.debug(f"Container output: {output}")
 
             # Try to parse JSON from the last line of output
