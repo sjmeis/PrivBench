@@ -32,8 +32,8 @@ app = create_app()
 
 with app.app_context():
     # Drop all tables and recreate them
-    db.drop_all()
-    db.create_all()
+    #db.drop_all()
+    #db.create_all()
 
     # Initialize app version
     initial_version = AppVersion(version="1.0.0")
