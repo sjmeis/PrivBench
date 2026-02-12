@@ -99,24 +99,22 @@ echo "Starting Flask backend..."
 wait_for_redis
 wait_for_postgres
 
-echo "Applying migrations..."
-python3 -m flask db upgrade || echo "Migration failed, continuing..."
+set +e
+setup_database
+set -e
 
-# set +e
-# setup_database
-# set -e
-
-# echo "Starting the Flask application..."
+echo "Starting the Flask application..."
 #python -m flask run --host=0.0.0.0 &
-# "$@" &
-# FLASK_PID=$!
+"$@" &
+FLASK_PID=$!
 
 # Wait for Flask to be ready
-#wait_for_flask
+wait_for_flask
 
 # Start module containers
 echo "Starting module containers..."
 chmod 666 /var/run/docker.sock || echo "Warning: Could not set socket permissions"
+python3 -m flask start-containers
 
-echo "Starting Gunicorn..."
-exec "$@"
+# Bring Flask process back to foreground
+wait $FLASK_PID
