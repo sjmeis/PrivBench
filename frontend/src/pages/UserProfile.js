@@ -7,6 +7,7 @@ import {useEffect, useState} from "react";
 import UserSubmissions from "../components/user/UserSubmissions";
 import PublicProfileEdit from "../components/user/PublicProfileEdit";
 import {useLocation} from "react-router-dom";
+import Footer from "../components/shared/Footer";
 
 
 export default function UserProfile() {
@@ -42,6 +43,7 @@ export default function UserProfile() {
         <Box sx={{ display: 'flex', minHeight: "calc(100vh - 65.5px)", bgcolor: 'background.body', marginTop: '-10px', marginBottom: '-40px', marginLeft: '-40px', marginRight: '-40px' }}>
             <SideNav selectedItem={selectedItem} onSelect={setSelectedItem} sx={{ width: 260 }} />
             <Box sx={{ flex: 1, p: 3 }}>{renderContent()}</Box>
+            <Footer />
         </Box>
 
     );

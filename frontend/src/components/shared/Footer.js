@@ -27,7 +27,7 @@ const Footer = () => {
         }}
       >
         <Typography level="body2" textColor="text.primary">
-          © 2025 PrivBench
+          © <script>document.write(new Date().getFullYear())</script> PrivBench
         </Typography>
         <Typography level="body2" textColor="text.primary">
           {"·"}
