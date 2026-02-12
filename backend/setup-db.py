@@ -136,7 +136,7 @@ with app.app_context():
         (
             "NERpriv",
             "NERpriv.py",
-            "nerpriv_requirements.txt",
+            "nerpriv-reqs.txt",
             "Private Entity Masking",
             "Text privatization should pay particular attention to named entities — words or groups of words that point to real-world objects, persons, or organizations. Ensuring that such entities are not leaked into the privatized text, while also balancing the preservation of semantics, is the mark of an effective privatization method.",
         ),
