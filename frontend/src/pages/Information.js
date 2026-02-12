@@ -94,6 +94,14 @@ const Information = () => {
 
   return (
     <MainLayout>
+    <Box sx={{ 
+        px: { xs: 2, md: 4 }, 
+        py: 4, 
+        width: '100%', 
+        boxSizing: 'border-box',
+        display: 'flex',
+        justifyContent: 'center' 
+      }}>
       <Grid container spacing={3}>
         <Grid sx={{ height: "auto" }} item xs={4}>
           <Box>
@@ -189,6 +197,7 @@ const Information = () => {
           </Box>
         </Grid>
       </Grid>
+      </Box>
     </MainLayout>
   );
 };

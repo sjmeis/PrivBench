@@ -28,7 +28,9 @@ const Footer = () => {
       >
         <Link
           component="button"
-          onClick={() => navigate("https://www.cs.cit.tum.de/sebis/")}
+          href="https://www.cs.cit.tum.de/sebis/"
+          target="_blank"
+          rel="noopener noreferrer"
           level="body1"
           sx={{
             textDecoration: "none",
