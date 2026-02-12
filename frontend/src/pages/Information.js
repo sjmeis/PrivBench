@@ -102,6 +102,7 @@ const Information = () => {
         alignItems: "center",
         gap: 4,
         paddingY: 4,
+        overflow: "hidden",
       }}
     >
       <Grid container spacing={3}>

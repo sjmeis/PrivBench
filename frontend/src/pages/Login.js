@@ -68,6 +68,7 @@ const Login = () => {
                 borderColor: 'divider',
                 borderRadius: 'sm',
                 mt: "auto",
+                overflow: "hidden",
             }}
         >
             <Typography level="h4" component="h1" sx={{ mb: 2 }}>

@@ -91,6 +91,7 @@ const Register = () => {
                 border: '1px solid',
                 borderColor: 'divider',
                 borderRadius: 'sm',
+                overflow: "hidden",
             }}
         >
             <Typography level="h4" component="h1" sx={{ mb: 2 }}>
