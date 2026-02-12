@@ -27,7 +27,6 @@ const Footer = () => {
         }}
       >
         <Link
-          component="button"
           href="https://www.cs.cit.tum.de/sebis/"
           target="_blank"
           rel="noopener noreferrer"
