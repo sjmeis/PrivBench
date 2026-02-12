@@ -13,7 +13,7 @@ import {
 } from "@mui/joy";
 import { useAuth } from '../contexts/AuthContext';
 import {Login, PersonAdd} from "@mui/icons-material";
-import Footer from "../components/shared/Footer";
+import MainLayout from "../components/layout/MainLayout";
 
 const Register = () => {
     const [formData, setFormData] = useState({
@@ -77,6 +77,7 @@ const Register = () => {
     };
 
     return (
+        <MainLayout>
         <Box
             sx={{
                 display: 'flex',
@@ -181,8 +182,8 @@ const Register = () => {
                     </Button>
                 </Stack>
             </form>
-            <Footer />
         </Box>
+        </MainLayout>
     );
 };
 

@@ -12,7 +12,6 @@ import { SideNaveSubmission } from "../components/submission/SideNaveSubmission"
 import MetadataTemplateDialog from "../components/submission/MetadataTemplateDialog";
 import { SubmissionStatus } from "src/enums/SubmissionStatus";
 import { API_BASE_URL } from "../config";
-import Footer from "../components/shared/Footer";
 
 const Upload = () => {
   const location = useLocation();
@@ -576,7 +575,6 @@ const Upload = () => {
             {currentStep === 3 && <FinalStep />}
           </Box>
         </Box>
-        <Footer />
       </Box>
     </>
   );
