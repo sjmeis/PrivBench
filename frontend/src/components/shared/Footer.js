@@ -8,7 +8,7 @@ const Footer = () => {
       component="footer"
       sx={{
         py: 2,
-        bottom: 0,
+        //bottom: 0,
         width: "100%",
         mt: "auto",
         bgcolor: "background.surface",
@@ -27,7 +27,7 @@ const Footer = () => {
         }}
       >
         <Typography level="body2" textColor="text.primary">
-          © 2025 PrivBench
+          © {new Date().getFullYear()} PrivBench
         </Typography>
         <Typography level="body2" textColor="text.primary">
           {"·"}

@@ -17,6 +17,7 @@ import BenchmarkCard from "../components/ranking/BenchmarkCard";
 import { motion } from "framer-motion";
 import { ModuleService } from "../services/ModuleService";
 import { API_BASE_URL } from '../config';
+import MainLayout from "../components/layout/MainLayout";
 
 const stepVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -92,17 +93,20 @@ const Information = () => {
   ];
 
   return (
+    <MainLayout>
     <Box
       sx={{
+        flex: 1,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         gap: 4,
         paddingY: 4,
+        overflow: "hidden",
       }}
     >
       <Grid container spacing={3}>
-        <Grid sx={{ height: "80vh" }} item xs={4}>
+        <Grid sx={{ height: "auto" }} item xs={4}>
           <Box>
             <Typography sx={{ marginBottom: 3 }} level="h3">
               Submission Process
@@ -138,7 +142,7 @@ const Information = () => {
           </Box>
         </Grid>
         <Divider sx={{ margin: 2, height: "auto" }} orientation="vertical" />
-        <Grid item sx={{ height: "80vh" }} xs={7}>
+        <Grid item sx={{ height: "auto" }} xs={7}>
           <Box sx={{ height: "90%" }}>
             <Typography level="h3" sx={{ marginBottom: 2 }}>
               Privatization Benchmarking Modules
@@ -197,6 +201,7 @@ const Information = () => {
         </Grid>
       </Grid>
     </Box>
+    </MainLayout>
   );
 };
 
