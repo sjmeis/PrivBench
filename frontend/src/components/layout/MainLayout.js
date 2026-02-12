@@ -8,11 +8,17 @@ const MainLayout = ({ children }) => {
                 minHeight: "100vh",
                 width: "100%",
                 overflowX: "hidden",
-                marginBottom: "-40px",
                 margin: 0,
                 padding: 0,
             }}>
-      <Box component="main" sx={{ flex: 1 }}>
+      <Box component="main" sx={{
+          flex: 1,
+          py: 4,
+          px: { xs: 2, md: 4 },
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+        }}>
         {children}
       </Box>
       <Footer />
