@@ -1,4 +1,5 @@
 import docker
+from docker.types import DeviceRequest
 import logging
 import threading
 from ..models import BenchmarkModule
@@ -123,6 +124,13 @@ class ContainerManager:
             self._mark_installing(container_name)
 
             try:
+                device_requests = []
+                if module.use_gpu:
+                    logger.info(f"Requesting GPU access for {container_name}")
+                    device_requests = [
+                        docker.types.DeviceRequest(count=-1, capabilities=[['gpu']])
+                    ]
+
                 # Check if image exists
                 try:
                     self.docker_client.images.get(image_tag)
@@ -140,7 +148,8 @@ class ContainerManager:
                     name=container_name,
                     command="sleep infinity",
                     working_dir="/app",
-                    environment={"PYTHONPATH": "/app", "PYTHONUNBUFFERED": "1"},
+                    environment={"PYTHONPATH": "/app", "PYTHONUNBUFFERED": "1", "NVIDIA_VISIBLE_DEVICES": "all"},
+                    device_requests=device_requests,
                     detach=True,
                     remove=False,
                 )
