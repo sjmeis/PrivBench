@@ -10,6 +10,7 @@ import {
   Button,
   Tooltip,
   Sheet,
+  useTheme,
 } from "@mui/joy";
 import StepIndicator from "@mui/joy/StepIndicator";
 import { Add } from "@mui/icons-material";
@@ -36,6 +37,8 @@ const Information = () => {
   const navigate = useNavigate();
   const [modules, setModules] = useState([]);
   const [submissionsBlocked, setSubmissionsBlocked] = useState(false);
+  const theme = useTheme();
+  const isLightMode = theme.palette.mode === "light";
 
   useEffect(() => {
     const fetchModules = async () => {
