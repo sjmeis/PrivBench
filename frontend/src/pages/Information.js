@@ -17,8 +17,7 @@ import BenchmarkCard from "../components/ranking/BenchmarkCard";
 import { motion } from "framer-motion";
 import { ModuleService } from "../services/ModuleService";
 import { API_BASE_URL } from '../config';
-import Footer from "../components/shared/Footer";
-import MainLayout from "../components/layout/MainLayout"
+import MainLayout from "../components/layout/MainLayout";
 
 const stepVariants = {
   hidden: { opacity: 0, y: 20 },
