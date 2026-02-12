@@ -1,6 +1,5 @@
 #!/bin/bash
 set -e
-FLASK_PID=""
 
 # Trap SIGINT and SIGTERM to stop containers gracefully
 cleanup() {
@@ -18,23 +17,14 @@ cleanup() {
 }
 trap cleanup SIGINT SIGTERM
 
-# Function to wait for Redis
 wait_for_redis() {
     echo "Waiting for Redis..."
-    sleep 2
-    while ! nc -z redis 6379; do
-        sleep 1
-    done
+    while ! nc -z redis 6379; do sleep 1; done
     echo "Redis is up!"
-    redis-cli -h redis ping
 }
-
-# Function to wait for PostgreSQL
 wait_for_postgres() {
     echo "Waiting for PostgreSQL..."
-    while ! nc -z db 5432; do
-        sleep 1
-    done
+    while ! nc -z db 5432; do sleep 1; done
     echo "PostgreSQL is ready!"
 }
 
@@ -109,22 +99,24 @@ echo "Starting Flask backend..."
 wait_for_redis
 wait_for_postgres
 
-set +e
-setup_database
-set -e
+echo "Applying migrations..."
+python3 -m flask db upgrade || echo "Migration failed, continuing..."
 
-echo "Starting the Flask application..."
+# set +e
+# setup_database
+# set -e
+
+# echo "Starting the Flask application..."
 #python -m flask run --host=0.0.0.0 &
-"$@" &
-FLASK_PID=$!
+# "$@" &
+# FLASK_PID=$!
 
 # Wait for Flask to be ready
-wait_for_flask
+#wait_for_flask
 
 # Start module containers
 echo "Starting module containers..."
 chmod 666 /var/run/docker.sock || echo "Warning: Could not set socket permissions"
-python3 -m flask start-containers
 
-# Bring Flask process back to foreground
-wait $FLASK_PID
+echo "Starting Gunicorn..."
+exec "$@"
