@@ -8,7 +8,6 @@ import UserSubmissions from "../components/user/UserSubmissions";
 import PublicProfileEdit from "../components/user/PublicProfileEdit";
 import {useLocation} from "react-router-dom";
 import MainLayout from "../components/layout/MainLayout";
-import { Main } from 'next/document';
 
 export default function UserProfile() {
     const location = useLocation();
