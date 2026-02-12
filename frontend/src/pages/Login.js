@@ -13,6 +13,7 @@ import {
 } from "@mui/joy";
 import {Login as LoginIcon, PersonAdd} from "@mui/icons-material";
 import { useAuth } from '../contexts/AuthContext';
+import MainLayout from "../components/layout/MainLayout";
 
 const Login = () => {
     const [formData, setFormData] = useState({
@@ -52,6 +53,7 @@ const Login = () => {
     };
 
     return (
+        <MainLayout>
         <Box
             sx={{
                 display: 'flex',
@@ -65,6 +67,8 @@ const Login = () => {
                 border: '1px solid',
                 borderColor: 'divider',
                 borderRadius: 'sm',
+                mt: "auto",
+                overflow: "hidden",
             }}
         >
             <Typography level="h4" component="h1" sx={{ mb: 2 }}>
@@ -127,6 +131,7 @@ const Login = () => {
                 </Stack>
             </form>
         </Box>
+        </MainLayout>
     );
 };
 

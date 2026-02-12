@@ -7,7 +7,7 @@ import {useEffect, useState} from "react";
 import UserSubmissions from "../components/user/UserSubmissions";
 import PublicProfileEdit from "../components/user/PublicProfileEdit";
 import {useLocation} from "react-router-dom";
-
+import MainLayout from "../components/layout/MainLayout";
 
 export default function UserProfile() {
     const location = useLocation();
@@ -38,11 +38,11 @@ export default function UserProfile() {
     };
 
     return (
-
-        <Box sx={{ display: 'flex', minHeight: "calc(100vh - 65.5px)", bgcolor: 'background.body', marginTop: '-10px', marginBottom: '-40px', marginLeft: '-40px', marginRight: '-40px' }}>
+        <MainLayout>
+        <Box sx={{ display: 'flex', minHeight: "calc(100vh - 65.5px)", bgcolor: 'background.body', marginTop: '-10px', marginBottom: '-40px', marginLeft: '-40px', marginRight: '-40px', overflow: "hidden", }}>
             <SideNav selectedItem={selectedItem} onSelect={setSelectedItem} sx={{ width: 260 }} />
             <Box sx={{ flex: 1, p: 3 }}>{renderContent()}</Box>
         </Box>
-
+        </MainLayout>
     );
 }
