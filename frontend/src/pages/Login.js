@@ -66,6 +66,7 @@ const Login = () => {
                 border: '1px solid',
                 borderColor: 'divider',
                 borderRadius: 'sm',
+                mt: "auto",
             }}
         >
             <Typography level="h4" component="h1" sx={{ mb: 2 }}>
