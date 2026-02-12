@@ -4,6 +4,7 @@ import { useTheme } from "@mui/joy";
 import axios from "axios";
 import Footer from "../components/shared/Footer";
 import { API_BASE_URL } from "src/config";
+import Footer from "../components/shared/Footer";
 
 const VersionHistory = () => {
   const [versions, setVersions] = useState([]);
@@ -178,6 +179,7 @@ const VersionHistory = () => {
           </Box>
         )}
       </Box>
+      <Footer />
       <Footer />
     </Sheet>
   );

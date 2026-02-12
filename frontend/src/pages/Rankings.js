@@ -43,6 +43,7 @@ import { getDateString, isNewDate } from "../utils/Date";
 import { formatToTwoDecimals } from "../utils/FormatUtils";
 import { useAuth } from "../contexts/AuthContext";
 import { SubmissionStatus } from "../enums/SubmissionStatus";
+import Footer from "../components/shared/Footer";
 
 const headCells = [
   { id: "status", numeric: false, label: "", width: "8%" },
@@ -956,6 +957,7 @@ const Rankings = () => {
           </tfoot>
         </Table>
       </Sheet>
+      <Footer />
     </Box>
   );
 };

@@ -12,6 +12,7 @@ import ChartCard from "../components/ranking/ChartCard";
 import CircularProgressCountUp from "../components/ranking/CircularProgressCountUp";
 import UserCard from "../components/ranking/UserCard";
 import BenchmarkingModulesOverview from "../components/shared/BenchmarkingModulesOverview";
+import Footer from "../components/shared/Footer";
 
 const RankingDetailView = () => {
     const {state} = useLocation();
@@ -104,6 +105,7 @@ const RankingDetailView = () => {
                     </Grid>
                 </Grid>
             </Box>
+            <Footer />
         </Box>
 :
     <LoadingSpinner/>

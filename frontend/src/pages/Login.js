@@ -13,6 +13,7 @@ import {
 } from "@mui/joy";
 import {Login as LoginIcon, PersonAdd} from "@mui/icons-material";
 import { useAuth } from '../contexts/AuthContext';
+import Footer from "../components/shared/Footer";
 
 const Login = () => {
     const [formData, setFormData] = useState({
@@ -126,6 +127,7 @@ const Login = () => {
                     </Button>
                 </Stack>
             </form>
+            <Footer />
         </Box>
     );
 };
