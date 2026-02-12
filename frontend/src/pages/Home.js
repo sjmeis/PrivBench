@@ -10,10 +10,13 @@ import {
 } from "@mui/joy";
 import { useTheme } from "@mui/joy";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
-import LockIcon from "@mui/icons-material/Lock";
+//import LockIcon from "@mui/icons-material/Lock";
+import ViewModuleIcon from '@mui/icons-material/ViewModule';
 import SpeedIcon from "@mui/icons-material/Speed";
-import StorageIcon from "@mui/icons-material/Storage";
-import SecurityIcon from "@mui/icons-material/Security";
+//import StorageIcon from "@mui/icons-material/Storage";
+//import SecurityIcon from "@mui/icons-material/Security";
+import LeaderboardIcon from '@mui/icons-material/Leaderboard';
+import AutorenewIcon from '@mui/icons-material/Autorenew';
 import { useNavigate } from "react-router-dom";
 import Footer from "../components/shared/Footer";
 import RankingsPreview from "../components/ranking/RankingPreview";
@@ -51,11 +54,11 @@ const Home = () => {
     {
       title: "Privacy-First Benchmarking",
       description:
-        "Evaluate your text privatization methods securely and confidentially",
+        "Evaluate your text privatization methods holistically",
     },
     {
       title: "Comprehensive Metrics",
-      description: "Get detailed insights across multiple privacy dimensions",
+      description: "Get detailed insights across multiple privacy and utility dimensions",
     },
     {
       title: "Active Community",
@@ -65,28 +68,28 @@ const Home = () => {
 
   const features = [
     {
-      icon: <LockIcon sx={{ fontSize: 32 }} />,
-      title: "Privacy-First Architecture",
+      icon: <ViewModuleIcon sx={{ fontSize: 32 }} />,
+      title: "Modular Architecture",
       description:
-        "State-of-the-art privacy preservation with end-to-end encryption and secure data handling",
+        "State-of-the-art text privacy preservation evaluation across a series of modular benchmarks",
     },
     {
       icon: <SpeedIcon sx={{ fontSize: 32 }} />,
       title: "Real-time Analysis",
       description:
-        "Get instant feedback on your privacy methods with comprehensive metrics and benchmarks",
+        "Get quick feedback on your privacy methods with comprehensive, research-backed metrics",
     },
     {
-      icon: <StorageIcon sx={{ fontSize: 32 }} />,
-      title: "Scalable Infrastructure",
+      icon: <LeaderboardIcon sx={{ fontSize: 32 }} />,
+      title: "Live Leaderboard",
       description:
-        "Handle large-scale datasets with our distributed computing infrastructure",
+        "Compare your methods against your peers, and tailor the filters according to your research needs",
     },
     {
-      icon: <SecurityIcon sx={{ fontSize: 32 }} />,
-      title: "Advanced Security",
+      icon: <AutorenewIcon sx={{ fontSize: 32 }} />,
+      title: "Future Updates",
       description:
-        "Enterprise-grade security protocols ensuring your data remains protected",
+        "As text privatization evaluation evolves, so will PrivBench",
     },
   ];
 
