@@ -1,0 +1,4 @@
+id,text,sentiment
+1,"Placeholder yelp review. Replace with real Yelp dataset.",positive
+2,"Another placeholder yelp review for testing.",negative
+3,"A third placeholder yelp review entry.",positive

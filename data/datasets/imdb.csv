@@ -1,0 +1,4 @@
+id,text,sentiment
+1,"Placeholder IMDB review. Replace with real IMDB dataset.",positive
+2,"Another placeholder IMDB review for testing.",negative
+3,"A third placeholder IMDB review entry.",positive

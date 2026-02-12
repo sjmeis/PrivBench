@@ -6,6 +6,7 @@ from datetime import datetime
 import os
 import logging
 import time
+import docker
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -184,6 +185,20 @@ with app.app_context():
             db.session.commit()
 
         modules[name] = module_record
+
+        # Skip rebuild if Docker image already exists
+        image_tag = f"module-{name.lower()}"
+        try:
+            docker_client = docker.from_env()
+            docker_client.images.get(image_tag)
+            logger.info(f"Docker image '{image_tag}' already exists. Skipping build for {name}.")
+            module_record.is_installed = True
+            db.session.commit()
+            continue
+        except docker.errors.ImageNotFound:
+            logger.info(f"Docker image '{image_tag}' not found. Will build {name}.")
+        except Exception as e:
+            logger.warning(f"Could not check Docker image for {name}: {e}. Will attempt build.")
 
         # Safe installation loop with retries and delay
         success = False

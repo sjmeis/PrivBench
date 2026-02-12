@@ -139,85 +139,20 @@ const Upload = () => {
   useEffect(() => {
     const fetchDatasets = async () => {
       try {
-        const listResponse = await fetch(`${API_BASE_URL}/datasets/list`, {
+        const response = await fetch(`${API_BASE_URL}/datasets`, {
           credentials: "include",
-          cache: "no-cache",
         });
-        if (!listResponse.ok) {
-          const errorData = await listResponse.json();
-          console.error("Failed to fetch datasets:", errorData.error);
+        if (!response.ok) {
+          console.error("Failed to fetch datasets");
           return;
         }
-
-        const data = await listResponse.json();
-
-        const datasetsWithDetails = await Promise.all(
-          data.datasets.map(async (dataset) => {
-            try {
-              const contentResponse = await fetch(
-                `${API_BASE_URL}/datasets/${encodeURIComponent(dataset.name)}`,
-                {
-                  credentials: "include",
-                  cache: "no-cache",
-                }
-              );
-
-              if (!contentResponse.ok) {
-                console.error(
-                  `Failed to fetch content for dataset ${dataset.name}`
-                );
-                return { ...dataset, rows: 0, columns: 0 };
-              }
-
-              const content = await contentResponse.text();
-              const rows = content.trim().split("\n"); // Split by newline
-              const columns = rows[0]?.split(",").length || 0; // Use the first row for column count
-
-              return {
-                ...dataset,
-                rows: rows.length, // Exclude header row
-                columns,
-              };
-            } catch (error) {
-              console.error(`Error fetching dataset ${dataset.name}:`, error);
-              return { ...dataset, rows: 0, columns: 0 };
-            }
-          })
-        );
-
-        setDatasets(datasetsWithDetails);
+        const dbDatasets = await response.json();
+        setDatasets(dbDatasets.map((ds) => ({ id: ds.id, name: ds.name })));
       } catch (error) {
         console.error("An error occurred while fetching datasets:", error);
       }
     };
-
     fetchDatasets();
-  }, []);
-
-  // We also need to resolve dataset IDs from the /datasets endpoint.
-  // The /datasets/list returns { id (index), name } but the DB id comes from /datasets.
-  // Let's fetch the real dataset records to map names to DB IDs.
-  useEffect(() => {
-    const fetchRealDatasetIds = async () => {
-      try {
-        const response = await fetch(`${API_BASE_URL}/datasets`, {
-          credentials: "include",
-        });
-        if (response.ok) {
-          const dbDatasets = await response.json();
-          // Update datasets state with real DB IDs
-          setDatasets((prev) =>
-            prev.map((ds) => {
-              const match = dbDatasets.find((dbDs) => dbDs.name === ds.name);
-              return match ? { ...ds, id: match.id } : ds;
-            })
-          );
-        }
-      } catch (error) {
-        console.error("Error fetching real dataset IDs:", error);
-      }
-    };
-    fetchRealDatasetIds();
   }, []);
 
   const handleStepClick = (step) => {
