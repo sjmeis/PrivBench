@@ -7,6 +7,7 @@ from ..models import PrivatizedDataset, Submission, Dataset, BenchmarkModule, Mo
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime
 import logging
+import csv
 import zipfile
 from io import BytesIO
 from urllib.parse import unquote
@@ -157,12 +158,46 @@ def upload_privatized_dataset():
                 400,
             )
 
+        # Validate dimensions against original dataset
+        original_dataset = Dataset.query.get(original_dataset_id)
+        if not original_dataset or not os.path.isfile(original_dataset.file_path):
+            return jsonify({"error": "Original dataset not found"}), 404
+
+        # Read original dataset header and row count
+        with open(original_dataset.file_path, "r", newline="") as f:
+            reader = csv.reader(f)
+            orig_header = next(reader, None)
+            orig_row_count = sum(1 for _ in reader) + 1  # +1 for header
+
+        # Read uploaded file using csv.reader to handle quoted fields correctly
+        file_content = file.read().decode("utf-8")
+        uploaded_rows = list(csv.reader(file_content.strip().splitlines()))
+        if not uploaded_rows:
+            return jsonify({"error": "Uploaded file is empty"}), 400
+
+        uploaded_header = uploaded_rows[0]
+        uploaded_row_count = len(uploaded_rows)
+
+        # Validate column names match
+        if uploaded_header != orig_header:
+            return jsonify({
+                "error": f"Column mismatch: expected {orig_header}, got {uploaded_header}"
+            }), 400
+
+        # Validate row count matches
+        if uploaded_row_count != orig_row_count:
+            return jsonify({
+                "error": f"Row count mismatch: expected {orig_row_count}, got {uploaded_row_count}"
+            }), 400
+
         filename = secure_filename(
             f"{submission_id}_{original_dataset_id}_{file.filename}"
         )
         file_path = os.path.join(PRIVATIZED_DATASETS_FOLDER, filename)
 
-        file.save(file_path)
+        # Write the already-read content to disk
+        with open(file_path, "w") as f:
+            f.write(file_content)
 
         privatized_dataset = PrivatizedDataset(
             submission_id=submission_id,

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { Box, Button, CircularProgress } from "@mui/joy";
 import { CloudUpload } from "@mui/icons-material";
 import { useSnackbar } from "../../contexts/SnackbarProvider";
@@ -6,64 +6,17 @@ import { useSnackbar } from "../../contexts/SnackbarProvider";
 const UploadTable = ({ datasets, uploadedFiles, uploadingDatasetId, onFileSelect }) => {
     const { showSnackbar } = useSnackbar();
 
-    const [uploadedDatasetDimensions, setUploadedDatasetDimensions] = useState({});
-
     const handleFileSelect = (e, datasetId) => {
         const file = e.target.files[0];
+        if (!file) return;
 
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = () => {
-                const text = reader.result;
-                const rows = text.split("\n");
-                const columns = rows[0].split(",").length;
-
-                // Store the calculated dimensions of the uploaded file
-                setUploadedDatasetDimensions(prevState => ({
-                    ...prevState,
-                    [datasetId]: {
-                        rows: rows.length,
-                        columns
-                    }
-                }));
-
-                // Debugging: Log datasets and datasetId
-                console.log("Datasets:", datasets);
-                console.log("Dataset ID:", datasetId);
-
-                // Find original dataset dimensions
-                const originalDataset = datasets.find((dataset) => dataset.id === datasetId);
-
-                // Debugging: Log originalDataset
-                console.log("Original Dataset:", originalDataset);
-
-                if (!originalDataset) {
-                    showSnackbar("Error! Original dataset not found.", "error");
-                    return;
-                }
-
-                const originalDimensions = { rows: originalDataset.rows, columns: originalDataset.columns };
-
-                // Debugging: Log originalDimensions
-                console.log("Original Dimensions:", originalDimensions);
-
-                // Check if dimensions match
-                if (
-                    rows.length !== originalDimensions.rows ||
-                    columns !== originalDimensions.columns
-                ) {
-                    showSnackbar(
-                        "Error! Please make sure to upload the correct file!",
-                        "error"
-                    );
-                    return;
-                }
-
-                // Proceed with file selection if dimensions match
-                onFileSelect(e, datasetId);
-            };
-            reader.readAsText(file);
+        if (!file.name.endsWith(".csv")) {
+            showSnackbar("Invalid file type. Only CSV files are allowed.", "error");
+            return;
         }
+
+        // Let the backend validate dimensions against the original dataset
+        onFileSelect(e, datasetId);
     };
 
     return (
@@ -75,9 +28,6 @@ const UploadTable = ({ datasets, uploadedFiles, uploadingDatasetId, onFileSelect
             </Box>
 
             {datasets.map((dataset) => {
-                const uploadedDimensions = uploadedDatasetDimensions[dataset.id];
-                const originalDimensions = { rows: dataset.rows, columns: dataset.columns };
-
                 return (
                     <Box key={dataset.id} sx={{ display: "flex", alignItems: "center", padding: "8px 16px", borderBottom: "1px solid #e0e0e0" }}>
                         <Box sx={{ flex: 1 }}>
@@ -86,8 +36,6 @@ const UploadTable = ({ datasets, uploadedFiles, uploadingDatasetId, onFileSelect
 
                         <Box sx={{ flex: 1 }}>
                             {uploadedFiles[dataset.id] || "Not Uploaded"}
-                            {uploadedDimensions && uploadedDimensions.rows !== originalDimensions.rows}
-                            {uploadedDimensions && uploadedDimensions.rows === originalDimensions.rows}
                         </Box>
 
                         <Box sx={{ flex: 1 }}>

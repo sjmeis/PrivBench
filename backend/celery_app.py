@@ -1,5 +1,5 @@
-from app import create_app
 from app.extensions import celery
+from app import create_app
 
 # Create the Flask application
 flask_app = create_app()
@@ -14,7 +14,11 @@ class ContextTask(celery.Task):
             return self.run(*args, **kwargs)
 
 
+# Set ContextTask BEFORE tasks are discovered so all tasks get app context
+celery.Task = ContextTask
+
+# Force autodiscovery of tasks so they use ContextTask as their base
+celery.autodiscover_tasks(["app.services", "app.tasks"])
+
 print("Available Celery tasks:")
 print(celery.tasks.keys())
-
-celery.Task = ContextTask
