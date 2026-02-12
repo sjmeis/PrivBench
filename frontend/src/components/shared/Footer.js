@@ -7,10 +7,10 @@ const Footer = () => {
     <Box
       component="footer"
       sx={{
-        py: 2,
-        //bottom: 0,
         width: "100%",
-        mt: "auto",
+        boxSizing: "border-box",
+        py: 3,
+        px: 2,
         bgcolor: "background.surface",
         borderTop: "1px solid",
         borderColor: "divider",
@@ -26,6 +26,24 @@ const Footer = () => {
           textAlign: "center",
         }}
       >
+        <Link
+          component="button"
+          onClick={() => navigate("https://www.cs.cit.tum.de/sebis/")}
+          level="body1"
+          sx={{
+            textDecoration: "none",
+            fontWeight: "md",
+            fontSize: "1rem",
+            "&:hover": {
+              textDecoration: "underline",
+            },
+          }}
+        >
+          sebis Homepage
+        </Link>
+        <Typography level="body2" textColor="text.primary">
+          {"·"}
+        </Typography>
         <Typography level="body2" textColor="text.primary">
           © {new Date().getFullYear()} PrivBench
         </Typography>

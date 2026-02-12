@@ -6,8 +6,11 @@ const MainLayout = ({ children }) => {
     <Box sx={{ display: "flex",
                 flexDirection: "column",
                 minHeight: "100vh",
-                width: "100vw",
+                width: "100%",
+                overflowX: "hidden",
                 marginBottom: "-40px",
+                margin: 0,
+                padding: 0,
             }}>
       <Box component="main" sx={{ flex: 1 }}>
         {children}
