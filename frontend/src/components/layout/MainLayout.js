@@ -12,6 +12,9 @@ const MainLayout = ({ children }) => {
       <Box component="main" sx={{
           flex: 1, 
           width: "100%",
+          paddingX: '40px',
+          paddingTop: '10px',
+          paddingBottom: '40px',
         }}>
         {children}
       </Box>

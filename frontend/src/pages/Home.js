@@ -97,9 +97,9 @@ const Home = () => {
     <Sheet
       sx={{
         marginTop: "-10px",
-        marginRight: "-40px",
-        marginLeft: "-40px",
-        marginBottom: "-40px",
+        // marginRight: "-40px",
+        // marginLeft: "-40px",
+        // marginBottom: "-40px",
         minHeight: "100vh",
         bgcolor: "background.body",
         background: isLightMode
