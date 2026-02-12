@@ -9,8 +9,6 @@ import {
   Divider,
   Button,
   Tooltip,
-  Sheet,
-  useTheme,
 } from "@mui/joy";
 import StepIndicator from "@mui/joy/StepIndicator";
 import { Add } from "@mui/icons-material";
@@ -37,8 +35,6 @@ const Information = () => {
   const navigate = useNavigate();
   const [modules, setModules] = useState([]);
   const [submissionsBlocked, setSubmissionsBlocked] = useState(false);
-  const theme = useTheme();
-  const isLightMode = theme.palette.mode === "light";
 
   useEffect(() => {
     const fetchModules = async () => {
@@ -97,21 +93,10 @@ const Information = () => {
   ];
 
   return (
-    <Sheet
-      sx={{
-        marginTop: "-10px",
-        marginRight: "-40px",
-        marginLeft: "-40px",
-        marginBottom: "-40px",
-        minHeight: "100vh",
-        bgcolor: "background.body",
-        background: isLightMode
-          ? "linear-gradient(to bottom, #ffffff, #f5f5f5)"
-          : "linear-gradient(to bottom, var(--joy-palette-neutral-900), var(--joy-palette-neutral-800))",
-      }}
-    >
+    <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
     <Box
       sx={{
+        flex: 1,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -216,7 +201,7 @@ const Information = () => {
       </Grid>
     </Box>
     <Footer />
-    </Sheet>
+    </Box>
   );
 };
 
