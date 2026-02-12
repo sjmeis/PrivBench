@@ -6,14 +6,16 @@ const MainLayout = ({ children }) => {
     <Box sx={{ display: "flex",
                 flexDirection: "column",
                 minHeight: "100vh",
-                width: "100vw",
-                padding: 0,
-                marginTop: "-10px",
-                marginRight: "-40px",
-                marginLeft: "-40px",
-                marginBottom: "-40px",
+                width: "100%",
+                overflowX: "hidden",
             }}>
-      <Box component="main" sx={{ flex: 1 }}>
+      <Box component="main" sx={{
+          flex: 1, 
+          width: "100%",
+          paddingX: '40px',
+          paddingTop: '10px',
+          paddingBottom: '40px',
+        }}>
         {children}
       </Box>
       <Footer />
