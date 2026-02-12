@@ -18,6 +18,7 @@ import { motion } from "framer-motion";
 import { ModuleService } from "../services/ModuleService";
 import { API_BASE_URL } from '../config';
 import Footer from "../components/shared/Footer";
+import MainLayout from "../components/layout/MainLayout"
 
 const stepVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -93,7 +94,7 @@ const Information = () => {
   ];
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+    <MainLayout>
     <Box
       sx={{
         flex: 1,
@@ -105,7 +106,7 @@ const Information = () => {
       }}
     >
       <Grid container spacing={3}>
-        <Grid sx={{ height: "80vh" }} item xs={4}>
+        <Grid sx={{ height: "auto" }} item xs={4}>
           <Box>
             <Typography sx={{ marginBottom: 3 }} level="h3">
               Submission Process
@@ -141,7 +142,7 @@ const Information = () => {
           </Box>
         </Grid>
         <Divider sx={{ margin: 2, height: "auto" }} orientation="vertical" />
-        <Grid item sx={{ height: "80vh" }} xs={7}>
+        <Grid item sx={{ height: "auto" }} xs={7}>
           <Box sx={{ height: "90%" }}>
             <Typography level="h3" sx={{ marginBottom: 2 }}>
               Privatization Benchmarking Modules
@@ -200,8 +201,7 @@ const Information = () => {
         </Grid>
       </Grid>
     </Box>
-    <Footer />
-    </Box>
+    </MainLayout>
   );
 };
 
