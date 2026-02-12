@@ -9,6 +9,7 @@ import {
   Divider,
   Button,
   Tooltip,
+  Sheet,
 } from "@mui/joy";
 import StepIndicator from "@mui/joy/StepIndicator";
 import { Add } from "@mui/icons-material";
@@ -93,6 +94,19 @@ const Information = () => {
   ];
 
   return (
+    <Sheet
+      sx={{
+        marginTop: "-10px",
+        marginRight: "-40px",
+        marginLeft: "-40px",
+        marginBottom: "-40px",
+        minHeight: "100vh",
+        bgcolor: "background.body",
+        background: isLightMode
+          ? "linear-gradient(to bottom, #ffffff, #f5f5f5)"
+          : "linear-gradient(to bottom, var(--joy-palette-neutral-900), var(--joy-palette-neutral-800))",
+      }}
+    >
     <Box
       sx={{
         display: "flex",
@@ -197,8 +211,9 @@ const Information = () => {
           </Box>
         </Grid>
       </Grid>
-      <Footer />
     </Box>
+    <Footer />
+    </Sheet>
   );
 };
 
