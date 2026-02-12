@@ -43,7 +43,7 @@ import { getDateString, isNewDate } from "../utils/Date";
 import { formatToTwoDecimals } from "../utils/FormatUtils";
 import { useAuth } from "../contexts/AuthContext";
 import { SubmissionStatus } from "../enums/SubmissionStatus";
-import Footer from "../components/shared/Footer";
+import MainLayout from "../components/layout/MainLayout";
 
 const headCells = [
   { id: "status", numeric: false, label: "", width: "8%" },
@@ -336,6 +336,7 @@ const Rankings = () => {
     });
 
   return (
+    <MainLayout>
     <Box>
       <Box sx={{ display: "flex", alignItems: "center" }}>
         <Breadcrumbs
@@ -957,8 +958,8 @@ const Rankings = () => {
           </tfoot>
         </Table>
       </Sheet>
-      <Footer />
     </Box>
+    </MainLayout>
   );
 };
 

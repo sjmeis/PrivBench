@@ -32,20 +32,14 @@ function App() {
           <CssBaseline />
           <Navbar />
           <Box
-            display="flex"
-            flexDirection="column"
-            minHeight="calc(100vh - 65.5px)"
-            backgroundColor="primary.background"
+            sx={{
+              minHeight: "100vh", 
+              backgroundColor: "background.body", // Use theme variable
+              display: "flex",
+              flexDirection: "column",
+              //minHeight="calc(100vh - 65.5px)"
+            }}
           >
-            <Box
-              flex="1"
-              sx={{
-                paddingLeft: "40px",
-                paddingRight: "40px",
-                paddingTop: "10px",
-                paddingBottom: "40px",
-              }}
-            >
               <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/login" element={<Login />} />
@@ -73,7 +67,6 @@ function App() {
                 </Route>
               </Routes>
             </Box>
-          </Box>
         </CssVarsProvider>
       </AuthProvider>
     </SnackbarProvider>
