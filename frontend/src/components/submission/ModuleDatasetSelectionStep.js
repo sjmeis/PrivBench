@@ -13,11 +13,23 @@ const ModuleDatasetSelectionStep = ({ datasetChoices, onChoicesChange }) => {
         const data = await ModuleService.fetchModulesWithDatasets();
         setModules(data);
 
-        // Auto-select for modules with only one compatible dataset
+        // Initialize choices for all modules; auto-select when only one dataset
         const autoSelected = { ...datasetChoices };
         let changed = false;
         for (const mod of data) {
-          if (mod.compatibleDatasets.length === 1 && !autoSelected[mod.id]) {
+          const hasKey = Object.prototype.hasOwnProperty.call(autoSelected, mod.id);
+
+          if (!hasKey) {
+            if (mod.compatibleDatasets.length === 1) {
+              autoSelected[mod.id] = mod.compatibleDatasets[0].id;
+            } else {
+              autoSelected[mod.id] = null;
+            }
+            changed = true;
+          } else if (
+            mod.compatibleDatasets.length === 1 &&
+            !autoSelected[mod.id]
+          ) {
             autoSelected[mod.id] = mod.compatibleDatasets[0].id;
             changed = true;
           }

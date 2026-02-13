@@ -67,7 +67,8 @@ const Register = () => {
         setIsLoading(true);
 
         try {
-            await register(formData);
+            const { confirmPassword, ...payload } = formData;
+            await register(payload);
             navigate(from, { replace: true });
         } catch (err) {
             setError(err.message);

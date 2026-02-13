@@ -184,14 +184,28 @@ const Upload = () => {
 
   const handleSaveMetadata = async () => {
     try {
-      // Skip if a submission already exists AND the metadata is unchanged.
+      // Skip metadata save if a submission already exists AND metadata is unchanged.
       // If no submission exists, we must proceed to create one.
       if (
         submissionId &&
         JSON.stringify(metadata) === JSON.stringify(initialMetadata)
       ) {
+        // Still persist dataset choices even when metadata hasn't changed
+        if (Object.keys(datasetChoices).length > 0) {
+          try {
+            const choices = Object.entries(datasetChoices).map(
+              ([moduleId, datasetId]) => ({
+                moduleId: parseInt(moduleId),
+                datasetId,
+              })
+            );
+            await ModuleService.saveDatasetChoices(submissionId, choices);
+          } catch (e) {
+            console.error("Error saving dataset choices:", e);
+          }
+        }
         setCurrentStep((prev) => prev + 1);
-        return; // Skip saving if no changes
+        return;
       }
       const isUpdate = Boolean(submissionId);
       const endpoint = `${API_BASE_URL}/metadata`;
