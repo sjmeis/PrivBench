@@ -235,11 +235,16 @@ with app.app_context():
         logger.info("Cooling down Docker Engine for 5s...")
         time.sleep(5)
 
-    # Populate compatibility junction table
+    # Populate compatibility junction table (clear existing rows first to allow re-runs)
     for module_name, dataset_names in compatibility_map.items():
         if module_name not in modules:
             continue
         module = modules[module_name]
+        db.session.execute(
+            module_dataset_compatibility.delete().where(
+                module_dataset_compatibility.c.module_id == module.id
+            )
+        )
         for ds_name in dataset_names:
             if ds_name in datasets:
                 db.session.execute(

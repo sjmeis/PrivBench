@@ -137,6 +137,7 @@ os.makedirs(PRIVATIZED_DATASETS_FOLDER, exist_ok=True)
 
 
 @data_bp.route("/upload-privatized-dataset", methods=["POST"])
+@jwt_required()
 def upload_privatized_dataset():
     try:
         if "file" not in request.files:
@@ -148,6 +149,12 @@ def upload_privatized_dataset():
 
         if not all([file, submission_id, original_dataset_id]):
             return jsonify({"error": "Missing required fields"}), 400
+
+        # Verify the submission belongs to the current user
+        user_id = get_jwt_identity()
+        submission = Submission.query.filter_by(id=submission_id, user_id=user_id).first()
+        if not submission:
+            return jsonify({"error": "Submission not found"}), 404
 
         if file.filename == "":
             return jsonify({"error": "No selected file"}), 400
@@ -330,14 +337,60 @@ def save_dataset_choices(submission_id):
         if not choices:
             return jsonify({"error": "No choices provided"}), 400
 
-        # Delete existing choices for this submission
-        ModuleDatasetChoice.query.filter_by(submission_id=submission_id).delete()
+        # Validate choices before modifying the database
+        validation_errors = []
+        valid_choices = []
 
-        for choice in choices:
+        for index, choice in enumerate(choices):
             module_id = choice.get("moduleId")
             dataset_id = choice.get("datasetId")
+
             if not module_id or not dataset_id:
+                validation_errors.append({
+                    "index": index,
+                    "error": "Both moduleId and datasetId are required.",
+                })
                 continue
+
+            module = BenchmarkModule.query.get(module_id)
+            if not module:
+                validation_errors.append({
+                    "index": index,
+                    "moduleId": module_id,
+                    "error": "Module not found.",
+                })
+                continue
+
+            dataset = Dataset.query.get(dataset_id)
+            if not dataset:
+                validation_errors.append({
+                    "index": index,
+                    "datasetId": dataset_id,
+                    "error": "Dataset not found.",
+                })
+                continue
+
+            if dataset not in module.compatible_datasets:
+                validation_errors.append({
+                    "index": index,
+                    "moduleId": module_id,
+                    "datasetId": dataset_id,
+                    "error": "Dataset is not compatible with the specified module.",
+                })
+                continue
+
+            valid_choices.append((module_id, dataset_id))
+
+        if validation_errors:
+            return jsonify({
+                "error": "One or more choices are invalid.",
+                "details": validation_errors,
+            }), 400
+
+        # Delete existing choices now that validation has passed
+        ModuleDatasetChoice.query.filter_by(submission_id=submission_id).delete()
+
+        for module_id, dataset_id in valid_choices:
             db.session.add(ModuleDatasetChoice(
                 submission_id=submission_id,
                 module_id=module_id,
