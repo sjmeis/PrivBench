@@ -13,7 +13,7 @@ with app.app_context():
         admin = User(
             username='admin',
             mail_address='admin@privbench.com',
-            password="test123",
+            password="sebis01.12.040",
             research_institute='test',
             admin=True,
         )
