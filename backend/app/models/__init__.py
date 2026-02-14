@@ -11,6 +11,7 @@ from .task import Task
 from .app_version import AppVersion
 from .submission_version_score import SubmissionVersionScore
 from .module_update import ModuleUpdate
+from .module_dataset_choice import ModuleDatasetChoice
 
 __all__ = [
     "User",
@@ -27,4 +28,5 @@ __all__ = [
     "AppVersion",
     "SubmissionVersionScore",
     "ModuleUpdate",
+    "ModuleDatasetChoice",
 ]

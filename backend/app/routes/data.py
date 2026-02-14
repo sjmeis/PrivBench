@@ -3,9 +3,11 @@ from flask import send_from_directory, send_file
 import os
 from werkzeug.utils import secure_filename
 from ..extensions import db
-from ..models import PrivatizedDataset, Submission, Dataset, BenchmarkModule
+from ..models import PrivatizedDataset, Submission, Dataset, BenchmarkModule, ModuleDatasetChoice
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime
 import logging
+import csv
 import zipfile
 from io import BytesIO
 from urllib.parse import unquote
@@ -135,6 +137,7 @@ os.makedirs(PRIVATIZED_DATASETS_FOLDER, exist_ok=True)
 
 
 @data_bp.route("/upload-privatized-dataset", methods=["POST"])
+@jwt_required()
 def upload_privatized_dataset():
     try:
         if "file" not in request.files:
@@ -147,6 +150,12 @@ def upload_privatized_dataset():
         if not all([file, submission_id, original_dataset_id]):
             return jsonify({"error": "Missing required fields"}), 400
 
+        # Verify the submission belongs to the current user
+        user_id = get_jwt_identity()
+        submission = Submission.query.filter_by(id=submission_id, user_id=user_id).first()
+        if not submission:
+            return jsonify({"error": "Submission not found"}), 404
+
         if file.filename == "":
             return jsonify({"error": "No selected file"}), 400
 
@@ -156,12 +165,46 @@ def upload_privatized_dataset():
                 400,
             )
 
+        # Validate dimensions against original dataset
+        original_dataset = Dataset.query.get(original_dataset_id)
+        if not original_dataset or not os.path.isfile(original_dataset.file_path):
+            return jsonify({"error": "Original dataset not found"}), 404
+
+        # Read original dataset header and row count
+        with open(original_dataset.file_path, "r", newline="") as f:
+            reader = csv.reader(f)
+            orig_header = next(reader, None)
+            orig_row_count = sum(1 for _ in reader) + 1  # +1 for header
+
+        # Read uploaded file using csv.reader to handle quoted fields correctly
+        file_content = file.read().decode("utf-8")
+        uploaded_rows = list(csv.reader(file_content.strip().splitlines()))
+        if not uploaded_rows:
+            return jsonify({"error": "Uploaded file is empty"}), 400
+
+        uploaded_header = uploaded_rows[0]
+        uploaded_row_count = len(uploaded_rows)
+
+        # Validate column names match
+        if uploaded_header != orig_header:
+            return jsonify({
+                "error": f"Column mismatch: expected {orig_header}, got {uploaded_header}"
+            }), 400
+
+        # Validate row count matches
+        if uploaded_row_count != orig_row_count:
+            return jsonify({
+                "error": f"Row count mismatch: expected {orig_row_count}, got {uploaded_row_count}"
+            }), 400
+
         filename = secure_filename(
             f"{submission_id}_{original_dataset_id}_{file.filename}"
         )
         file_path = os.path.join(PRIVATIZED_DATASETS_FOLDER, filename)
 
-        file.save(file_path)
+        # Write the already-read content to disk
+        with open(file_path, "w") as f:
+            f.write(file_content)
 
         privatized_dataset = PrivatizedDataset(
             submission_id=submission_id,
@@ -272,4 +315,119 @@ def get_required_datasets(submission_id):
 
     except Exception as e:
         logger.error(f"Error fetching required datasets: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
+@data_bp.route("/submissions/<int:submission_id>/dataset-choices", methods=["POST"])
+@jwt_required()
+def save_dataset_choices(submission_id):
+    """Save per-module dataset choices for a submission.
+
+    Expected JSON body:
+        { "choices": [ { "moduleId": 1, "datasetId": 2 }, ... ] }
+    """
+    try:
+        user_id = get_jwt_identity()
+        submission = Submission.query.filter_by(id=submission_id, user_id=user_id).first()
+        if not submission:
+            return jsonify({"error": "Submission not found"}), 404
+
+        data = request.get_json() or {}
+        choices = data.get("choices", [])
+        if not choices:
+            return jsonify({"error": "No choices provided"}), 400
+
+        # Validate choices before modifying the database
+        validation_errors = []
+        valid_choices = []
+
+        for index, choice in enumerate(choices):
+            module_id = choice.get("moduleId")
+            dataset_id = choice.get("datasetId")
+
+            if not module_id or not dataset_id:
+                validation_errors.append({
+                    "index": index,
+                    "error": "Both moduleId and datasetId are required.",
+                })
+                continue
+
+            module = BenchmarkModule.query.get(module_id)
+            if not module:
+                validation_errors.append({
+                    "index": index,
+                    "moduleId": module_id,
+                    "error": "Module not found.",
+                })
+                continue
+
+            dataset = Dataset.query.get(dataset_id)
+            if not dataset:
+                validation_errors.append({
+                    "index": index,
+                    "datasetId": dataset_id,
+                    "error": "Dataset not found.",
+                })
+                continue
+
+            if dataset not in module.compatible_datasets:
+                validation_errors.append({
+                    "index": index,
+                    "moduleId": module_id,
+                    "datasetId": dataset_id,
+                    "error": "Dataset is not compatible with the specified module.",
+                })
+                continue
+
+            valid_choices.append((module_id, dataset_id))
+
+        if validation_errors:
+            return jsonify({
+                "error": "One or more choices are invalid.",
+                "details": validation_errors,
+            }), 400
+
+        # Delete existing choices now that validation has passed
+        ModuleDatasetChoice.query.filter_by(submission_id=submission_id).delete()
+
+        for module_id, dataset_id in valid_choices:
+            db.session.add(ModuleDatasetChoice(
+                submission_id=submission_id,
+                module_id=module_id,
+                dataset_id=dataset_id,
+            ))
+
+        db.session.commit()
+        return jsonify({"message": "Dataset choices saved"}), 200
+
+    except Exception as e:
+        logger.error(f"Error saving dataset choices: {str(e)}")
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@data_bp.route("/submissions/<int:submission_id>/dataset-choices", methods=["GET"])
+@jwt_required()
+def get_dataset_choices(submission_id):
+    """Get per-module dataset choices for a submission."""
+    try:
+        user_id = get_jwt_identity()
+        submission = Submission.query.filter_by(id=submission_id, user_id=user_id).first()
+        if not submission:
+            return jsonify({"error": "Submission not found"}), 404
+
+        choices = ModuleDatasetChoice.query.filter_by(submission_id=submission_id).all()
+
+        return jsonify([
+            {
+                "moduleId": c.module_id,
+                "datasetId": c.dataset_id,
+                "moduleName": c.module.name if c.module else None,
+                "datasetName": c.dataset.name if c.dataset else None,
+            }
+            for c in choices
+        ]), 200
+
+    except Exception as e:
+        logger.error(f"Error fetching dataset choices: {str(e)}")
         return jsonify({"error": str(e)}), 500
