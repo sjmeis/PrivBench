@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Box, Button } from "@mui/joy";
 import { Bookmark, Done, East, Save, Update, West } from "@mui/icons-material";
 import { useLocation } from "react-router-dom";
 import { useSnackbar } from "../contexts/SnackbarProvider";
+import ModuleDatasetSelectionStep from "../components/submission/ModuleDatasetSelectionStep";
 import DownloadStep from "../components/submission/DownloadStep";
 import MetadataStep from "../components/submission/MetadataStep";
 import UploadStep from "../components/submission/UploadStep";
@@ -11,6 +12,7 @@ import { getUserSubmissions } from "../services/RankingsService";
 import { SideNaveSubmission } from "../components/submission/SideNaveSubmission";
 import MetadataTemplateDialog from "../components/submission/MetadataTemplateDialog";
 import { SubmissionStatus } from "src/enums/SubmissionStatus";
+import { ModuleService } from "../services/ModuleService";
 import { API_BASE_URL } from "../config";
 import MainLayout from "../components/layout/MainLayout";
 
@@ -22,6 +24,7 @@ const Upload = () => {
   const [submissionId, setSubmissionId] = useState(state?.submissionId || null);
   const [datasets, setDatasets] = useState([]);
   const [uploadedFiles, setUploadedFiles] = useState({});
+  const [datasetChoices, setDatasetChoices] = useState({}); // { moduleId: datasetId }
   const [templates, setTemplates] = useState([]);
   const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
   const [templateDialogAction, setTemplateDialogAction] = useState("save");
@@ -44,6 +47,22 @@ const Upload = () => {
   const [initialMetadata, setInitialMetadata] = useState({});
   const { showSnackbar } = useSnackbar();
 
+  // Derive the unique chosen dataset IDs from datasetChoices
+  const chosenDatasetIds = useMemo(() => {
+    return [...new Set(Object.values(datasetChoices))];
+  }, [datasetChoices]);
+
+  // Filter datasets to only those chosen by the user
+  const chosenDatasets = useMemo(() => {
+    return datasets.filter((ds) => chosenDatasetIds.includes(ds.id));
+  }, [datasets, chosenDatasetIds]);
+
+  // Check if all modules have a dataset selected
+  const allModulesHaveDataset = useMemo(() => {
+    return Object.keys(datasetChoices).length > 0 &&
+      Object.values(datasetChoices).every((v) => v != null);
+  }, [datasetChoices]);
+
   const fetchUserSubmission = async () => {
     // If metadata is already loaded from a template, don't overwrite it.
     if (state?.templateId) {
@@ -60,12 +79,21 @@ const Upload = () => {
       );
 
       if (pendingSubmission) {
-        setCurrentStep(2);
+        setCurrentStep(3);
         setMetadata(pendingSubmission.metadata);
         setInitialMetadata(pendingSubmission.metadata);
         setSubmissionId(pendingSubmission.id);
+        // Load existing dataset choices
+        try {
+          const choices = await ModuleService.getDatasetChoices(pendingSubmission.id);
+          const choicesMap = {};
+          choices.forEach((c) => { choicesMap[c.moduleId] = c.datasetId; });
+          setDatasetChoices(choicesMap);
+        } catch (e) {
+          console.error("Error loading dataset choices:", e);
+        }
       } else if (inProgressSubmission) {
-        setCurrentStep(3);
+        setCurrentStep(4);
         setMetadata(inProgressSubmission.metadata);
         setInitialMetadata(inProgressSubmission.metadata);
         setSubmissionId(inProgressSubmission.id);
@@ -112,58 +140,19 @@ const Upload = () => {
   useEffect(() => {
     const fetchDatasets = async () => {
       try {
-        const listResponse = await fetch(`${API_BASE_URL}/datasets/list`, {
+        const response = await fetch(`${API_BASE_URL}/datasets`, {
           credentials: "include",
-          cache: "no-cache",
         });
-        if (!listResponse.ok) {
-          const errorData = await listResponse.json();
-          console.error("Failed to fetch datasets:", errorData.error);
+        if (!response.ok) {
+          console.error("Failed to fetch datasets");
           return;
         }
-
-        const data = await listResponse.json();
-
-        const datasetsWithDetails = await Promise.all(
-          data.datasets.map(async (dataset) => {
-            try {
-              const contentResponse = await fetch(
-                `${API_BASE_URL}/datasets/${encodeURIComponent(dataset.name)}`,
-                {
-                  credentials: "include",
-                  cache: "no-cache",
-                }
-              );
-
-              if (!contentResponse.ok) {
-                console.error(
-                  `Failed to fetch content for dataset ${dataset.name}`
-                );
-                return { ...dataset, rows: 0, columns: 0 };
-              }
-
-              const content = await contentResponse.text();
-              const rows = content.trim().split("\n"); // Split by newline
-              const columns = rows[0]?.split(",").length || 0; // Use the first row for column count
-
-              return {
-                ...dataset,
-                rows: rows.length, // Exclude header row
-                columns,
-              };
-            } catch (error) {
-              console.error(`Error fetching dataset ${dataset.name}:`, error);
-              return { ...dataset, rows: 0, columns: 0 };
-            }
-          })
-        );
-
-        setDatasets(datasetsWithDetails);
+        const dbDatasets = await response.json();
+        setDatasets(dbDatasets.map((ds) => ({ id: ds.id, name: ds.name })));
       } catch (error) {
         console.error("An error occurred while fetching datasets:", error);
       }
     };
-
     fetchDatasets();
   }, []);
 
@@ -187,7 +176,7 @@ const Upload = () => {
   };
 
   useEffect(() => {
-    if (currentStep === 1) {
+    if (currentStep === 2) {
       setIsMetadataValid(validateMetadata());
     }
     // eslint-disable-next-line
@@ -195,14 +184,28 @@ const Upload = () => {
 
   const handleSaveMetadata = async () => {
     try {
-      // Skip if a submission already exists AND the metadata is unchanged.
+      // Skip metadata save if a submission already exists AND metadata is unchanged.
       // If no submission exists, we must proceed to create one.
       if (
         submissionId &&
         JSON.stringify(metadata) === JSON.stringify(initialMetadata)
       ) {
+        // Still persist dataset choices even when metadata hasn't changed
+        if (Object.keys(datasetChoices).length > 0) {
+          try {
+            const choices = Object.entries(datasetChoices).map(
+              ([moduleId, datasetId]) => ({
+                moduleId: parseInt(moduleId),
+                datasetId,
+              })
+            );
+            await ModuleService.saveDatasetChoices(submissionId, choices);
+          } catch (e) {
+            console.error("Error saving dataset choices:", e);
+          }
+        }
         setCurrentStep((prev) => prev + 1);
-        return; // Skip saving if no changes
+        return;
       }
       const isUpdate = Boolean(submissionId);
       const endpoint = `${API_BASE_URL}/metadata`;
@@ -233,8 +236,27 @@ const Upload = () => {
           "success"
         );
 
+        const newSubmissionId = !isUpdate && data.submission_id
+          ? data.submission_id
+          : submissionId;
+
         if (!isUpdate && data.submission_id) {
           setSubmissionId(data.submission_id);
+        }
+
+        // Save dataset choices to backend now that we have a submission ID
+        if (newSubmissionId && Object.keys(datasetChoices).length > 0) {
+          try {
+            const choices = Object.entries(datasetChoices).map(
+              ([moduleId, datasetId]) => ({
+                moduleId: parseInt(moduleId),
+                datasetId,
+              })
+            );
+            await ModuleService.saveDatasetChoices(newSubmissionId, choices);
+          } catch (e) {
+            console.error("Error saving dataset choices:", e);
+          }
         }
 
         // Advance to the next step
@@ -255,7 +277,14 @@ const Upload = () => {
   };
 
   const handleNext = () => {
-    if (currentStep === 1) {
+    if (currentStep === 0) {
+      // Validate all modules have a dataset selected
+      if (!allModulesHaveDataset) {
+        showSnackbar("Please select a dataset for every module!", "error");
+        return;
+      }
+    }
+    if (currentStep === 2) {
       if (!isMetadataValid) {
         showSnackbar("Please fill in all metadata fields!", "error");
         return;
@@ -459,7 +488,7 @@ const Upload = () => {
         />
 
         <Box sx={{ flex: 1, p: 3 }}>
-          {currentStep !== 3 && (
+          {currentStep !== 4 && (
             <Box
               sx={{
                 position: "fixed",
@@ -488,18 +517,18 @@ const Upload = () => {
               <Button
                 sx={{ width: "133px" }}
                 variant="solid"
-                color={currentStep === 2 ? "success" : "primary"}
+                color={currentStep === 3 ? "success" : "primary"}
                 onClick={handleNext}
                 endDecorator={
-                  currentStep === 1 &&
+                  currentStep === 2 &&
                   JSON.stringify(metadata) !==
                     JSON.stringify(initialMetadata) ? (
-                    <Save /> // "Save" if metadata has changed at step 1
-                  ) : currentStep === 1 &&
+                    <Save /> // "Save" if metadata has changed at step 2
+                  ) : currentStep === 2 &&
                     JSON.stringify(metadata) ===
                       JSON.stringify(initialMetadata) ? (
-                    <East /> // Arrow if metadata has not changed at step 1
-                  ) : currentStep === 2 ? (
+                    <East /> // Arrow if metadata has not changed at step 2
+                  ) : currentStep === 3 ? (
                     <Done />
                   ) : (
                     <East />
@@ -507,21 +536,22 @@ const Upload = () => {
                 }
                 size="lg"
                 disabled={
-                  (currentStep === 1 && !isMetadataValid) ||
-                  (currentStep === 2 &&
-                    !datasets.every((dataset) => uploadedFiles[dataset.id]))
+                  (currentStep === 0 && !allModulesHaveDataset) ||
+                  (currentStep === 2 && !isMetadataValid) ||
+                  (currentStep === 3 &&
+                    !chosenDatasets.every((dataset) => uploadedFiles[dataset.id]))
                 }
               >
-                {currentStep === 1 &&
+                {currentStep === 2 &&
                 (selectedTemplateId ||
                   JSON.stringify(metadata) !== JSON.stringify(initialMetadata))
                   ? "Save & Continue"
-                  : currentStep === 2
-                  ? "Submit" // "Submit" if step 2
+                  : currentStep === 3
+                  ? "Submit" // "Submit" if step 3
                   : "Next"}
               </Button>
 
-              {currentStep === 1 && (
+              {currentStep === 2 && (
                 <Button
                   sx={{ width: "133px" }}
                   variant="solid"
@@ -544,9 +574,16 @@ const Upload = () => {
               maxHeight: "calc(100vh - 80px)",
             }}
           >
-            {currentStep === 0 && <DownloadStep datasets={datasets} />}
+            {currentStep === 0 && (
+              <ModuleDatasetSelectionStep
+                datasetChoices={datasetChoices}
+                onChoicesChange={setDatasetChoices}
+              />
+            )}
 
-            {currentStep === 1 && (
+            {currentStep === 1 && <DownloadStep datasets={chosenDatasets} />}
+
+            {currentStep === 2 && (
               <MetadataStep
                 metadata={metadata}
                 setMetadata={setMetadata}
@@ -559,10 +596,10 @@ const Upload = () => {
               />
             )}
 
-            {currentStep === 2 && (
+            {currentStep === 3 && (
               <UploadStep
                 submissionId={submissionId}
-                datasets={datasets}
+                datasets={chosenDatasets}
                 uploadedFiles={uploadedFiles}
                 onFileUploaded={(datasetId, fileName) => {
                   setUploadedFiles((prev) => ({
@@ -573,7 +610,7 @@ const Upload = () => {
               />
             )}
 
-            {currentStep === 3 && <FinalStep />}
+            {currentStep === 4 && <FinalStep />}
           </Box>
         </Box>
       </Box>
