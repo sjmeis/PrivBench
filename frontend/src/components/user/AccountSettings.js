@@ -167,7 +167,7 @@ const AccountSettings = ({user}) => {
                                 >
                                     <EditRoundedIcon />
                                 </IconButton>
-                                {(user.profile_picture_path || previewUrl) && (
+                                {(user.profilePicturePath || previewUrl) && (
                                     <IconButton
                                         onClick={handleDeletePicture}
                                         size="sm"
