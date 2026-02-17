@@ -42,8 +42,13 @@ const Login = () => {
         setError('');
         setIsLoading(true);
 
+        const trimmedData = Object.keys(formData).reduce((acc, key) => {
+            acc[key] = typeof formData[key] === 'string' ? formData[key].trim() : formData[key];
+            return acc;
+        }, {});
+
         try {
-            await login(formData);
+            await login(trimmedData);
             navigate(from, { replace: true });
         } catch (err) {
             setError(err.message);

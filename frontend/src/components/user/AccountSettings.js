@@ -55,13 +55,17 @@ const AccountSettings = ({user}) => {
 
     const updatePassword = async () => {
         const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
+
+        const trimmedNewPassword = passwords.newPassword.trim();
+        const trimmedCurrentPassword = passwords.currentPassword.trim();
+        const trimmedConfirmPassword = passwords.confirmPassword.trim();
         
-        if (!passwordRegex.test(passwords.newPassword)) {
+        if (!passwordRegex.test(trimmedNewPassword) {
             showSnackbar("Password must be at least 8 characters long and include both letters and numbers.", "error");
             return;
         }
 
-        if (passwords.newPassword !== passwords.confirmPassword) {
+        if (trimmedNewPassword !== trimmedConfirmPassword) {
             showSnackbar("New passwords do not match", "error");
             return;
         }
@@ -69,7 +73,7 @@ const AccountSettings = ({user}) => {
         setIsPasswordLoading(true);
 
         try {
-            await changePassword(passwords.currentPassword, passwords.newPassword);
+            await changePassword(trimmedCurrentPassword, trimmedNewPassword);
             showSnackbar("Password updated. You will be logged out for security.", "success");
             
             setTimeout(() => {

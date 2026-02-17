@@ -75,10 +75,15 @@ const Register = () => {
             return;
         }
 
+        const trimmedData = Object.keys(formData).reduce((acc, key) => {
+            acc[key] = typeof formData[key] === 'string' ? formData[key].trim() : formData[key];
+            return acc;
+        }, {});
+
         setIsLoading(true);
 
         try {
-            const { confirmPassword, ...payload } = formData;
+            const { confirmPassword, ...payload } = trimmedData;
             await register(payload);
             navigate(from, { replace: true });
         } catch (err) {

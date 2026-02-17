@@ -25,7 +25,7 @@ def register():
         if not all(k in data for k in ["username", "mailAddress", "password"]):
             return jsonify({"message": "All fields are required!"}), 400
         
-        password = data.get('password')
+        password = data.get('password').strip()
         if not re.match(r'^(?=.*[A-Za-z])(?=.*\d).{8,}$', password):
             return jsonify({"message": "Password is too weak."}), 400
 
@@ -55,7 +55,7 @@ def register():
             username=username,
             mail_address=mail_address,
             research_institute=data["researchInstitute"],
-            password=data["password"],
+            password=password,
         )
 
         db.session.add(new_user)
