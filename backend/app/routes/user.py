@@ -159,7 +159,7 @@ def change_password():
     user_id = get_jwt_identity()
     user = User.query.get(user_id)
 
-    if not check_password_hash(user.password_hash, current_password):
+    if not check_password_hash(user.password, current_password):
         return jsonify({"message": "Current password is incorrect"}), 401
 
     user.password_hash = generate_password_hash(new_password)
