@@ -129,41 +129,47 @@ if __name__ == '__main__':
                 score = None
                 processed_rows = 0
                 logger.info("Starting to process container output...")
-                for line in result.output:
-                    line = line.decode("utf-8").strip()
-                    logger.debug(f"Raw output line: {repr(line)}")
+                for chunk in result.output:
+                    raw = chunk.decode("utf-8")
+                    logger.debug(f"Raw output chunk: {repr(raw)}")
 
-                    # Skip tqdm progress bar lines
-                    if "\r" in line or "%" in line or "it/s" in line:
-                        continue
-
-                    if line.startswith("PROGRESS:"):
-                        try:
-                            rows = int(line.replace("PROGRESS:", "").strip())
-                            processed_rows = rows
-                            if progress_callback:
-                                progress_callback(rows)
-                            logger.debug(f"Progress update: {rows} rows processed")
-                        except ValueError as e:
-                            logger.warning(f"Failed to parse progress value: {e}")
-
-                    if "SCORE:" in line:
-                        logger.info(f"Found score line: {repr(line)}")
-                        try:
-                            score_part = line[line.find("SCORE:") + 6 :]
-                            score = float(score_part.strip())
-                            logger.info(f"Successfully parsed score: {score}")
-                            if progress_callback:
-                                progress_callback(processed_rows, score)
-                        except ValueError as e:
-                            logger.error(
-                                f"Failed to parse score: {e} from line: {repr(line)}"
-                            )
+                    # Split chunk into individual lines
+                    for line in raw.splitlines():
+                        line = line.strip()
+                        if not line:
                             continue
 
-                    elif line.startswith("ERROR:"):
-                        error_msg = line.replace("ERROR:", "").strip()
-                        raise Exception(error_msg)
+                        # Skip tqdm progress bar lines
+                        if "\r" in line or "%" in line or "it/s" in line:
+                            continue
+
+                        if line.startswith("PROGRESS:"):
+                            try:
+                                rows = int(line.replace("PROGRESS:", "").strip())
+                                processed_rows = rows
+                                if progress_callback:
+                                    progress_callback(rows)
+                                logger.debug(f"Progress update: {rows} rows processed")
+                            except ValueError as e:
+                                logger.warning(f"Failed to parse progress value: {e}")
+
+                        if "SCORE:" in line:
+                            logger.info(f"Found score line: {repr(line)}")
+                            try:
+                                score_part = line[line.find("SCORE:") + 6 :]
+                                score = float(score_part.strip())
+                                logger.info(f"Successfully parsed score: {score}")
+                                if progress_callback:
+                                    progress_callback(processed_rows, score)
+                            except ValueError as e:
+                                logger.error(
+                                    f"Failed to parse score: {e} from line: {repr(line)}"
+                                )
+                                continue
+
+                        elif line.startswith("ERROR:"):
+                            error_msg = line.replace("ERROR:", "").strip()
+                            raise Exception(error_msg)
 
                 exit_code = result.exit_code
                 if exit_code is not None and exit_code != 0:
