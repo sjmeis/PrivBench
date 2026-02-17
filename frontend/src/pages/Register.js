@@ -42,15 +42,15 @@ const Register = () => {
 
     const validateForm = () => {
         if (formData.password !== formData.confirmPassword) {
-            setError("Passwords don't match");
+            setError("Passwords don't match. Please try again.");
             return false;
         }
         if (formData.password.length < 6) {
-            setError("Password must be at least 6 characters long");
+            setError("Password must be at least 6 characters long.");
             return false;
         }
         if (formData.username.length < 3) {
-            setError("Username must be at least 3 characters long");
+            setError("Username must be at least 3 characters long.");
             return false;
         }
         return true;

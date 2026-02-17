@@ -16,10 +16,10 @@ import Button from "@mui/joy/Button";
 import CardOverflow from "@mui/joy/CardOverflow";
 import CardActions from "@mui/joy/CardActions";
 import { DeleteForever } from "@mui/icons-material";
-import {updateUser, uploadProfilePicture, deleteProfilePicture} from "../../services/UserService";
+import {updateUser, uploadProfilePicture, deleteProfilePicture, changePassword} from "../../services/UserService";
 import {useSnackbar} from "../../contexts/SnackbarProvider";
 import {useAuth} from "../../contexts/AuthContext";
-import {Cancel, Save} from "@mui/icons-material";
+import {Cancel, Save, LockRounded} from "@mui/icons-material";
 
 const AccountSettings = ({user}) => {
     const [formData, setFormData] = useState({
@@ -33,6 +33,42 @@ const AccountSettings = ({user}) => {
 
     const { showSnackbar } = useSnackbar();
     const { checkAuth } = useAuth()
+
+    const [passwords, setPasswords] = useState({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: ""
+    });
+
+    const handlePasswordChange = (e) => {
+        setPasswords({ ...passwords, [e.target.name]: e.target.value });
+    };
+
+    const updatePassword = async () => {
+        const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
+        
+        if (!passwordRegex.test(passwords.newPassword)) {
+            showSnackbar("Password must be at least 8 characters long and include both letters and numbers.", "error");
+            return;
+        }
+
+        if (passwords.newPassword !== passwords.confirmPassword) {
+            showSnackbar("New passwords do not match", "error");
+            return;
+        }
+
+        try {
+            await changePassword(passwords.currentPassword, passwords.newPassword);
+            showSnackbar("Password updated. You will be logged out for security.", "success");
+            
+            setTimeout(() => {
+                logout();
+            }, 2000);
+            
+        } catch (error) {
+            showSnackbar(error.message, "error");
+        }
+    };
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
@@ -237,6 +273,58 @@ const AccountSettings = ({user}) => {
                             </CardActions>
                         </CardOverflow>
                     </Card>
+                        <Card>
+                    <Box sx={{ mb: 1 }}>
+                        <Typography level="title-md">Change Password</Typography>
+                        <Typography level="body-sm">
+                            Change the password to your account below.
+                        </Typography>
+                    </Box>
+                    <Divider />
+                    <Stack spacing={2} sx={{ my: 1 }}>
+                        <FormControl>
+                            <FormLabel>Current Password</FormLabel>
+                            <Input 
+                                type="password" 
+                                name="currentPassword"
+                                value={passwords.currentPassword}
+                                onChange={handlePasswordChange}
+                                startDecorator={<LockRounded />} 
+                            />
+                        </FormControl>
+                        <FormControl>
+                            <FormLabel>New Password</FormLabel>
+                            <Input 
+                                type="password" 
+                                name="newPassword"
+                                value={passwords.newPassword}
+                                onChange={handlePasswordChange}
+                            />
+                        </FormControl>
+                        <FormControl>
+                            <FormLabel>Confirm New Password</FormLabel>
+                            <Input 
+                                type="password" 
+                                name="confirmPassword"
+                                value={passwords.confirmPassword}
+                                onChange={handlePasswordChange}
+                            />
+                        </FormControl>
+                    </Stack>
+                    <CardOverflow sx={{ borderTop: "1px solid", borderColor: "divider" }}>
+                        <CardActions sx={{ alignSelf: "flex-end", pt: 2 }}>
+                            <Button 
+                                size="sm" 
+                                variant="solid" 
+                                color="primary"
+                                disabled={!passwords.currentPassword || !passwords.newPassword || passwords.newPassword !== passwords.confirmPassword}
+                                onClick={updatePassword}
+                            >
+                                Update Password
+                            </Button>
+                        </CardActions>
+                    </CardOverflow>
+                </Card>
                 </Stack>
             </Box>
         </Stack>

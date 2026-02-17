@@ -47,3 +47,15 @@ export const deleteProfilePicture = async () => {
         throw new Error(error.response?.data?.message || "Failed to delete image");
     }
 };
+
+export const changePassword = async (currentPassword, newPassword) => {
+    try {
+        const response = await axios.post(`${API_BASE_URL}/user/change-password`, {
+            currentPassword,
+            newPassword
+        });
+        return response.data;
+    } catch (error) {
+        throw new Error(error.response?.data?.message || "Failed to update password");
+    }
+};
