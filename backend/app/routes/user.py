@@ -153,7 +153,7 @@ def change_password():
     current_password = data.get('currentPassword')
     new_password = data.get('newPassword')
 
-    if not re.match(r'^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$', new_password):
+    if not re.match(r'^(?=.*[A-Za-z])(?=.*\d).{8,}$', new_password):
         return jsonify({"message": "Password does not meet security requirements"}), 400
 
     user_id = get_jwt_identity()
