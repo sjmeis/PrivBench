@@ -125,6 +125,7 @@ def get_user():
                         "admin": user.admin,
                         "bio": user.bio,
                         "id": user.id,
+                        "profilePicturePath": user.profile_picture_path
                     }
                 }
             ),
