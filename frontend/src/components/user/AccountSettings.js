@@ -103,6 +103,14 @@ const AccountSettings = ({user}) => {
 
     return (
         <Stack spacing={4} sx={{maxWidth: "800px", mx: "auto"}}>
+            <input
+            type="file"
+            accept="image/*"
+            ref={fileInputRef}
+            style={{ display: "none" }}
+            onChange={handleFileChange}
+            />
+
             <Typography level="h4">Account Settings</Typography>
             <Box sx={{flex: 1, width: "100%"}}>
                 <Stack
@@ -129,6 +137,7 @@ const AccountSettings = ({user}) => {
                             sx={{my: 1}}
                         >
                             <Stack direction="column" spacing={1}>
+                            <Box sx={{ position: "relative", width: "fit-content" }}>
                                 <AspectRatio
                                     ratio="1"
                                     maxHeight={200}
@@ -177,6 +186,7 @@ const AccountSettings = ({user}) => {
                                         <DeleteForever />
                                     </IconButton>
                                 )}
+                            </Box>
                             </Stack>
                             <Stack spacing={2} sx={{flexGrow: 1}}>
                                 <Stack spacing={1}>
