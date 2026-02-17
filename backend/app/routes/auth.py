@@ -161,7 +161,7 @@ def logout():
 
 @auth_bp.route('/auth/forgot-password', methods=['POST'])
 def forgot_password():
-    email = request.get_json().get('email')
+    email = request.get_json().get('email').strip()
     user = User.query.filter_by(mail_address=email).first()
 
     if user:
@@ -172,11 +172,10 @@ def forgot_password():
             additional_claims={"reset": True}
         )
         
-        # In production, this link points to your React frontend
         reset_url = f"https://privbench.com/reset-password/{reset_token}"
         
         msg = Message("Password Reset Request",
-                      sender="noreply@privbench.com",
+                      sender="privbench@web.de",
                       recipients=[email])
         msg.body = f"To reset your password, visit the following link: {reset_url}\nIf you did not make this request, simply ignore this email."
         mail.send(msg)
@@ -190,16 +189,14 @@ def reset_password():
     new_password = data.get('newPassword').strip()
 
     try:
-        # Verify token and ensure it's a reset token
         decoded = decode_token(token)
         if not decoded.get('sub') or not decoded.get('reset'):
             return jsonify({"message": "Invalid token type"}), 400
 
-        user = User.query.get(decoded['sub'])
+        user = User.query.get(int(decoded['sub']))
         if not user:
             return jsonify({"message": "User not found"}), 404
 
-        # Validate new password strength
         if not re.match(r'^(?=.*[A-Za-z])(?=.*\d).{8,}$', new_password):
             return jsonify({"message": "Password too weak"}), 400
 
