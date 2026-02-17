@@ -26,15 +26,15 @@ class Submission(db.Model):
         cascade="all, delete-orphan",
     )
     submission_metadata = db.relationship(
-        "SubmissionMetadata", uselist=False, back_populates="submission"
+        "SubmissionMetadata", uselist=False, back_populates="submission", cascade="all, delete-orphan"
     )
     privatized_datasets = db.relationship(
-        "PrivatizedDataset", back_populates="submission", lazy=True
+        "PrivatizedDataset", back_populates="submission", lazy=True, cascade="all, delete-orphan",
     )
     benchmark_scores = db.relationship(
-        "BenchmarkScore", back_populates="submission", lazy=True
+        "BenchmarkScore", back_populates="submission", lazy=True, cascade="all, delete-orphan"
     )
-    tasks = db.relationship("Task", back_populates="submission", lazy=True)
+    tasks = db.relationship("Task", back_populates="submission", lazy=True, cascade="all, delete-orphan")
 
     # Many-to-many relationship with Dataset
     datasets = db.relationship(
