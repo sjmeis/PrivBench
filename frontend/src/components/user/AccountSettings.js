@@ -301,22 +301,22 @@ const AccountSettings = ({user}) => {
                         <FormControl>
                             <FormLabel>Current Password</FormLabel>
                             <Input 
-                                type="password" 
+                                type={showPasswords ? "text" : "password"}
                                 name="currentPassword"
                                 value={passwords.currentPassword}
                                 onChange={handlePasswordChange}
                                 startDecorator={<LockRounded />}
                                 endDecorator={
-                                <IconButton onClick={() => setShowPasswords(!showPasswords)}>
-                                    {showPasswords ? <VisibilityOff /> : <Visibility />}
-                                </IconButton>
-                            } 
+                                    <IconButton onClick={() => setShowPasswords(!showPasswords)}>
+                                        {showPasswords ? <VisibilityOff /> : <Visibility />}
+                                    </IconButton>
+                                } 
                             />
                         </FormControl>
-                        <FormControl>
+                        <FormControl error={passwords.newPassword && !isNewPasswordSecure(passwords.newPassword)}>
                             <FormLabel>New Password</FormLabel>
                             <Input 
-                                type="password" 
+                                type={showPasswords ? "text" : "password"}
                                 name="newPassword"
                                 value={passwords.newPassword}
                                 onChange={handlePasswordChange}
@@ -326,10 +326,10 @@ const AccountSettings = ({user}) => {
                                 At least 8 characters, including 1 letter and 1 number.
                             </FormHelperText>
                         </FormControl>
-                        <FormControl>
+                        <FormControl error={passwords.confirmPassword && passwords.newPassword !== passwords.confirmPassword}>
                             <FormLabel>Confirm New Password</FormLabel>
                             <Input 
-                                type="password" 
+                                type={showPasswords ? "text" : "password"}
                                 name="confirmPassword"
                                 value={passwords.confirmPassword}
                                 onChange={handlePasswordChange}
