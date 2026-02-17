@@ -16,6 +16,11 @@ import Button from "@mui/joy/Button";
 import CardOverflow from "@mui/joy/CardOverflow";
 import CardActions from "@mui/joy/CardActions";
 import { DeleteForever } from "@mui/icons-material";
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
+import InfoOutlined from '@mui/icons-material/InfoOutlined';
+import { HelperText } from '@mui/joy';
+
 import {updateUser, uploadProfilePicture, deleteProfilePicture, changePassword} from "../../services/UserService";
 import {useSnackbar} from "../../contexts/SnackbarProvider";
 import {useAuth} from "../../contexts/AuthContext";
@@ -39,10 +44,14 @@ const AccountSettings = ({user}) => {
         newPassword: "",
         confirmPassword: ""
     });
+    const [showPasswords, setShowPasswords] = useState(false);
+    const [isPasswordLoading, setIsPasswordLoading] = useState(false);
 
     const handlePasswordChange = (e) => {
         setPasswords({ ...passwords, [e.target.name]: e.target.value });
     };
+
+    const isNewPasswordSecure = (pwd) => /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/.test(pwd);
 
     const updatePassword = async () => {
         const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
@@ -57,6 +66,8 @@ const AccountSettings = ({user}) => {
             return;
         }
 
+        setIsPasswordLoading(true);
+
         try {
             await changePassword(passwords.currentPassword, passwords.newPassword);
             showSnackbar("Password updated. You will be logged out for security.", "success");
@@ -66,7 +77,12 @@ const AccountSettings = ({user}) => {
             }, 2000);
             
         } catch (error) {
-            showSnackbar(error.message, "error");
+            setIsPasswordLoading(false);
+            if (error.response?.status === 429) {
+                showSnackbar("Too many attempts. Please wait a minute before trying again.", "error");
+            } else {
+                showSnackbar(error.message, "error");
+            }
         }
     };
 
@@ -289,7 +305,12 @@ const AccountSettings = ({user}) => {
                                 name="currentPassword"
                                 value={passwords.currentPassword}
                                 onChange={handlePasswordChange}
-                                startDecorator={<LockRounded />} 
+                                startDecorator={<LockRounded />}
+                                endDecorator={
+                                <IconButton onClick={() => setShowPasswords(!showPasswords)}>
+                                    {showPasswords ? <VisibilityOff /> : <Visibility />}
+                                </IconButton>
+                            } 
                             />
                         </FormControl>
                         <FormControl>
@@ -300,6 +321,10 @@ const AccountSettings = ({user}) => {
                                 value={passwords.newPassword}
                                 onChange={handlePasswordChange}
                             />
+                            <HelperText sx={{ fontSize: 'xs' }}>
+                                <InfoOutlined sx={{ fontSize: 'sm' }} />
+                                At least 8 characters, including 1 letter and 1 number.
+                            </HelperText>
                         </FormControl>
                         <FormControl>
                             <FormLabel>Confirm New Password</FormLabel>
@@ -309,6 +334,9 @@ const AccountSettings = ({user}) => {
                                 value={passwords.confirmPassword}
                                 onChange={handlePasswordChange}
                             />
+                            {passwords.confirmPassword && passwords.newPassword !== passwords.confirmPassword && (
+                                <HelperText color="danger">Passwords do not match.</HelperText>
+                            )}
                         </FormControl>
                     </Stack>
                     <CardOverflow sx={{ borderTop: "1px solid", borderColor: "divider" }}>
@@ -317,6 +345,7 @@ const AccountSettings = ({user}) => {
                                 size="sm" 
                                 variant="solid" 
                                 color="primary"
+                                loading={isPasswordLoading}
                                 disabled={!passwords.currentPassword || !passwords.newPassword || passwords.newPassword !== passwords.confirmPassword}
                                 onClick={updatePassword}
                             >
