@@ -37,7 +37,7 @@ const AccountSettings = ({user}) => {
     const fileInputRef = useRef(null);  
 
     const { showSnackbar } = useSnackbar();
-    const { checkAuth } = useAuth()
+    const { checkAuth, logout } = useAuth()
 
     const [passwords, setPasswords] = useState({
         currentPassword: "",
@@ -51,10 +51,10 @@ const AccountSettings = ({user}) => {
         setPasswords({ ...passwords, [e.target.name]: e.target.value });
     };
 
-    const isNewPasswordSecure = (pwd) => /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/.test(pwd);
+    const isNewPasswordSecure = (pwd) => /^(?=.*[A-Za-z])(?=.*\d).{8,}$/.test(pwd);
 
     const updatePassword = async () => {
-        const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
+        const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
         
         if (!passwordRegex.test(passwords.newPassword)) {
             showSnackbar("Password must be at least 8 characters long and include both letters and numbers.", "error");
@@ -73,7 +73,7 @@ const AccountSettings = ({user}) => {
             showSnackbar("Password updated. You will be logged out for security.", "success");
             
             setTimeout(() => {
-                checkAuth.logout();
+                logout();
             }, 2000);
             
         } catch (error) {
@@ -313,7 +313,7 @@ const AccountSettings = ({user}) => {
                                 } 
                             />
                         </FormControl>
-                        <FormControl error={passwords.newPassword && !isNewPasswordSecure(passwords.newPassword)}>
+                        <FormControl error={Boolean(passwords.newPassword && !isNewPasswordSecure(passwords.newPassword))}>
                             <FormLabel>New Password</FormLabel>
                             <Input 
                                 type={showPasswords ? "text" : "password"}
@@ -322,8 +322,13 @@ const AccountSettings = ({user}) => {
                                 onChange={handlePasswordChange}
                             />
                             <FormHelperText sx={{ fontSize: 'xs' }}>
-                                <InfoOutlined sx={{ fontSize: 'sm' }} />
-                                At least 8 characters, including 1 letter and 1 number.
+                                <InfoOutlined sx={{ 
+                                    fontSize: 'sm', 
+                                    color: isNewPasswordSecure(passwords.newPassword) ? 'success.plainColor' : 'inherit' 
+                                }} />
+                                <Typography color={isNewPasswordSecure(passwords.newPassword) ? 'success' : 'neutral'}>
+                                    At least 8 characters, including 1 letter and 1 number.
+                                </Typography>
                             </FormHelperText>
                         </FormControl>
                         <FormControl error={passwords.confirmPassword && passwords.newPassword !== passwords.confirmPassword}>
