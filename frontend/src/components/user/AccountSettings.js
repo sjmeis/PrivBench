@@ -60,7 +60,7 @@ const AccountSettings = ({user}) => {
         const trimmedCurrentPassword = passwords.currentPassword.trim();
         const trimmedConfirmPassword = passwords.confirmPassword.trim();
         
-        if (!passwordRegex.test(trimmedNewPassword) {
+        if (!passwordRegex.test(trimmedNewPassword)) {
             showSnackbar("Password must be at least 8 characters long and include both letters and numbers.", "error");
             return;
         }
