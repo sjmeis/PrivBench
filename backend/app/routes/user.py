@@ -11,7 +11,8 @@ from werkzeug.utils import secure_filename
 
 user_bp = Blueprint("user", __name__)
 
-UPLOAD_FOLDER = os.path.join(current_app.root_path, 'static', 'uploads', 'profile_pics')
+BASE_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads', 'profile_pics')
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
 def allowed_file(filename):
@@ -20,6 +21,9 @@ def allowed_file(filename):
 @user_bp.route('/user/profile-picture', methods=['POST'])
 @jwt_required()
 def upload_profile_picture():
+    if not os.path.exists(UPLOAD_FOLDER):
+        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
     try:
         user_id = get_jwt_identity()
         user = User.query.get(user_id)
