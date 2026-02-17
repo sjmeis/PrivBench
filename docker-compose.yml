@@ -86,6 +86,8 @@ services:
       - "80"
     environment:
       - REACT_APP_API_URL=https://privbench.com/api
+    volumes:
+      - ./backend/static/uploads:/app/static/uploads:ro
 
   nginx:
     image: nginx:latest
