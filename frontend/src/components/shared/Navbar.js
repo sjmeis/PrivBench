@@ -204,11 +204,13 @@ const Navbar = () => {
               <Dropdown>
                 <MenuButton
                   endDecorator={
+                    <Tooltip title={user?.username || "Account"} variant="soft">
                     <Avatar
                       sx={{ maxWidth: 28, maxHeight: 28 }}
                       size="sm"
-                      src={getGravatarUrl(user.mailAddress)}
+                      src={getProfileImage()}
                     />
+                    </Tooltip>
                   }
                   variant="soft"
                   color="primary"
