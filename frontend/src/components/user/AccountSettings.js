@@ -4,10 +4,14 @@ import Box from "@mui/joy/Box";
 import Stack from "@mui/joy/Stack";
 import Card from "@mui/joy/Card";
 import Divider from "@mui/joy/Divider";
+import Modal from "@mui/joy/Modal";
+import ModalDialog from "@mui/joy/ModalDialog";
+import ModalClose from "@mui/joy/ModalClose";
 import AspectRatio from "@mui/joy/AspectRatio";
 import {getGravatarUrl} from "../../utils/Gravatar";
 import IconButton from "@mui/joy/IconButton";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
+import WarningRounded from "@mui/icons-material/WarningRounded";
 import FormLabel from "@mui/joy/FormLabel";
 import FormControl from "@mui/joy/FormControl";
 import Input from "@mui/joy/Input";
@@ -20,6 +24,8 @@ import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import InfoOutlined from '@mui/icons-material/InfoOutlined';
 import { FormHelperText } from '@mui/joy';
+import axios from 'axios';
+import { API_BASE_URL } from '../config';
 
 import {updateUser, uploadProfilePicture, deleteProfilePicture, changePassword} from "../../services/UserService";
 import {useSnackbar} from "../../contexts/SnackbarProvider";
@@ -39,6 +45,10 @@ const AccountSettings = ({user}) => {
     const { showSnackbar } = useSnackbar();
     const { checkAuth, logout } = useAuth()
 
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [confirmText, setConfirmText] = useState("");
+
     const [passwords, setPasswords] = useState({
         currentPassword: "",
         newPassword: "",
@@ -46,6 +56,24 @@ const AccountSettings = ({user}) => {
     });
     const [showPasswords, setShowPasswords] = useState(false);
     const [isPasswordLoading, setIsPasswordLoading] = useState(false);
+
+    const closeDeleteModal = () => {
+        setIsDeleteModalOpen(false);
+        setConfirmText("");
+    };
+
+    const handleDeleteAccount = async () => {
+        setIsDeleting(true);
+        try {
+            await axios.delete(`${API_BASE_URL}/user/delete-account`);
+            showSnackbar("Your account has been permanently deleted.", "success");
+            logout();
+        } catch (error) {
+            showSnackbar("Failed to delete account. Please try again.", "error");
+            setIsDeleting(false);
+            closeDeleteModal();
+        }
+    };
 
     const handlePasswordChange = (e) => {
         setPasswords({ ...passwords, [e.target.name]: e.target.value });
@@ -363,6 +391,68 @@ const AccountSettings = ({user}) => {
                         </CardActions>
                     </CardOverflow>
                 </Card>
+
+                <Card variant="soft" color="danger">
+                    <Box>
+                        <Typography level="title-md" color="danger">Danger Zone</Typography>
+                        <Typography level="body-sm">
+                            Deleting your account is permanent and cannot be undone.
+                        </Typography>
+                    </Box>
+                    <Divider />
+                    <CardActions sx={{ alignSelf: 'flex-start', pt: 1 }}>
+                        <Button 
+                            variant="solid" 
+                            color="danger" 
+                            onClick={() => setIsDeleteModalOpen(true)}
+                        >
+                            Delete Account
+                        </Button>
+                    </CardActions>
+                </Card>
+                <Modal open={isDeleteModalOpen} onClose={closeDeleteModal}>
+                    <ModalDialog variant="outlined" role="alertdialog" sx={{ maxWidth: 400 }}>
+                        <ModalClose />
+                        <Typography level="h4" startDecorator={<WarningRounded color="danger" />}>
+                            Are you absolutely sure?
+                        </Typography>
+                        <Divider />
+                        <Stack spacing={2}>
+                            <Typography level="body-md">
+                                This action **cannot** be undone. This will permanently delete your profile, 
+                                submissions, and all associated data.
+                            </Typography>
+                            
+                            <FormControl>
+                                <FormLabel>
+                                    Please type <b>DELETE</b> to confirm.
+                                </FormLabel>
+                                <Input 
+                                    placeholder="DELETE"
+                                    value={confirmText}
+                                    onChange={(e) => setConfirmText(e.target.value)}
+                                    color={confirmText === "DELETE" ? "success" : "neutral"}
+                                    autoFocus
+                                />
+                            </FormControl>
+                        </Stack>
+                        
+                        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end', pt: 2 }}>
+                            <Button variant="plain" color="neutral" onClick={closeDeleteModal}>
+                                Cancel
+                            </Button>
+                            <Button 
+                                variant="solid" 
+                                color="danger" 
+                                loading={isDeleting} 
+                                disabled={confirmText !== "DELETE"} 
+                                onClick={handleDeleteAccount}
+                            >
+                                Permanently Delete
+                            </Button>
+                        </Box>
+                    </ModalDialog>
+                </Modal>
                 </Stack>
             </Box>
         </Stack>

@@ -15,7 +15,7 @@ class User(db.Model):
     profile_picture_path = db.Column(db.String(255), nullable=True)
 
     # One-to-many relationship with Submission
-    submissions = db.relationship('Submission', back_populates='user', lazy=True)
+    submissions = db.relationship('Submission', back_populates='user', cascade="all, delete-orphan", lazy=True)
 
     def __init__(self, username, password, mail_address, research_institute, badges=None, admin=False, bio=""):
         self.username = username
