@@ -25,6 +25,8 @@ import { SnackbarProvider } from "./contexts/SnackbarProvider";
 import VersionHistory from "./pages/VersionHistory";
 import Imprint from "./pages/Imprint";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 
 function App() {
   return (
@@ -46,6 +48,8 @@ function App() {
                 <Route path="/" element={<Home />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/rankings" element={<Rankings />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} /> 
+                <Route path="/reset-password/:token" element={<ResetPassword />} />
                 <Route
                   path="/rankings/detail"
                   element={<RankingDetailView />}
