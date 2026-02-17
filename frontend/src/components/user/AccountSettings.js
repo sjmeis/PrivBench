@@ -25,7 +25,7 @@ import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import InfoOutlined from '@mui/icons-material/InfoOutlined';
 import { FormHelperText } from '@mui/joy';
 import axios from 'axios';
-import { API_BASE_URL } from '../config';
+import { API_BASE_URL } from '../../config';
 
 import {updateUser, uploadProfilePicture, deleteProfilePicture, changePassword} from "../../services/UserService";
 import {useSnackbar} from "../../contexts/SnackbarProvider";
