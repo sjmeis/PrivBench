@@ -96,6 +96,7 @@ class BenchmarkService:
             )
             # Track the temp directory for cleanup
             import os
+
             combined_dir = os.path.dirname(dataset_path)
 
             # Load datasets to get total row count
@@ -174,6 +175,10 @@ class BenchmarkService:
                 .values(
                     submission_id=submission_id,
                     module_id=module_id,
+                    # NOTE: privatized_dataset_id is intentionally set to None.
+                    # Modules can now use multiple datasets, and dataset lineage
+                    # is tracked via the new multi-dataset mechanism instead of
+                    # this deprecated column on BenchmarkScore.
                     privatized_dataset_id=None,
                     score=float(score),
                     created_at=datetime.utcnow(),
