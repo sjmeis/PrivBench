@@ -67,6 +67,11 @@ const Navbar = () => {
     alignItems: "center",
   };
 
+  const getProfileImage = () => {
+        if (!user) return ""; 
+        return user.profilePicturePath || getGravatarUrl(user.mailAddress);
+    };
+
   // Avoid returning early before hooks are called
   const isLightMode = mode === "light";
 
@@ -224,10 +229,12 @@ const Navbar = () => {
                     onClick={() => navigate("/profile", { state: "account" })}
                   >
                     <Box sx={{ display: "flex", alignItems: "center" }}>
-                      <Avatar
-                        src={getGravatarUrl(user.mailAddress)}
-                        sx={{ borderRadius: "50%" }}
-                      />
+                      <Tooltip title={user?.username || "Account"} variant="soft">
+                          <Avatar
+                            src={getProfileImage()}
+                            sx={{ borderRadius: "50%" }}
+                          />
+                      </Tooltip>
                       <Box sx={{ ml: 1.5 }}>
                         <Typography level="title-sm" textColor="text.primary">
                           {user.username}
