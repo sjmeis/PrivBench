@@ -14,6 +14,10 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import {Login, PersonAdd} from "@mui/icons-material";
 import MainLayout from "../components/layout/MainLayout";
+import { FormHelperText, IconButton } from '@mui/joy';
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
+import InfoOutlined from '@mui/icons-material/InfoOutlined';
 
 const Register = () => {
     const [formData, setFormData] = useState({
@@ -25,6 +29,9 @@ const Register = () => {
     });
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+
+    const isPasswordSecure = (pwd) => /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/.test(pwd);
     
     const navigate = useNavigate();
     const location = useLocation();
@@ -41,6 +48,10 @@ const Register = () => {
     };
 
     const validateForm = () => {
+        if (!isPasswordSecure(formData.password)) {
+            setError("Password must be at least 8 characters long and include both letters and numbers.");
+            return false;
+        }
         if (formData.password !== formData.confirmPassword) {
             setError("Passwords don't match. Please try again.");
             return false;
@@ -141,15 +152,25 @@ const Register = () => {
                             autoComplete="username"
                         />
                     </FormControl>
-                    <FormControl required>
+                    <FormControl required error={formData.password.length > 0 && !isPasswordSecure(formData.password)}>
                         <FormLabel>Password</FormLabel>
                         <Input
                             name="password"
-                            type="password"
+                            type={showPassword ? "text" : "password"}
                             value={formData.password}
+                            placeholder="••••••••"
                             onChange={handleInputChange}
                             autoComplete="new-password"
+                            endDecorator={
+                                <IconButton onClick={() => setShowPassword(!showPassword)}>
+                                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                                </IconButton>
+                            }
                         />
+                        <FormHelperText sx={{ fontSize: 'xs' }}>
+                            <InfoOutlined sx={{ fontSize: 'sm' }} />
+                            At least 8 characters, including 1 letter and 1 number.
+                        </FormHelperText>
                     </FormControl>
 
                     <FormControl required>

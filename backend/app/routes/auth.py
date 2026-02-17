@@ -24,6 +24,10 @@ def register():
 
         if not all(k in data for k in ["username", "mailAddress", "password"]):
             return jsonify({"message": "All fields are required!"}), 400
+        
+        password = data.get('password')
+        if not re.match(r'^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$', password):
+            return jsonify({"message": "Password is too weak."}), 400
 
         # Validate username length and format if needed
         username = data["username"].strip()
