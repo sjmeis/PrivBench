@@ -19,7 +19,7 @@ import { DeleteForever } from "@mui/icons-material";
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import InfoOutlined from '@mui/icons-material/InfoOutlined';
-import { HelperText } from '@mui/joy';
+import { FormHelperText } from '@mui/joy';
 
 import {updateUser, uploadProfilePicture, deleteProfilePicture, changePassword} from "../../services/UserService";
 import {useSnackbar} from "../../contexts/SnackbarProvider";
@@ -321,10 +321,10 @@ const AccountSettings = ({user}) => {
                                 value={passwords.newPassword}
                                 onChange={handlePasswordChange}
                             />
-                            <HelperText sx={{ fontSize: 'xs' }}>
+                            <FormHelperText sx={{ fontSize: 'xs' }}>
                                 <InfoOutlined sx={{ fontSize: 'sm' }} />
                                 At least 8 characters, including 1 letter and 1 number.
-                            </HelperText>
+                            </FormHelperText>
                         </FormControl>
                         <FormControl>
                             <FormLabel>Confirm New Password</FormLabel>
@@ -335,7 +335,7 @@ const AccountSettings = ({user}) => {
                                 onChange={handlePasswordChange}
                             />
                             {passwords.confirmPassword && passwords.newPassword !== passwords.confirmPassword && (
-                                <HelperText color="danger">Passwords do not match.</HelperText>
+                                <FormHelperText color="danger">Passwords do not match.</FormHelperText>
                             )}
                         </FormControl>
                     </Stack>
