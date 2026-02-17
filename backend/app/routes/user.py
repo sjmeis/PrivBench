@@ -162,7 +162,7 @@ def change_password():
     if not check_password_hash(user.password, current_password):
         return jsonify({"message": "Current password is incorrect"}), 401
 
-    user.password_hash = generate_password_hash(new_password)
+    user.password = generate_password_hash(new_password)
     db.session.commit()
 
     return jsonify({"message": "Password updated successfully"}), 200
