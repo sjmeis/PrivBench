@@ -13,6 +13,7 @@ services:
       - ./modules:/app/modules
       - ./benchmarks:/app/benchmarks
       - /var/run/docker.sock:/var/run/docker.sock
+      - ./backend/static/uploads:/app/static/uploads
     user: root
     environment:
       - PYTHONPATH=/app
