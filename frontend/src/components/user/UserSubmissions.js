@@ -181,8 +181,7 @@ const UserSubmissions = () => {
                   Overview of submissions
                 </Typography>
                 <Typography level="body-sm">
-                  Make Submission Public to visualize them on the leaderboard
-                  and earn badges
+                  Make your submissions public to include them on the leaderboard.
                 </Typography>
               </Box>
               <Divider />

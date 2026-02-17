@@ -77,7 +77,7 @@ const PublicProfileEdit = ({user}) => {
                     <Box sx={{ mb: 1 }}>
                         <Typography level="title-md">Bio</Typography>
                         <Typography level="body-sm">
-                            Write a short introduction to be displayed on your profile
+                            Write a short introduction to be displayed on your profile.
                         </Typography>
                     </Box>
                     <Divider />
