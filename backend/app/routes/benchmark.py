@@ -15,7 +15,6 @@ from ..models import (
     AppVersion,
     SubmissionVersionScore,
     ModuleUpdate,
-    ModuleDatasetChoice,
 )
 from ..enums import SubmissionStatus
 from datetime import datetime
@@ -47,22 +46,21 @@ def _compute_modules_to_update(submission: Submission):
             .first()
         )
 
+        # Collect compatible dataset info for this module
+        compat_datasets = module.compatible_datasets
+        dataset_ids = [ds.id for ds in compat_datasets]
+        dataset_names = [ds.name for ds in compat_datasets]
+
         if not score:
-            # New module for this submission — check user's dataset choice
-            choice = (
-                db.session.query(ModuleDatasetChoice)
-                .filter_by(submission_id=submission.id, module_id=module.id)
-                .first()
-            )
-            dataset = Dataset.query.get(choice.dataset_id) if choice else None
+            # New module for this submission
             results.append(
                 {
                     "module_id": module.id,
                     "module_name": module.name,
                     "reason": "new",
                     "requires_dataset_upload": True,
-                    "dataset_id": dataset.id if dataset else None,
-                    "dataset_name": dataset.name if dataset else None,
+                    "dataset_ids": dataset_ids,
+                    "dataset_names": dataset_names,
                 }
             )
             continue
@@ -115,20 +113,14 @@ def _compute_modules_to_update(submission: Submission):
             reasons.append("modified")
 
         if reasons:
-            choice = (
-                db.session.query(ModuleDatasetChoice)
-                .filter_by(submission_id=submission.id, module_id=module.id)
-                .first()
-            )
-            dataset = Dataset.query.get(choice.dataset_id) if choice else None
             results.append(
                 {
                     "module_id": module.id,
                     "module_name": module.name,
                     "reasons": reasons,
                     "requires_dataset_upload": has_dataset_update,
-                    "dataset_id": dataset.id if dataset else None,
-                    "dataset_name": dataset.name if dataset else None,
+                    "dataset_ids": dataset_ids,
+                    "dataset_names": dataset_names,
                 }
             )
 
@@ -231,30 +223,24 @@ def benchmark():
         for module in benchmark_modules:
             logger.info(f"Processing module: {module.name}")
 
-            # Look up the user's dataset choice for this module
-            choice = (
-                db.session.query(ModuleDatasetChoice)
-                .filter_by(submission_id=submission.id, module_id=module.id)
-                .first()
-            )
-            if not choice:
-                logger.error(f"No dataset choice found for module {module.name}")
-                continue
-
-            dataset = db.session.query(Dataset).filter_by(id=choice.dataset_id).first()
-            if not dataset:
-                logger.error(f"Dataset not found for module {module.name}")
-                continue
-
-            privatized_dataset = (
-                db.session.query(PrivatizedDataset)
-                .filter_by(
-                    submission_id=submission.id, original_dataset_id=choice.dataset_id
+            # Verify all compatible datasets have a matching privatized dataset
+            missing_datasets = []
+            for compat_ds in module.compatible_datasets:
+                priv = (
+                    db.session.query(PrivatizedDataset)
+                    .filter_by(
+                        submission_id=submission.id,
+                        original_dataset_id=compat_ds.id,
+                    )
+                    .first()
                 )
-                .first()
-            )
-            if not privatized_dataset:
-                logger.error(f"Privatized dataset not found for module {module.name}")
+                if not priv:
+                    missing_datasets.append(compat_ds.name)
+
+            if missing_datasets:
+                logger.error(
+                    f"Missing privatized datasets for module {module.name}: {missing_datasets}"
+                )
                 continue
 
             # Add submission to queue for this module
@@ -288,7 +274,7 @@ def benchmark():
                         f"Starting immediate processing for module {module.name} at position 1"
                     )
                     task_result = BenchmarkService.process_module_queue_entry(
-                        queue_entry, module, dataset, privatized_dataset
+                        queue_entry, module
                     )
                     if task_result:
                         immediate_tasks.append(task_result)
@@ -605,25 +591,24 @@ def benchmark_update():
             if not module:
                 continue
 
-            choice = (
-                db.session.query(ModuleDatasetChoice)
-                .filter_by(submission_id=submission_id, module_id=module.id)
-                .first()
-            )
-            dataset = Dataset.query.get(choice.dataset_id) if choice else None
-
-            privatized_dataset = None
-            if dataset:
-                privatized_dataset = PrivatizedDataset.query.filter_by(
-                    submission_id=submission_id, original_dataset_id=dataset.id
-                ).first()
-
-            # If dataset upload is required, ensure privatized dataset exists
-            if info["requires_dataset_upload"] and not privatized_dataset:
-                logger.warning(
-                    f"Required privatized dataset missing for submission {submission_id}, module {module.id}"
+            # Verify all compatible datasets have a matching privatized dataset
+            missing_datasets = []
+            for compat_ds in module.compatible_datasets:
+                priv = (
+                    db.session.query(PrivatizedDataset)
+                    .filter_by(
+                        submission_id=submission_id,
+                        original_dataset_id=compat_ds.id,
+                    )
+                    .first()
                 )
-                # Skip queueing this module
+                if not priv:
+                    missing_datasets.append(compat_ds.name)
+
+            if info.get("requires_dataset_upload") and missing_datasets:
+                logger.warning(
+                    f"Required privatized dataset missing for submission {submission_id}, module {module.id}: {missing_datasets}"
+                )
                 continue
 
             queue_entry = QueueService.add_to_queue(
@@ -649,7 +634,7 @@ def benchmark_update():
 
             if position_info and position_info.get("position") == 1:
                 task_result = BenchmarkService.process_module_queue_entry(
-                    queue_entry, module, dataset, privatized_dataset
+                    queue_entry, module
                 )
                 if task_result:
                     immediate_tasks.append(task_result)
