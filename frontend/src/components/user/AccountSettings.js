@@ -62,7 +62,7 @@ const AccountSettings = ({user}) => {
             showSnackbar("Password updated. You will be logged out for security.", "success");
             
             setTimeout(() => {
-                logout();
+                checkAuth.logout();
             }, 2000);
             
         } catch (error) {
