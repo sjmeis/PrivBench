@@ -11,8 +11,9 @@ from werkzeug.utils import secure_filename
 
 user_bp = Blueprint("user", __name__)
 
-BASE_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
-UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads', 'profile_pics')
+#BASE_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+#UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads', 'profile_pics')
+UPLOAD_FOLDER = '/app/static/uploads/profile_pics'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
 def allowed_file(filename):
