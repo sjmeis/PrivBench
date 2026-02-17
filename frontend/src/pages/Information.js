@@ -68,17 +68,17 @@ const Information = () => {
     {
       title: "Download Datasets",
       description:
-        "Start by downloading datasets from our platform containing sensitive personal data.",
+        "Start by downloading the datasets provided by our platform.",
     },
     {
       title: "Fill Metadata Form",
       description:
-        "Complete a metadata form detailing the chosen data privatization technique.",
+        "Complete a metadata form detailing the text privatization technique you would like to benchmark.",
     },
     {
-      title: "Apply Data Privatization",
+      title: "Apply Text Privatization",
       description:
-        "Apply your own data privatization algorithm to the downloaded datasets.",
+        "Apply your own text privatization method to the downloaded datasets (text column only).",
     },
     {
       title: "Upload Privatized Data",
@@ -88,7 +88,7 @@ const Information = () => {
     {
       title: "Evaluation",
       description:
-        "Our platform evaluates the privatized datasets to assess privacy preservation and data utility.",
+        "Our platform evaluates the privatized datasets to assess privacy preservation and data utility holistically.",
     },
   ];
 

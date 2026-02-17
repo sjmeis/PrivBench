@@ -23,6 +23,8 @@ import AdminView from "./pages/AdminView";
 import ProtectedRoutesAdmin from "./routes/ProtectedRoutesAdmin";
 import { SnackbarProvider } from "./contexts/SnackbarProvider";
 import VersionHistory from "./pages/VersionHistory";
+import Imprint from "./pages/Imprint";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 
 function App() {
   return (
@@ -50,6 +52,8 @@ function App() {
                 />
                 <Route path="/information" element={<Information />} />
                 <Route path="/register" element={<Register />} />
+                <Route path="/imprint" element={<Imprint />} />
+                <Route path="/privacy" element={<PrivacyPolicy />} />
 
                 <Route element={<ProtectedRoutesAdmin />}>
                   <Route path="/admin" element={<AdminView />} />
