@@ -166,3 +166,27 @@ def change_password():
     db.session.commit()
 
     return jsonify({"message": "Password updated successfully"}), 200
+
+@user_bp.route('/user/delete-account', methods=['DELETE'])
+@jwt_required()
+def delete_account():
+    try:
+        user_id = get_jwt_identity()
+        user = User.query.get(user_id)
+
+        if not user:
+            return jsonify({"message": "User not found"}), 404
+
+        if user.profile_picture_path:
+            file_path = os.path.join(current_app.root_path, user.profile_picture_path.lstrip('/'))
+            if os.path.exists(file_path):
+                os.remove(file_path)
+
+        db.session.delete(user)
+        db.session.commit()
+
+        return jsonify({"message": "Account deleted successfully"}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": "Error deleting account", "error": str(e)}), 500
