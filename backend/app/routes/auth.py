@@ -159,7 +159,7 @@ def logout():
         current_app.logger.error(f"Logout error: {str(e)}")
         return jsonify({"message": "Logout failed!"}), 500
 
-@auth_bp.route('/forgot-password', methods=['POST'])
+@auth_bp.route('/auth/forgot-password', methods=['POST'])
 def forgot_password():
     email = request.get_json().get('email')
     user = User.query.filter_by(mail_address=email).first()
@@ -183,7 +183,7 @@ def forgot_password():
 
     return jsonify({"message": "If that email exists, a reset link has been sent."}), 200
 
-@auth_bp.route('/reset-password', methods=['POST'])
+@auth_bp.route('/auth/reset-password', methods=['POST'])
 def reset_password():
     data = request.get_json()
     token = data.get('token')
