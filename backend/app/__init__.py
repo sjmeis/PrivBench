@@ -7,13 +7,13 @@ from celery import Celery
 
 from .utils.container_manager import container_manager
 from .config import Config
-from .extensions import db
+from .extensions import db, mail
 import logging
 import os
 
 jwt = JWTManager()
 migrate = Migrate()
-mail = Mail()
+#mail = Mail()
 
 
 def make_celery(app):

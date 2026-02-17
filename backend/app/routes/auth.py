@@ -5,8 +5,14 @@ from flask_jwt_extended import (
     jwt_required,
     set_access_cookies,
     unset_jwt_cookies,
+    decode_token
 )
-from werkzeug.security import check_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
+
+from datetime import timedelta
+from flask_mail import Message
+from ..extensions import mail
+
 from ..models.user import User
 from .. import db
 import re
@@ -152,3 +158,54 @@ def logout():
     except Exception as e:
         current_app.logger.error(f"Logout error: {str(e)}")
         return jsonify({"message": "Logout failed!"}), 500
+
+@auth_bp.route('/forgot-password', methods=['POST'])
+def forgot_password():
+    email = request.get_json().get('email')
+    user = User.query.filter_by(mail_address=email).first()
+
+    if user:
+        # Create a reset token valid for 15 minutes
+        reset_token = create_access_token(
+            identity=str(user.id), 
+            expires_delta=timedelta(minutes=15),
+            additional_claims={"reset": True}
+        )
+        
+        # In production, this link points to your React frontend
+        reset_url = f"https://privbench.com/reset-password/{reset_token}"
+        
+        msg = Message("Password Reset Request",
+                      sender="noreply@privbench.com",
+                      recipients=[email])
+        msg.body = f"To reset your password, visit the following link: {reset_url}\nIf you did not make this request, simply ignore this email."
+        mail.send(msg)
+
+    return jsonify({"message": "If that email exists, a reset link has been sent."}), 200
+
+@auth_bp.route('/reset-password', methods=['POST'])
+def reset_password():
+    data = request.get_json()
+    token = data.get('token')
+    new_password = data.get('newPassword').strip()
+
+    try:
+        # Verify token and ensure it's a reset token
+        decoded = decode_token(token)
+        if not decoded.get('sub') or not decoded.get('reset'):
+            return jsonify({"message": "Invalid token type"}), 400
+
+        user = User.query.get(decoded['sub'])
+        if not user:
+            return jsonify({"message": "User not found"}), 404
+
+        # Validate new password strength
+        if not re.match(r'^(?=.*[A-Za-z])(?=.*\d).{8,}$', new_password):
+            return jsonify({"message": "Password too weak"}), 400
+
+        user.password = generate_password_hash(new_password)
+        db.session.commit()
+        return jsonify({"message": "Password has been reset successfully!"}), 200
+
+    except Exception:
+        return jsonify({"message": "The reset link is invalid or has expired."}), 400
