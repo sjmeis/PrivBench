@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link as RouterLink } from 'react-router-dom';
 import {
     Box,
     Typography,
@@ -9,7 +9,8 @@ import {
     Button,
     Alert,
     Stack,
-    Divider
+    Divider,
+    Link
 } from "@mui/joy";
 import {Login as LoginIcon, PersonAdd} from "@mui/icons-material";
 import { useAuth } from '../contexts/AuthContext';
@@ -104,7 +105,18 @@ const Login = () => {
                     </FormControl>
 
                     <FormControl required>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <FormLabel>Password</FormLabel>
+                        <Link
+                            component={RouterLink}
+                            to="/forgot-password"
+                            level="body-xs"
+                            underline="hover"
+                            sx={{ fontWeight: 'md' }}
+                            >
+                            Forgot password?
+                        </Link>
+                        </Box>
                         <Input
                             name="password"
                             type="password"
