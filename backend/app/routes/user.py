@@ -8,6 +8,7 @@ from .. import db
 import re
 import os
 from werkzeug.utils import secure_filename
+from werkzeug.security import generate_password_hash, check_password_hash
 
 user_bp = Blueprint("user", __name__)
 
@@ -144,3 +145,24 @@ def update_user():
             "error": "An error occurred while updating the user!",
             "details": str(e)
         }), 500
+
+@user_bp.route('/user/change-password', methods=['POST'])
+@jwt_required()
+def change_password():
+    data = request.get_json()
+    current_password = data.get('currentPassword')
+    new_password = data.get('newPassword')
+
+    if not re.match(r'^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$', new_password):
+        return jsonify({"message": "Password does not meet security requirements"}), 400
+
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+
+    if not check_password_hash(user.password_hash, current_password):
+        return jsonify({"message": "Current password is incorrect"}), 401
+
+    user.password_hash = generate_password_hash(new_password)
+    db.session.commit()
+
+    return jsonify({"message": "Password updated successfully"}), 200
