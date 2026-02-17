@@ -23,3 +23,27 @@ export const updateUser = async (userData) => {
     }
 };
 
+export const uploadProfilePicture = async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+        const response = await axios.post(`${API_BASE_URL}/user/profile-picture`, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+        return response.data;
+    } catch (error) {
+        throw new Error(error.response?.data?.message || "Failed to upload image");
+    }
+};
+
+export const deleteProfilePicture = async () => {
+    try {
+        const response = await axios.delete(`${API_BASE_URL}/user/profile-picture`);
+        return response.data;
+    } catch (error) {
+        throw new Error(error.response?.data?.message || "Failed to delete image");
+    }
+};

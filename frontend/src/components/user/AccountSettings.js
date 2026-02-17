@@ -1,4 +1,4 @@
-import React, {useState} from "react";
+import React, {useState, useRef} from "react";
 import Typography from "@mui/joy/Typography";
 import Box from "@mui/joy/Box";
 import Stack from "@mui/joy/Stack";
@@ -15,7 +15,8 @@ import EmailRoundedIcon from "@mui/icons-material/EmailRounded";
 import Button from "@mui/joy/Button";
 import CardOverflow from "@mui/joy/CardOverflow";
 import CardActions from "@mui/joy/CardActions";
-import {updateUser} from "../../services/UserService";
+import { DeleteForever } from "@mui/icons-material";
+import {updateUser, uploadProfilePicture, deleteProfilePicture} from "../../services/UserService";
 import {useSnackbar} from "../../contexts/SnackbarProvider";
 import {useAuth} from "../../contexts/AuthContext";
 import {Cancel, Save} from "@mui/icons-material";
@@ -26,14 +27,44 @@ const AccountSettings = ({user}) => {
         mailAddress: user.mailAddress,
     });
 
+    const [previewUrl, setPreviewUrl] = useState(null);
+    const [selectedFile, setSelectedFile] = useState(null);
+    const fileInputRef = useRef(null);  
+
     const { showSnackbar } = useSnackbar();
     const { checkAuth } = useAuth()
 
-    const updateUserInfo = async () => {
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setSelectedFile(file);
+            // Create a local URL for the preview
+            const reader = new FileReader();
+            reader.onloadend = () => setPreviewUrl(reader.result);
+            reader.readAsDataURL(file);
+        }
+    };
 
+    const handleDeletePicture = async () => {
         try {
+            await deleteProfilePicture();
+            showSnackbar("Profile picture removed", "success");
+            setPreviewUrl(null); // Clear any local preview
+            checkAuth(); // Refresh global user state
+        } catch (error) {
+            showSnackbar(error.message, "error");
+        }
+    };
+
+    const updateUserInfo = async () => {
+        try {
+            if (selectedFile) {
+                await uploadProfilePicture(selectedFile);
+            }
+
             await updateUser({...formData, bio: user.bio});
             showSnackbar("User updated successfully", 'success')
+            setSelectedFile(null); // Reset file state
             checkAuth()
         } catch (error) {
             showSnackbar(error.message, 'error')
@@ -45,14 +76,16 @@ const AccountSettings = ({user}) => {
     }
 
     const isFormValid = () => {
-        return formData.mailAddress && !isFormUntouched();
-    }
+        return (formData.mailAddress && !isFormUntouched()) || selectedFile !== null;
+    };
 
     const resetForm = () => {
         setFormData({
             researchInstitute: user.researchInstitute,
             mailAddress: user.mailAddress,
         })
+        setPreviewUrl(null);
+        setSelectedFile(null);
     }
 
 
@@ -102,14 +135,14 @@ const AccountSettings = ({user}) => {
                                     sx={{flex: 1, minWidth: 120, borderRadius: "100%"}}
                                 >
                                     <img
-                                        src={getGravatarUrl(user.mailAddress)}
+                                        src={previewUrl || user.profilePicturePath || getGravatarUrl(user.mailAddress)}
                                         loading="lazy"
-                                        alt=""
+                                        alt="Profile"
                                     />
                                 </AspectRatio>
-                                {/*//fixme: implement logic for updating profile picture*/}
                                 <IconButton
-                                    aria-label="upload new picture"
+                                    onClick={() => fileInputRef.current.click()} // Open file picker
+                                    aria-label="Upload new profile picture"
                                     size="sm"
                                     variant="outlined"
                                     color="neutral"
@@ -118,13 +151,32 @@ const AccountSettings = ({user}) => {
                                         position: "absolute",
                                         zIndex: 2,
                                         borderRadius: "50%",
-                                        left: 100,
-                                        top: 170,
+                                        right: 0,
+                                        bottom: 0,
                                         boxShadow: "sm",
                                     }}
                                 >
-                                    <EditRoundedIcon/>
+                                    <EditRoundedIcon />
                                 </IconButton>
+                                {(user.profile_picture_path || previewUrl) && (
+                                    <IconButton
+                                        onClick={handleDeletePicture}
+                                        size="sm"
+                                        variant="outlined"
+                                        color="danger"
+                                        sx={{
+                                            bgcolor: "background.body",
+                                            position: "absolute",
+                                            zIndex: 2,
+                                            borderRadius: "50%",
+                                            left: 15,
+                                            bottom: 0,
+                                            boxShadow: "sm",
+                                        }}
+                                    >
+                                        <DeleteForever />
+                                    </IconButton>
+                                )}
                             </Stack>
                             <Stack spacing={2} sx={{flexGrow: 1}}>
                                 <Stack spacing={1}>

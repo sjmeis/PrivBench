@@ -12,6 +12,7 @@ class User(db.Model):
     research_institute = db.Column(db.String(120), nullable=True)
     admin = db.Column(db.Boolean, default=False, nullable=False)
     bio = db.Column(db.String(400), nullable=True)
+    profile_picture_path = db.Column(db.String(255), nullable=True)
 
     # One-to-many relationship with Submission
     submissions = db.relationship('Submission', back_populates='user', lazy=True)
