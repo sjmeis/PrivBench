@@ -26,9 +26,6 @@ const Footer = () => {
           textAlign: "center",
         }}
       >
-        <Typography level="body2" textColor="text.primary">
-          {"·"}
-        </Typography>
         <Link
           component="button"
           onClick={() => navigate("/imprint")}
@@ -44,6 +41,9 @@ const Footer = () => {
         >
           Imprint
         </Link>
+        <Typography level="body2" textColor="text.primary">
+          {"·"}
+        </Typography>
         <Link
           href="https://www.cs.cit.tum.de/sebis/"
           target="_blank"
