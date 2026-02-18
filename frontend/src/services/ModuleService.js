@@ -46,17 +46,11 @@ const createBenchmarkingModule = async (formData, onProgress) => {
       form.append("requirementsFile", formData.requirementsFile);
     }
 
-    if (formData.selectedDatasets && formData.selectedDatasets.length > 0) {
+    if (formData.selectedDatasetIds && formData.selectedDatasetIds.length > 0) {
       form.append(
-        "selectedDatasets",
-        JSON.stringify(formData.selectedDatasets)
+        "selectedDatasetIds",
+        JSON.stringify(formData.selectedDatasetIds)
       );
-    }
-
-    if (formData.uploadedDatasets && formData.uploadedDatasets.length > 0) {
-      formData.uploadedDatasets.forEach((dataset) => {
-        form.append("uploadedDatasets", dataset);
-      });
     }
 
     const response = await axios.post(`${API_BASE_URL}/modules/create`, form, {
@@ -67,7 +61,8 @@ const createBenchmarkingModule = async (formData, onProgress) => {
     });
 
     // If we have a task ID, start polling for status
-    if (response.data.data.task_id) {
+    const taskId = response.data.install_task_id || response.data.data?.install_task_id;
+    if (taskId) {
       if (onProgress) {
         onProgress("Module created, installing dependencies...");
       }
@@ -231,22 +226,22 @@ const updateModuleLogic = async (moduleId, formData) => {
   }
 };
 
-const updateModuleDataset = async (moduleId, formData) => {
-  try {
-    const response = await axios.post(
-      `${API_BASE_URL}/modules/update/dataset/${moduleId}`,
-      formData,
-      {
-        withCredentials: true,
-        headers: { "Content-Type": "multipart/form-data" },
-      }
-    );
-    return response.data;
-  } catch (error) {
-    console.error("Error updating module dataset:", error);
-    throw error;
-  }
-};
+// const updateModuleDataset = async (moduleId, formData) => {
+//   try {
+//     const response = await axios.post(
+//       `${API_BASE_URL}/modules/update/dataset/${moduleId}`,
+//       formData,
+//       {
+//         withCredentials: true,
+//         headers: { "Content-Type": "multipart/form-data" },
+//       }
+//     );
+//     return response.data;
+//   } catch (error) {
+//     console.error("Error updating module dataset:", error);
+//     throw error;
+//   }
+// };
 
 const updateModuleRequirements = async (moduleId, formData) => {
   const res = await axios.post(
@@ -288,6 +283,14 @@ const fetchModulesWithDatasets = async () => {
   }
 };
 
+const updateModuleDatasetAssociation = async (moduleId, payload) => {
+    // payload = { dataset_id: int, should_link: bool }
+    const response = await axios.post(`${API_BASE_URL}/modules/${moduleId}/datasets`, payload, {
+        withCredentials: true
+    });
+    return response.data;
+};
+
 export const ModuleService = {
   updateBenchmarkModule,
   deleteBenchmarkModule,
@@ -299,8 +302,9 @@ export const ModuleService = {
   publishModuleUpdates,
   downloadModuleLogic,
   updateModuleLogic,
-  updateModuleDataset,
+  // updateModuleDataset,
   updateModuleRequirements,
   downloadModuleRequirements,
   fetchModulesWithDatasets,
+  updateModuleDatasetAssociation
 };
