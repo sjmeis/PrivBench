@@ -304,12 +304,12 @@ def get_required_datasets(submission_id):
         seen_dataset_ids = set()
 
         for module in incomplete_modules:
-            if module.dataset_id not in seen_dataset_ids:
-                dataset = module.dataset
-                required_datasets.append(
-                    {"id": dataset.id, "name": dataset.name, "moduleName": module.name}
-                )
-                seen_dataset_ids.add(dataset.id)
+            for ds in module.compatible_datasets:
+                if ds.id not in seen_dataset_ids:
+                    required_datasets.append(
+                        {"id": ds.id, "name": ds.name, "moduleName": module.name}
+                    )
+                    seen_dataset_ids.add(ds.id)
 
         return jsonify({"datasets": required_datasets}), 200
 

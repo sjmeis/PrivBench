@@ -288,33 +288,6 @@ const fetchModulesWithDatasets = async () => {
   }
 };
 
-const saveDatasetChoices = async (submissionId, choices) => {
-  try {
-    const response = await axios.post(
-      `${API_BASE_URL}/submissions/${submissionId}/dataset-choices`,
-      { choices },
-      { withCredentials: true }
-    );
-    return response.data;
-  } catch (error) {
-    console.error("Error saving dataset choices:", error);
-    throw error;
-  }
-};
-
-const getDatasetChoices = async (submissionId) => {
-  try {
-    const response = await axios.get(
-      `${API_BASE_URL}/submissions/${submissionId}/dataset-choices`,
-      { withCredentials: true }
-    );
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching dataset choices:", error);
-    throw error;
-  }
-};
-
 export const ModuleService = {
   updateBenchmarkModule,
   deleteBenchmarkModule,
@@ -330,6 +303,4 @@ export const ModuleService = {
   updateModuleRequirements,
   downloadModuleRequirements,
   fetchModulesWithDatasets,
-  saveDatasetChoices,
-  getDatasetChoices,
 };

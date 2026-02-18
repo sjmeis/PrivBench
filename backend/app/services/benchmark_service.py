@@ -1,5 +1,6 @@
 from celery.utils.log import get_task_logger
 from datetime import datetime
+import shutil
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy import select, func, cast, Numeric
 from ..extensions import db, celery
@@ -15,6 +16,7 @@ from ..models import (
 from ..enums import SubmissionStatus
 from ..tasks.run_benchmark import run_benchmark
 from ..utils.dataset_loader import load_dataset
+from ..utils.dataset_combiner import build_combined_datasets
 from ..utils.email_sender import send_email
 from ..utils.version_utils import get_significant_version
 from ..config import Config
@@ -26,26 +28,16 @@ logger = get_task_logger(__name__)
 @celery.task(bind=True)
 def run_benchmark_task(
     self,
-    module_path,
-    module_name,
-    dataset_path,
-    priv_dataset_path,
-    privatized_dataset_id,
-    submission_id,
     module_id,
+    submission_id,
     user_id,
     queue_entry_id=None,
 ):
     """Celery task for running benchmark"""
     return BenchmarkService.run_benchmark_task(
         self,
-        module_path,
-        module_name,
-        dataset_path,
-        priv_dataset_path,
-        privatized_dataset_id,
-        submission_id,
         module_id,
+        submission_id,
         user_id,
         queue_entry_id,
     )
@@ -55,24 +47,23 @@ class BenchmarkService:
     @staticmethod
     def run_benchmark_task(
         self,
-        module_path,
-        module_name,
-        dataset_path,
-        priv_dataset_path,
-        privatized_dataset_id,
-        submission_id,
         module_id,
+        submission_id,
         user_id,
         queue_entry_id=None,
     ):
         """Run a benchmark module as a Celery task with queue support."""
+        module = db.session.query(BenchmarkModule).get(module_id)
+        module_name = module.name
+        module_path = module.path
+
         logger.info(
             f"Starting benchmark task for module {module_name}, queue_entry: {queue_entry_id}"
         )
 
+        combined_dir = None
         try:
             total_steps = 100
-            total_rows = None
 
             # Stage 1: Initialization (10%)
             logger.info(f"Module {module_name}: Initialization stage")
@@ -87,24 +78,32 @@ class BenchmarkService:
                 },
             )
 
-            # Stage 2: Loading Module (30%)
-            logger.info(f"Loading benchmark module from {module_path}")
+            # Stage 2: Build combined datasets (15%)
+            logger.info(f"Building combined datasets for module {module_name}")
             self.update_state(
                 state="PROGRESS",
                 meta={
                     "current": 15,
                     "total": total_steps,
-                    "status": "Loading benchmark module...",
+                    "status": "Combining datasets...",
                     "processedRows": 0,
                     "totalRows": 0,
                 },
             )
 
+            dataset_path, priv_dataset_path = build_combined_datasets(
+                module, submission_id
+            )
+            # Track the temp directory for cleanup
+            import os
+
+            combined_dir = os.path.dirname(dataset_path)
+
             # Load datasets to get total row count
             dataset = load_dataset(dataset_path)
             total_rows = len(dataset)
 
-            # Stage 3: Loading Datasets (50%)
+            # Stage 3: Loading Datasets (20%)
             logger.info(f"Loading datasets from {dataset_path} and {priv_dataset_path}")
             self.update_state(
                 state="PROGRESS",
@@ -117,7 +116,7 @@ class BenchmarkService:
                 },
             )
 
-            # Stage 4: Running Benchmark (80%)
+            # Stage 4: Running Benchmark (30%)
             logger.info(f"Starting benchmark execution")
             self.update_state(
                 state="PROGRESS",
@@ -176,7 +175,11 @@ class BenchmarkService:
                 .values(
                     submission_id=submission_id,
                     module_id=module_id,
-                    privatized_dataset_id=privatized_dataset_id,
+                    # NOTE: privatized_dataset_id is intentionally set to None.
+                    # Modules can now use multiple datasets, and dataset lineage
+                    # is tracked via the new multi-dataset mechanism instead of
+                    # this deprecated column on BenchmarkScore.
+                    privatized_dataset_id=None,
                     score=float(score),
                     created_at=datetime.utcnow(),
                 )
@@ -343,8 +346,17 @@ PrivBench Team
 
             raise Exception(str(e))
 
+        finally:
+            # Clean up temporary combined dataset files
+            if combined_dir:
+                try:
+                    shutil.rmtree(combined_dir, ignore_errors=True)
+                    logger.info(f"Cleaned up temp directory: {combined_dir}")
+                except Exception as cleanup_err:
+                    logger.warning(f"Failed to clean up temp dir: {cleanup_err}")
+
     @staticmethod
-    def process_module_queue_entry(queue_entry, module, dataset, privatized_dataset):
+    def process_module_queue_entry(queue_entry, module):
         """Process a specific queue entry by starting the benchmark task"""
         try:
             logger.info(
@@ -353,13 +365,8 @@ PrivBench Team
 
             # Start the benchmark task with queue entry ID
             task = run_benchmark_task.delay(
-                str(module.path),
-                module.name,
-                str(dataset.file_path),
-                str(privatized_dataset.file_path),
-                privatized_dataset.id,
-                queue_entry.submission_id,
                 module.id,
+                queue_entry.submission_id,
                 queue_entry.user_id,
                 queue_entry_id=queue_entry.id,
             )
@@ -391,35 +398,11 @@ PrivBench Team
                 logger.info(f"No more entries in queue for module {module_id}")
                 return None
 
-            # Get the module and related data
+            # Get the module
             module = db.session.query(BenchmarkModule).get(module_id)
-            dataset = db.session.query(Dataset).filter_by(id=module.dataset_id).first()
-
-            if not dataset:
-                logger.error(f"Dataset not found for module {module.name}")
-                QueueService.complete_processing(next_entry.id, success=False)
-                return None
-
-            privatized_dataset = (
-                db.session.query(PrivatizedDataset)
-                .filter_by(
-                    submission_id=next_entry.submission_id,
-                    original_dataset_id=module.dataset_id,
-                )
-                .first()
-            )
-
-            if not privatized_dataset:
-                logger.error(
-                    f"Privatized dataset not found for submission {next_entry.submission_id}"
-                )
-                QueueService.complete_processing(next_entry.id, success=False)
-                return None
 
             # Process this queue entry
-            result = BenchmarkService.process_module_queue_entry(
-                next_entry, module, dataset, privatized_dataset
-            )
+            result = BenchmarkService.process_module_queue_entry(next_entry, module)
 
             if result:
                 logger.info(
