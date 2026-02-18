@@ -15,7 +15,7 @@ import React from "react";
 import ModelCardTextPairs from "../shared/ModelCardTextPairs";
 import InsertDriveFileIcon from "@mui/icons-material/InsertDriveFile";
 
-const ModuleConfirmationDialog = ({isConfirmationOpen, handleCloseConfirmation, handleSaveConfirmation, module}) => {
+const ModuleConfirmationDialog = ({isConfirmationOpen, handleCloseConfirmation, handleSaveConfirmation, module, allDatasets = []}) => {
 
     return (
         <Modal open={isConfirmationOpen} onClose={handleCloseConfirmation}>
@@ -33,14 +33,26 @@ const ModuleConfirmationDialog = ({isConfirmationOpen, handleCloseConfirmation, 
                         <ModelCardTextPairs icon={<InsertDriveFileIcon/>} content={module.algorithmFile?.name}
                                             title={'Algorithm File'}/>
 
-                        <Box sx={{display: 'flex', flexWrap: 'wrap'}}>
-                            <Typography level="body2" sx={{width: '100%'}}>
-                                <ModelCardTextPairs
-                                                    title={'Datasets: '}/>
-                                    {[...module.selectedDatasets, ...module.uploadedDatasets].map((dataset) => (
-                                        <Chip sx={{m: '2px'}} variant='outlined' key={dataset.id}>{dataset.name}</Chip>
-                                    ))}
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', flexDirection: 'column', gap: 1 }}>
+                            <Typography level="body-sm" sx={{ fontWeight: 'bold' }}>
+                                Datasets to link:
                             </Typography>
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                {module.selectedDatasetIds && module.selectedDatasetIds.length > 0 ? (
+                                    module.selectedDatasetIds.map((id) => {
+                                        const ds = allDatasets.find(d => d.id === id);
+                                        return (
+                                            <Chip variant='outlined' color="primary" key={id}>
+                                                {ds?.name || `ID: ${id}`}
+                                            </Chip>
+                                        );
+                                    })
+                                ) : (
+                                    <Typography level="body-xs" sx={{ fontStyle: 'italic', color: 'text.tertiary' }}>
+                                        No datasets selected
+                                    </Typography>
+                                )}
+                            </Box>
                         </Box>
                     </Stack>
                 </DialogContent>
