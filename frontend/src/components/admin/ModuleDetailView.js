@@ -27,7 +27,7 @@ import { useSnackbar } from "../../contexts/SnackbarProvider";
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
 import { Save } from "@mui/icons-material";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
-import InsertDriveFileRoundedIcon from "@mui/icons-material/InsertDriveFileRoundedIcon"
+import InsertDriveFileRoundedIcon from "@mui/icons-material/InsertDriveFileRounded"
 
 const ModuleDetailView = ({
   selectedModule,
