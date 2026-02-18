@@ -1,6 +1,7 @@
 import {
   Box,
   Button,
+  Checkbox,
   Divider,
   FormLabel,
   IconButton,
@@ -26,6 +27,7 @@ import { useSnackbar } from "../../contexts/SnackbarProvider";
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
 import { Save } from "@mui/icons-material";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
+import InsertDriveFileRoundedIcon from "@mui/icons-material/InsertDriveFileRoundedIcon"
 
 const ModuleDetailView = ({
   selectedModule,
@@ -41,7 +43,7 @@ const ModuleDetailView = ({
   });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const DATASET_TABLE_TITLE = "Associated Dataset";
+  const DATASET_TABLE_TITLE = "Associated Datasets";
   const SCRIPT_TABLE_TITLE = "Python Benchmarking Module Logic";
   const REQUIREMENTS_TABLE_TITLE = "Python Dependencies (requirements.txt)";
   const { showSnackbar } = useSnackbar();
@@ -54,6 +56,7 @@ const ModuleDetailView = ({
   const logicInputRef = useRef(null);
   const datasetInputRef = useRef(null);
   const requirementsInputRef = useRef(null);
+  const [allDatasets, setAllDatasets] = useState([]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -186,26 +189,26 @@ const ModuleDetailView = ({
     }
   };
 
-  const uploadDataset = async () => {
-    if (!datasetFile) {
-      showSnackbar("Select a dataset file first", "neutral");
-      return;
-    }
-    setIsUploadingDataset(true);
-    try {
-      const form = new FormData();
-      form.append("file", datasetFile);
-      await ModuleService.updateModuleDataset(selectedModule.id, form);
-      showSnackbar("Dataset updated", "success");
-      setDatasetFile(null);
-      if (datasetInputRef.current) datasetInputRef.current.value = "";
-      onUpdateOrDelete();
-    } catch (error) {
-      showSnackbar("Error updating dataset", "error");
-    } finally {
-      setIsUploadingDataset(false);
-    }
-  };
+  // const uploadDataset = async () => {
+  //   if (!datasetFile) {
+  //     showSnackbar("Select a dataset file first", "neutral");
+  //     return;
+  //   }
+  //   setIsUploadingDataset(true);
+  //   try {
+  //     const form = new FormData();
+  //     form.append("file", datasetFile);
+  //     await ModuleService.updateModuleDataset(selectedModule.id, form);
+  //     showSnackbar("Dataset updated", "success");
+  //     setDatasetFile(null);
+  //     if (datasetInputRef.current) datasetInputRef.current.value = "";
+  //     onUpdateOrDelete();
+  //   } catch (error) {
+  //     showSnackbar("Error updating dataset", "error");
+  //   } finally {
+  //     setIsUploadingDataset(false);
+  //   }
+  // };
 
   const uploadRequirements = async () => {
     if (!requirementsFile) {
@@ -228,6 +231,19 @@ const ModuleDetailView = ({
     }
   };
 
+  const handleToggleAssociation = async (datasetId, shouldLink) => {
+    try {
+      await ModuleService.updateModuleDatasetAssociation(selectedModule.id, {
+        dataset_id: datasetId,
+        should_link: shouldLink
+      });
+      showSnackbar(shouldLink ? "Dataset linked" : "Dataset unlinked", "success");
+      onUpdateOrDelete(); // Refresh parent to update compatibleDatasets list
+    } catch (error) {
+      showSnackbar("Failed to update association", "error");
+    }
+  };
+
   useEffect(() => {
     setFormData({
       name: selectedModule?.name ?? "",
@@ -237,6 +253,12 @@ const ModuleDetailView = ({
       path: selectedModule?.path ?? "",
     });
   }, [selectedModule]);
+
+  useEffect(() => {
+      DatasetService.fetchAllDatasets()
+          .then(setAllDatasets)
+          .catch(err => console.error("Failed to load datasets", err));
+  }, []);
 
   return (
     <Sheet
@@ -462,40 +484,25 @@ const ModuleDetailView = ({
                 title={REQUIREMENTS_TABLE_TITLE}
                 onDownload={downloadRequirements}
               />
-              {/* Upload/Replace Dataset */}
-              <Sheet variant="outlined" sx={{ p: 1.5, borderRadius: "sm" }}>
+              {/* Select Associated Dataset(s) */}
+              <Sheet variant="outlined" sx={{ p: 2, borderRadius: "sm", maxHeight: 300, overflow: 'auto' }}>
                 <Stack spacing={1}>
-                  <Typography level="title-sm">
-                    Update Dataset (csv, parquet, json, zip)
-                  </Typography>
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <Input
-                      type="file"
-                      sx={{ flex: 1, alignItems: "center" }}
-                      slotProps={{
-                        input: {
-                          ref: datasetInputRef,
-                          accept: ".csv,.parquet,.json,.zip,.txt",
-                          onChange: onSelectDatasetFile,
-                        },
-                      }}
-                    />
-                    <Button
-                      variant="solid"
-                      color="primary"
-                      endDecorator={<CloudUploadIcon />}
-                      disabled={!datasetFile || isUploadingDataset}
-                      loading={isUploadingDataset}
-                      onClick={uploadDataset}
-                    >
-                      {datasetFile ? "Upload" : "Choose file"}
-                    </Button>
-                  </Stack>
-                  {datasetFile && (
-                    <Typography level="body-sm" sx={{ color: "text.tertiary" }}>
-                      Selected: {datasetFile.name}
-                    </Typography>
-                  )}
+                  {allDatasets.map((ds) => {
+                    // Check if this dataset is already linked to the selected module
+                    const isLinked = selectedModule.compatibleDatasets?.some(mDs => mDs.id === ds.id);
+                    
+                    return (
+                      <Box key={ds.id} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography level="body-sm" startDecorator={<InsertDriveFileRoundedIcon />}>
+                          {ds.name}
+                        </Typography>
+                        <Checkbox 
+                          checked={isLinked}
+                          onChange={(e) => handleToggleAssociation(ds.id, e.target.checked)}
+                        />
+                      </Box>
+                    );
+                  })}
                 </Stack>
               </Sheet>
 

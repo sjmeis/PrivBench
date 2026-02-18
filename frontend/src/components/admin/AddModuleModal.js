@@ -17,13 +17,15 @@ import {
   Divider,
   Select,
   Option,
+  Checkbox,
+  Sheet
 } from "@mui/joy";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
-import AddDatasetsModal from "./AddDatasetsModal";
+import InsertDriveFileRoundedIcon from "@mui/icons-material/InsertDriveFileRounded";
 import ModuleConfirmationDialog from "./ModuleConfirmationDialog";
 import { ModuleService } from "../../services/ModuleService";
-import AddModuleDatasetTable from "./AddModuleDatasetTable";
-import { Add, Save } from "@mui/icons-material";
+import { DatasetService } from "../../services/DatasetService";
+import { Save } from "@mui/icons-material";
 
 // Device specification options
 const DEVICE_SPECIFICATIONS = [
@@ -32,28 +34,32 @@ const DEVICE_SPECIFICATIONS = [
 ];
 
 const AddModuleModal = ({ isOpen, onClose, onSubmit, onError }) => {
-  const [isDSModalOpen, setIsDSModalOpen] = useState(false);
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
+  const [allDatasets, setAllDatasets] = useState([]);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     deviceSpecification: "cpu",
     algorithmFile: null,
     requirementsFile: null,
-    selectedDatasets: [],
-    uploadedDatasets: [],
+    selectedDatasetIds: []
   });
 
   useEffect(() => {
+    if (isOpen) {
+      DatasetService.fetchAllDatasets()
+        .then(setAllDatasets)
+        .catch(() => console.error("Failed to load dataset options."));
+
     setFormData({
       name: "",
       description: "",
       deviceSpecification: "cpu",
       algorithmFile: null,
       requirementsFile: null,
-      selectedDatasets: [],
-      uploadedDatasets: [],
+      selectedDatasetIds: [],
     });
+    }
   }, [isOpen]);
 
   const isFormValid = () => {
@@ -61,8 +67,7 @@ const AddModuleModal = ({ isOpen, onClose, onSubmit, onError }) => {
       formData.name.trim() &&
       formData.description.trim() &&
       formData.algorithmFile &&
-      (formData.selectedDatasets.length > 0 ||
-        formData.uploadedDatasets.length > 0)
+      formData.selectedDatasetIds.length > 0
     );
   };
 
@@ -71,33 +76,22 @@ const AddModuleModal = ({ isOpen, onClose, onSubmit, onError }) => {
     setFormData({ ...formData, [name]: value });
   };
 
-  const handleSelectChange = (name, value) => {
-    setFormData({ ...formData, [name]: value });
+  const handleToggleDataset = (id) => {
+    setFormData(prev => ({
+      ...prev,
+      selectedDatasetIds: prev.selectedDatasetIds.includes(id)
+        ? prev.selectedDatasetIds.filter(i => i !== id)
+        : [...prev.selectedDatasetIds, id]
+    }));
   };
 
   const handleFileChange = (e) => {
     setFormData({ ...formData, algorithmFile: e.target.files[0] });
   };
 
-  const handleDatasetSubmit = (selectedDataset, uploadedDataset) => {
-    if (selectedDataset) {
-      setFormData((prevFormData) => ({
-        ...prevFormData,
-        selectedDatasets: prevFormData.selectedDatasets.concat(selectedDataset),
-      }));
-    } else if (uploadedDataset) {
-      setFormData((prevFormData) => ({
-        ...prevFormData,
-        uploadedDatasets: prevFormData.uploadedDatasets.concat(uploadedDataset),
-      }));
-    }
-    setIsDSModalOpen(false);
-  };
-
   const handleSubmit = async () => {
     try {
-      const response = await ModuleService.createBenchmarkingModule(formData);
-      console.log(response);
+      await ModuleService.createBenchmarkingModule(formData);
       onSubmit();
     } catch (err) {
       onError(err.message);
@@ -111,33 +105,6 @@ const AddModuleModal = ({ isOpen, onClose, onSubmit, onError }) => {
     e.preventDefault();
     handleSubmit();
     console.log(formData);
-  };
-
-  const removeDataset = (id) => {
-    setFormData({
-      ...formData,
-      selectedDatasets: formData.selectedDatasets.filter(
-        (dataset) => dataset.id !== id
-      ),
-    });
-  };
-
-  const removeUploadedDataset = (id) => {
-    setFormData({
-      ...formData,
-      uploadedDatasets: formData.uploadedDatasets.filter(
-        (dataset) => dataset.id !== id
-      ),
-    });
-  };
-
-  const handleOpenConfirmation = () => {
-    setIsConfirmationOpen(true);
-  };
-
-  const handleCloseConfirmation = () => {
-    //todo: implement cleanup logic
-    setIsConfirmationOpen(false);
   };
 
   return (
@@ -172,20 +139,16 @@ const AddModuleModal = ({ isOpen, onClose, onSubmit, onError }) => {
 
                 <FormControl>
                   <FormLabel>Device Specification</FormLabel>
-                  <Select
-                    placeholder="Select device requirement"
-                    value={formData.deviceSpecification}
-                    onChange={(event, value) =>
-                      handleSelectChange("deviceSpecification", value)
-                    }
+                  <Select 
+                    value={formData.deviceSpecification} 
+                    onChange={(_, val) => setFormData({...formData, deviceSpecification: val})}
                   >
                     {DEVICE_SPECIFICATIONS.map((device) => (
-                      <Option key={device.value} value={device.value}>
-                        {device.label}
-                      </Option>
+                      <Option key={device.value} value={device.value}>{device.label}</Option>
                     ))}
                   </Select>
                 </FormControl>
+
                 <FormControl>
                   <FormLabel required>Description</FormLabel>
                   <Textarea
@@ -242,49 +205,43 @@ const AddModuleModal = ({ isOpen, onClose, onSubmit, onError }) => {
 
             <Divider orientation="vertical" />
 
-            <Box
-              sx={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}
-            >
-              <Typography level="h5" fontWeight="bold">
-                Step 2: Dataset Configuration
-              </Typography>
-              {formData && (
-                <AddModuleDatasetTable
-                  formData={formData}
-                  removeDataset={removeDataset}
-                  removeUploadedDataset={removeUploadedDataset}
-                />
-              )}
-              <Button
-                variant="soft"
-                onClick={() => setIsDSModalOpen(true)}
-                fullWidth
-                endDecorator={<Add />}
-              >
-                Add Datasets
-              </Button>
+            <Box sx={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
+              <Typography level="title-md" fontWeight="bold">Select Associated Datasets</Typography>
+              <Sheet variant="outlined" sx={{ p: 1, borderRadius: "sm", maxHeight: 400, overflow: 'auto' }}>
+                <Stack spacing={1}>
+                  {allDatasets.length > 0 ? allDatasets.map((ds) => (
+                    <Box key={ds.id} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 0.5 }}>
+                      <Typography level="body-sm" startDecorator={<InsertDriveFileRoundedIcon color="primary" />}>
+                        {ds.name}
+                      </Typography>
+                      <Checkbox 
+                        checked={formData.selectedDatasetIds.includes(ds.id)} 
+                        onChange={() => handleToggleDataset(ds.id)} 
+                      />
+                    </Box>
+                  )) : (
+                    <Typography level="body-xs" sx={{ p: 2, textAlign: 'center', fontStyle: 'italic' }}>
+                      No datasets found. Upload them first in Dataset Management.
+                    </Typography>
+                  )}
+                </Stack>
+              </Sheet>
             </Box>
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button
-            disabled={!isFormValid()}
-            color="success"
-            onClick={handleOpenConfirmation}
+          <Button 
+            disabled={!isFormValid()} 
+            color="success" 
+            onClick={() => setIsConfirmationOpen(true)} 
             endDecorator={<Save />}
           >
-            Save Module
+            Create Module
           </Button>
         </DialogActions>
-        <ModalClose />
-        <AddDatasetsModal
-          isOpen={isDSModalOpen}
-          onClose={() => setIsDSModalOpen(false)}
-          onSubmit={handleDatasetSubmit}
-        />
         <ModuleConfirmationDialog
-          handleSaveConfirmation={handleFormSubmit}
-          handleCloseConfirmation={handleCloseConfirmation}
+          handleSaveConfirmation={() => { setIsConfirmationOpen(false); handleSubmit(); }}
+          handleCloseConfirmation={() => setIsConfirmationOpen(false)}
           isConfirmationOpen={isConfirmationOpen}
           module={formData}
         />

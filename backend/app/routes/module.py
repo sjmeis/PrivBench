@@ -390,16 +390,10 @@ def create_benchmark_module():
 
         name = request.form.get("name")
         description = request.form.get("description")
-        provided_version = request.form.get("version")  # may be empty
-        device_spec = request.form.get("deviceSpecification")  # optional
-
-        # Handle selected datasets - comes as JSON string
-        selected_datasets_json = request.form.get("selectedDatasets")
-        selected_datasets = (
-            json.loads(selected_datasets_json) if selected_datasets_json else []
-        )
-
-        dataset_ids = [dataset.get("id") for dataset in selected_datasets]
+        provided_version = request.form.get("version")
+        device_spec = request.form.get("deviceSpecification", "cpu")
+        dataset_ids_raw = request.form.get("selectedDatasetIds", "[]")
+        dataset_ids = json.loads(dataset_ids_raw)
 
         if not all([name, description]):
             logger.error("Missing required fields")
@@ -434,33 +428,6 @@ def create_benchmark_module():
                 logger.error(f"Error reading requirements file: {str(e)}")
                 return jsonify({"error": "Invalid requirements file"}), 400
 
-        # Handle uploaded datasets
-        uploaded_files = request.files.getlist("uploadedDatasets")
-        uploaded_file_paths = []
-
-        if uploaded_files:
-            for file in uploaded_files:
-                if file and file.filename:
-                    filename = secure_filename(file.filename)
-                    file_path = os.path.join(DATASET_FOLDER, filename)
-                    file.save(file_path)
-                    uploaded_file_paths.append(file_path)
-
-                    new_dataset = Dataset(
-                        name=filename,
-                        file_path=file_path,
-                        created_at=datetime.utcnow(),
-                        is_active=True,
-                    )
-
-                    db.session.add(new_dataset)
-                    db.session.flush()
-
-                    dataset_ids.append(new_dataset.id)
-                else:
-                    logger.warning(f"Skipping invalid dataset file")
-                    continue
-
         # Do not increment app version here, module will receive its version upon publish.
         # Use current app version or provided version as placeholder.
         current_ver = provided_version or AppVersion.get_current_version()
@@ -472,7 +439,6 @@ def create_benchmark_module():
             version=current_ver,
             is_active=True,
             path=algo_path,
-            dataset_id=None,
             device_specification=device_spec or "cpu",
         )
 
@@ -481,8 +447,8 @@ def create_benchmark_module():
 
         # Link compatible datasets via many-to-many
         if dataset_ids:
-            compatible = Dataset.query.filter(Dataset.id.in_(dataset_ids)).all()
-            new_benchmark_module.compatible_datasets = compatible
+            datasets = Dataset.query.filter(Dataset.id.in_(dataset_ids)).all()
+            new_benchmark_module.compatible_datasets = datasets
 
         # Record a pending update entry
         db.session.add(
@@ -501,10 +467,9 @@ def create_benchmark_module():
         # Debugging: Print received data
         logger.debug("Name: %s", name)
         logger.debug("Description: %s", description)
-        logger.debug("Selected Datasets: %s", selected_datasets)
+        logger.debug("Selected Datasets: %s", dataset_ids)
         logger.debug("Algorithm File Path: %s", algo_path)
         logger.debug("Requirements File Path: %s", requirements_path)
-        logger.debug("Uploaded Dataset File Paths: %s", uploaded_file_paths)
 
         logger.info(
             f"Dispatching install_and_load_module task for module ID {new_benchmark_module.id}"
@@ -515,20 +480,18 @@ def create_benchmark_module():
             module_path=algo_path,
             requirements_path=requirements_path if requirements_path else None,
             is_new_module=True,
-            device_specification=device_spec or "cpu",
+            device_specification=device_spec,
         )
 
         return (
             jsonify(
                 {
-                    "message": "Benchmark module created successfully",
+                    "message": "Benchmark module created successfully, provisioning started",
                     "data": {
                         "name": name,
                         "description": description,
-                        "selectedDatasets": selected_datasets,
                         "algorithmFilePath": algo_path,
                         "requirementsFilePath": requirements_path,
-                        "uploadedDatasetPaths": uploaded_file_paths,
                         "deviceSpecification": device_spec or "cpu",
                         "install_task_id": install_task.id,
                     },
@@ -537,16 +500,8 @@ def create_benchmark_module():
             201,
         )
 
-    except json.JSONDecodeError as e:
-        logger.error(f"Error decoding selected datasets JSON: {str(e)}")
-        return (
-            jsonify(
-                {"error": "Invalid format for selected datasets", "details": str(e)}
-            ),
-            400,
-        )
     except Exception as e:
-        logger.error(f"Error creating benchmark module: {e}")
+        logger.error(f"Error creating module: {e}")
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
@@ -1147,3 +1102,22 @@ def get_version_history():
             jsonify({"message": "Failed to fetch version history", "error": str(e)}),
             500,
         )
+    
+@module_bp.route('/modules/<int:module_id>/datasets', methods=['POST'])
+def toggle_dataset_association(module_id):
+    module = BenchmarkModule.query.get_or_404(module_id)
+    data = request.json
+    dataset_id = data.get('dataset_id')
+    should_link = data.get('should_link')
+
+    dataset = Dataset.query.get_or_404(dataset_id)
+
+    if should_link:
+        if dataset not in module.compatible_datasets:
+            module.compatible_datasets.append(dataset)
+    else:
+        if dataset in module.compatible_datasets:
+            module.compatible_datasets.remove(dataset)
+
+    db.session.commit()
+    return jsonify({"message": "Association updated"}), 200
