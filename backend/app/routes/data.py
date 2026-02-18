@@ -11,6 +11,7 @@ import csv
 import zipfile
 from io import BytesIO
 from urllib.parse import unquote
+import json
 
 
 logging.basicConfig(level=logging.DEBUG)
@@ -274,6 +275,7 @@ def get_all_datasets():
                     dataset.created_at.isoformat() if dataset.created_at else None
                 ),
                 "isActive": dataset.is_active,
+                "compatibleModules": [{"id": m.id, "name": m.name} for m in dataset.compatible_modules]
             }
             for dataset in datasets
         ]
@@ -430,4 +432,66 @@ def get_dataset_choices(submission_id):
 
     except Exception as e:
         logger.error(f"Error fetching dataset choices: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@data_bp.route('/datasets/upload', methods=['POST'])
+def upload_dataset():
+    if 'file' not in request.files:
+        return jsonify({"error": "No file part"}), 400
+    
+    file = request.files['file']
+    dataset_name = request.form.get('name')
+
+    module_ids_raw = request.form.get('moduleIds', '[]')
+    module_ids = json.loads(module_ids_raw)
+    
+    if file.filename == '' or not dataset_name:
+        return jsonify({"error": "Missing file or dataset name"}), 400
+
+    filename = secure_filename(f"{dataset_name}.csv")
+    file_path = os.path.join(DATASET_FOLDER, filename)
+
+    try:
+        file.save(file_path)
+
+        # 2. Update Database
+        new_dataset = Dataset(
+            name=dataset_name,
+            file_path=file_path,
+            is_active=True 
+        )
+
+        if module_ids:
+            modules = BenchmarkModule.query.filter(BenchmarkModule.id.in_(module_ids)).all()
+            new_dataset.compatible_modules.extend(modules)
+        
+        db.session.add(new_dataset)
+        db.session.commit()
+
+        return jsonify({
+            "id": new_dataset.id,
+            "name": new_dataset.name,
+            "message": "Dataset uploaded successfully"
+        }), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+    
+@data_bp.route('/datasets/<int:id>', methods=['DELETE'])
+def delete_dataset(id):
+    dataset = Dataset.query.get_or_404(id)
+    if dataset.submissions:
+        return jsonify({
+            "error": "Cannot delete dataset. It is currently linked to existing user submissions."
+        }), 400
+
+    try:
+        if os.path.exists(dataset.file_path):
+            os.remove(dataset.file_path)
+        
+        db.session.delete(dataset)
+        db.session.commit()
+        return jsonify({"message": "Dataset deleted successfully"}), 200
+    except Exception as e:
+        db.session.rollback()
         return jsonify({"error": str(e)}), 500
