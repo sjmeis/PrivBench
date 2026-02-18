@@ -1,7 +1,7 @@
 import * as React from 'react';
 import Typography from '@mui/joy/Typography';
 import Table from '@mui/joy/Table';
-import { Box, Chip, IconButton, Sheet } from "@mui/joy";
+import { Box, Chip, IconButton, Sheet, Stack } from "@mui/joy";
 
 import InsertDriveFileRoundedIcon from '@mui/icons-material/InsertDriveFileRounded';
 import ArrowDropDownRoundedIcon from '@mui/icons-material/ArrowDropDownRounded';
@@ -9,10 +9,15 @@ import {getDateString} from "../../utils/Date";
 import {CloudDownloadRounded} from "@mui/icons-material";
 import {DatasetService} from "../../services/DatasetService";
 import {useSnackbar} from "../../contexts/SnackbarProvider";
+import { Modal, ModalDialog, DialogTitle, DialogContent, DialogActions, Button, Divider } from "@mui/joy";
+import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
+import WarningRoundedIcon from "@mui/icons-material/WarningRounded";
 
 
-const DatasetTable = ({datasets}) => {
+const DatasetTable = ({datasets , onRefresh}) => {
     const {showSnackbar} = useSnackbar()
+    const [deleteId, setDeleteId] = React.useState(null);
+    const [isDeleting, setIsDeleting] = React.useState(false);
     const downloadDataset = (dataset) => {
         console.log(dataset)
         DatasetService.downloadDatasets([dataset.name])
@@ -24,6 +29,20 @@ const DatasetTable = ({datasets}) => {
                 showSnackbar("Error downloading datasets", "error");
             });
     }
+
+    const handleDelete = async () => {
+        setIsDeleting(true);
+        try {
+            await DatasetService.deleteDataset(deleteId);
+            showSnackbar("Dataset deleted successfully", "success");
+            setDeleteId(null);
+            onRefresh();
+        } catch (error) {
+            showSnackbar(error.response?.data?.error || "Error deleting dataset", "error");
+        } finally {
+            setIsDeleting(false);
+        }
+    };
 
     return (
         <Sheet
@@ -56,13 +75,11 @@ const DatasetTable = ({datasets}) => {
                             </Typography>
                         </th>
                         {/* <th style={{width: '30%'}}><Typography level="title-sm">File Path</Typography></th> */}
-                        <th style={{ width: '30%' }}><Typography level="title-sm">Mapped Modules</Typography></th>
+                        <th style={{ width: '35%' }}><Typography level="title-sm">Mapped Modules</Typography></th>
                         <th style={{width: '15%'}}>
                             <Typography level="title-sm">Status</Typography>
                         </th>
-                        <th style={{width: '10%', textAlign: 'right'}}>
-                            <Typography level="title-sm">Download</Typography>
-                        </th>
+                        <th style={{ width: '15%', textAlign: 'right' }}>Actions</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -102,20 +119,43 @@ const DatasetTable = ({datasets}) => {
                                 {item.isActive ? <Chip variant='soft' color='success'>Active</Chip> :
                                     <Chip color='error' variant='soft'>Not Active</Chip>}
                             </td>
-                            <td style={{textAlign: "right"}}>
-                                <IconButton
-                                    variant='soft'
-                                    color='primary'
-                                    onClick={() => downloadDataset(item)}
-                                >
-                                    <CloudDownloadRounded/>
-                                </IconButton>
+                            <td style={{ textAlign: "right" }}>
+                                <Stack direction="row" spacing={1} justifyContent="flex-end">
+                                    <IconButton variant='soft' color='primary' onClick={() => downloadDataset(item)}>
+                                        <CloudDownloadRounded />
+                                    </IconButton>
+                                    <IconButton variant='soft' color='danger' onClick={() => setDeleteId(item.id)}>
+                                        <DeleteForeverIcon />
+                                    </IconButton>
+                                </Stack>
                             </td>
                         </tr>)
                     )}
                     </tbody>
                 </Table>
             </div>
+
+            <Modal open={!!deleteId} onClose={() => setDeleteId(null)}>
+                <ModalDialog variant="outlined" role="alertdialog">
+                    <DialogTitle>
+                        <WarningRoundedIcon />
+                        Confirm Deletion
+                    </DialogTitle>
+                    <Divider />
+                    <DialogContent>
+                        Are you sure you want to delete this dataset? This will remove the physical file from the VM and unlink it from all modules. 
+                        <b> This cannot be undone.</b>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button variant="solid" color="danger" onClick={handleDelete} loading={isDeleting}>
+                            Delete
+                        </Button>
+                        <Button variant="plain" color="neutral" onClick={() => setDeleteId(null)}>
+                            Cancel
+                        </Button>
+                    </DialogActions>
+                </ModalDialog>
+            </Modal>
         </Sheet>
     );
 }

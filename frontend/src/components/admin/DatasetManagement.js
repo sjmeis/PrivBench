@@ -63,7 +63,7 @@ const DatasetManagement = () => {
                     Add Dataset
                 </Button>
             </Box>
-        <DatasetTable datasets={datasets}></DatasetTable>
+        <DatasetTable datasets={datasets} onRefresh={loadDatasets}></DatasetTable>
         <Modal open={isModalOpen} onClose={() => setIsModalOpen(false)}>
                 <ModalDialog sx={{ width: 400 }}>
                     <DialogTitle>Upload New Dataset</DialogTitle>
@@ -72,7 +72,7 @@ const DatasetManagement = () => {
                         <FormControl required>
                             <FormLabel>Dataset Name</FormLabel>
                             <Input 
-                                placeholder="e.g. Adult Census Income" 
+                                placeholder="Dataset Name" 
                                 value={newDatasetName}
                                 onChange={(e) => setNewDatasetName(e.target.value)}
                             />
