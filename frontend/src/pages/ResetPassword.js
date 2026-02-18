@@ -12,6 +12,7 @@ import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import axios from 'axios';
 import { useSnackbar } from '../contexts/SnackbarProvider';
 import { API_BASE_URL } from '../config';
+import MainLayout from "../components/layout/MainLayout";
 
 const ResetPassword = () => {
     const { token } = useParams(); // Grabs the JWT from the URL
@@ -84,6 +85,7 @@ const ResetPassword = () => {
     }
 
     return (
+        <MainLayout>
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh', px: 2 }}>
             <Card sx={{ width: '100%', maxWidth: 400, boxShadow: 'lg' }}>
                 <Typography level="h3" component="h1">Reset Password</Typography>
@@ -142,6 +144,7 @@ const ResetPassword = () => {
                 </form>
             </Card>
         </Box>
+        </MainLayout>
     );
 };
 

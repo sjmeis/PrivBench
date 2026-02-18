@@ -10,6 +10,7 @@ import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import axios from 'axios';
 import { useSnackbar } from '../contexts/SnackbarProvider';
 import { API_BASE_URL } from '../config';
+import MainLayout from "../components/layout/MainLayout";
 
 const ForgotPassword = () => {
     const [email, setEmail] = useState('');
@@ -41,6 +42,7 @@ const ForgotPassword = () => {
     };
 
     return (
+        <MainLayout>
         <Box sx={{ 
             display: 'flex', 
             justifyContent: 'center', 
@@ -120,6 +122,7 @@ const ForgotPassword = () => {
                 </Box>
             </Card>
         </Box>
+        </MainLayout>
     );
 };
 
