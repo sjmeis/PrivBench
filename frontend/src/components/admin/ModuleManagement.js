@@ -1,4 +1,4 @@
-import { Box, Grid, Input, Button } from "@mui/joy";
+import { Box, Grid, Input, Button, Typography } from "@mui/joy";
 import FormControl from "@mui/joy/FormControl";
 import SearchIcon from "@mui/icons-material/Search";
 import React, { useEffect, useMemo, useState } from "react";
@@ -105,6 +105,7 @@ const ModuleManagement = () => {
 
   return (
     <Box sx={{ width: selectedModule ? "calc(70vw - 270px)" : "100%" }}>
+      <Typography level="h2">Dataset Management</Typography>
       <Box>
         <Box
           className="SearchAndFilters-tabletUp"
