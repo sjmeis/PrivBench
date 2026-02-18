@@ -72,7 +72,7 @@ export function SideNaveSubmission({ currentStep, handleStepClick }) {
                         </StepIndicator>
                     }
                 >
-                    <Typography sx={{marginLeft: '10px'}} color={currentStep === 0 ? 'primary': ''}>Select Datasets</Typography>
+                    <Typography sx={{marginLeft: '10px'}} color={currentStep === 0 ? 'primary': ''}>Dataset Overview</Typography>
                 </Step>
                 <Step
                     completed={currentStep > 1}

@@ -8,7 +8,7 @@ class BenchmarkScore(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     submission_id = db.Column(db.Integer, db.ForeignKey('submission.id'), nullable=False)
     module_id = db.Column(db.Integer, db.ForeignKey('benchmark_module.id'), nullable=False)
-    privatized_dataset_id = db.Column(db.Integer, db.ForeignKey('privatized_dataset.id'), nullable=False)
+    privatized_dataset_id = db.Column(db.Integer, db.ForeignKey('privatized_dataset.id'), nullable=True)
     task_id = db.Column(db.String(255), nullable=True)
     score = db.Column(db.Float, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

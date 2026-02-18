@@ -177,6 +177,7 @@ def get_modules_with_compatible_datasets():
                 "name": module.name,
                 "title": module.title,
                 "description": module.description,
+                "sampleCount": module.sample_count,
                 "compatibleDatasets": [
                     {
                         "id": ds.id,
