@@ -521,6 +521,7 @@ const ModuleDetailView = ({
         handleDelete={handleDeleteModule}
         moduleName={selectedModule.name}
         isLoading={isDeleting}
+        allDatasets={allDatasets}
       />
     </Sheet>
   );
