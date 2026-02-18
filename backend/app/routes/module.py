@@ -152,6 +152,7 @@ def get_all_benchmark_modules():
                     if dataset
                     else None
                 ),
+                "compatibleDatasets": [{"id": d.id, "name": d.name} for d in module.compatible_datasets]
             }
 
             module_list.append(module_info)

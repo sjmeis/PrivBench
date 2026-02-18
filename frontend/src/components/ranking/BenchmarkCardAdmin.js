@@ -1,5 +1,5 @@
 import React from 'react';
-import {Box, Card, Typography, Divider} from "@mui/joy";
+import {Box, Card, Typography, Divider, Chip} from "@mui/joy";
 import InsertDriveFileRoundedIcon from "@mui/icons-material/InsertDriveFileRounded";
 
 const BenchmarkCardAdmin = ({item, handleCardClick, isSelected}) => {
@@ -46,27 +46,29 @@ const BenchmarkCardAdmin = ({item, handleCardClick, isSelected}) => {
 
             <Divider orientation="vertical" flexItem/>
 
-            <Box sx={{display: 'flex', flexDirection: 'column', gap: 1, flex: 1}}>
-                <Typography level="body-sm" sx={{textAlign: 'center', fontWeight: 'bold'}}>
-                    Associated Datasets:
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, flex: 1 }}>
+                <Typography level="body-sm" sx={{ textAlign: 'left', fontWeight: 'bold' }}>
+                Associated Datasets:
                 </Typography>
-                <Box sx={{display: 'flex', flexDirection: 'column', gap: 0.5}}>
-                    {/*//todo: add iteration for multiple datasets here*/}
-                    <table>
-                        <tbody>
-                            <tr>
-                                <td>
-                                    <Typography
-                                        level="title-sm"
-                                        startDecorator={<InsertDriveFileRoundedIcon color="primary"/>}
-                                        sx={{alignItems: 'flex-start'}}
-                                    >
-                                        {item.name}
-                                    </Typography>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                {item.compatibleDatasets && item.compatibleDatasets.length > 0 ? (
+                    item.compatibleDatasets.map((ds) => (
+                    <Chip
+                        key={ds.id}
+                        variant="outlined"
+                        color="primary"
+                        size="sm"
+                        startDecorator={<InsertDriveFileRoundedIcon sx={{ fontSize: '1rem' }} />}
+                        sx={{ borderRadius: 'sm' }}
+                    >
+                        {ds.name}
+                    </Chip>
+                    ))
+                ) : (
+                    <Typography level="body-xs" sx={{ fontStyle: 'italic', color: 'text.tertiary' }}>
+                    No datasets linked
+                    </Typography>
+                )}
                 </Box>
             </Box>
         </Card>

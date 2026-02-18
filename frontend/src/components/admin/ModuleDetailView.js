@@ -146,9 +146,9 @@ const ModuleDetailView = ({
     }
   };
 
-  const downloadDataset = async () => {
+  const downloadDataset = async (dataset) => {
     try {
-      await DatasetService.downloadDatasets([selectedModule.dataset?.name]);
+      await DatasetService.downloadDatasets([dataset.name]);
     } catch (error) {
       showSnackbar("Error downloading dataset", "error");
     }
@@ -500,9 +500,9 @@ const ModuleDetailView = ({
               </Sheet>
 
               <FileTableSmall
-                items={[selectedModule.dataset]}
+                items={selectedModule.compatibleDatasets || []}
                 title={DATASET_TABLE_TITLE}
-                onDownload={downloadDataset}
+                onDownload={(ds) => downloadDataset(ds)}
               />
             </Stack>
           </Box>

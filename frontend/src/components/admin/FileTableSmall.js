@@ -6,9 +6,9 @@ import { useSnackbar } from "../../contexts/SnackbarProvider";
 const FileTableSmall = ({ items, title, onDownload }) => {
   const { showSnackbar } = useSnackbar();
 
-  const handleDownload = () => {
+  const handleDownload = (item) => {
     if (onDownload) {
-      onDownload();
+      onDownload(item);
     } else {
       showSnackbar("Download handler not configured", "warning");
     }
@@ -45,7 +45,7 @@ const FileTableSmall = ({ items, title, onDownload }) => {
         <tbody>
           {items && items.length > 0 ? (
             items.map((item) => (
-              <tr key={item.id}>
+              <tr key={item.id || item.name}>
                 <td>
                   <Typography
                     level="title-sm"
@@ -59,7 +59,7 @@ const FileTableSmall = ({ items, title, onDownload }) => {
                 </td>
                 <td>
                   <IconButton
-                    onClick={handleDownload}
+                    onClick={() => handleDownload(item)}
                     variant="outlined"
                     color="primary"
                   >
