@@ -166,10 +166,34 @@ const fetchDatasetsWithDetails = async () => {
     }
 };
 
+const uploadDataset = async (file, name, moduleIds = []) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('name', name);
+    formData.append('moduleIds', JSON.stringify(moduleIds));
+
+    try {
+        const response = await axios.post(`${API_BASE_URL}/datasets/upload`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+            withCredentials: true
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Error uploading dataset:', error);
+        throw error;
+    }
+};
+
+const deleteDataset = async (id) => {
+    return await axios.delete(`${API_BASE_URL}/datasets/${id}`, { withCredentials: true });
+};
+
 export const DatasetService = {
     fetchAllDatasets,
     fetchAllDatasetsForUpdate,
     fetchDatasetsWithDetails,
     downloadDatasets,
-    uploadPrivatizedDataset
+    uploadPrivatizedDataset,
+    uploadDataset,
+    deleteDataset
 };

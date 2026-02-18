@@ -1,10 +1,11 @@
 import * as React from 'react';
 import Typography from '@mui/joy/Typography';
 import Table from '@mui/joy/Table';
+import { Chip, IconButton, Sheet, Stack } from "@mui/joy";
 
 import InsertDriveFileRoundedIcon from '@mui/icons-material/InsertDriveFileRounded';
 import ArrowDropDownRoundedIcon from '@mui/icons-material/ArrowDropDownRounded';
-import {Chip, IconButton, Sheet} from "@mui/joy";
+import {Box, Chip, IconButton, Sheet} from "@mui/joy";
 import {getDateString} from "../../utils/Date";
 import {CloudDownloadRounded} from "@mui/icons-material";
 import {DatasetService} from "../../services/DatasetService";
@@ -44,10 +45,10 @@ const DatasetTable = ({datasets}) => {
                 >
                     <thead>
                     <tr>
-                        <th style={{width: '30%'}}>
+                        <th style={{width: '20%'}}>
                             <Typography level="title-sm">Dataset</Typography>
                         </th>
-                        <th style={{width: '20%'}}>
+                        <th style={{width: '15%'}}>
                             <Typography
                                 level="title-sm"
                                 endDecorator={<ArrowDropDownRoundedIcon/>}
@@ -55,13 +56,12 @@ const DatasetTable = ({datasets}) => {
                                 Created At
                             </Typography>
                         </th>
-                        <th style={{width: '30%'}}>
-                            <Typography level="title-sm">File Path</Typography>
-                        </th>
+                        {/* <th style={{width: '30%'}}><Typography level="title-sm">File Path</Typography></th> */}
+                        <th style={{ width: '30%' }}><Typography level="title-sm">Mapped Modules</Typography></th>
                         <th style={{width: '15%'}}>
                             <Typography level="title-sm">Status</Typography>
                         </th>
-                        <th style={{width: '15%', textAlign: 'right'}}>
+                        <th style={{width: '10%', textAlign: 'right'}}>
                             <Typography level="title-sm">Download</Typography>
                         </th>
                     </tr>
@@ -81,8 +81,23 @@ const DatasetTable = ({datasets}) => {
                             <td>
                                 <Typography level="body-sm">{getDateString(item.createdAt)}</Typography>
                             </td>
-                            <td>
+                            {/* <td>
                                 <Typography level="body-sm">{item.filePath}</Typography>
+                            </td> */}
+                            <td>
+                                <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                                    {item.compatibleModules?.length > 0 ? (
+                                        item.compatibleModules.map((mod) => (
+                                            <Chip key={mod.id} size="sm" variant="soft" color="primary">
+                                                {mod.name}
+                                            </Chip>
+                                        ))
+                                    ) : (
+                                        <Typography level="body-xs" sx={{ color: 'text.tertiary', fontStyle: 'italic' }}>
+                                            None assigned
+                                        </Typography>
+                                    )}
+                                </Box>
                             </td>
                             <td>
                                 {item.isActive ? <Chip variant='soft' color='success'>Active</Chip> :
