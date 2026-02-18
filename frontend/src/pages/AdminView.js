@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { SideNavAdmin } from "../components/admin/SideNavAdmin";
 import DatasetManagement from "../components/admin/DatasetManagement";
 import ModuleManagement from "../components/admin/ModuleManagement";
+import MainLayout from "../components/layout/MainLayout";
 
 const AdminView = () => {
   const { state } = useLocation();
@@ -28,15 +29,16 @@ const AdminView = () => {
   };
 
   return (
+    <MainLayout>
     <Box
       sx={{
-        display: "flex",
-        minHeight: "calc(100vh - 65.5px)",
+        #display: "flex",
+        minHeight: "100vh",
         bgcolor: "background.body",
-        marginTop: "-10px",
-        marginBottom: "-40px",
-        marginLeft: "-40px",
-        marginRight: "-40px",
+        // marginTop: "-10px",
+        // marginBottom: "-40px",
+        // marginLeft: "-40px",
+        // marginRight: "-40px",
       }}
     >
       <SideNavAdmin
@@ -46,6 +48,7 @@ const AdminView = () => {
       />
       <Box sx={{ flex: 1, p: 3 }}>{renderContent()}</Box>
     </Box>
+    </MainLayout>
   );
 };
 
