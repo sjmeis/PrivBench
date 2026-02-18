@@ -12,9 +12,9 @@ logger = logging.getLogger(__name__)
 class ModuleManager:
     def __init__(self):
         self.docker_client = docker.from_env()
-        #self.base_image_cpu = "python:3.9-slim"
+        # self.base_image_cpu = "python:3.9-slim"
         # CUDA runtime; requires host NVIDIA driver + toolkit
-        #self.base_image_gpu = "nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04"
+        # self.base_image_gpu = "nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04"
         self.base_image_cpu = "privbench-base-cpu:latest"
         self.base_image_gpu = "privbench-base-gpu:latest"
 
@@ -31,11 +31,12 @@ class ModuleManager:
         #     RUN pip install --no-cache-dir -r requirements.txt
         #     COPY . /app
         #     """
-            
+
         return f"""
         FROM {base}
         WORKDIR /app
         ENV PYTHONPATH=/app
+        RUN pip install --no-cache-dir pandas
         COPY {requirements_filename} /app/requirements.txt
         RUN pip install --no-cache-dir -r requirements.txt || true
         COPY . /app
@@ -103,13 +104,13 @@ class ModuleManager:
                 if "stream" in log:
                     logger.debug(f"Build log: {log['stream'].strip()}")
 
-            self.docker_client.images.prune(filters={'dangling': True})
+            self.docker_client.images.prune(filters={"dangling": True})
 
             return tag
 
     def test_module(self, image_tag, module_name, use_gpu=False):
         """Test if the module can be loaded and instantiated"""
-        
+
         # Update: We force the PYTHONPATH inside the test script too
         test_script = f"""
 import sys
@@ -150,18 +151,16 @@ print(json.dumps({{"success": result == True, "error": str(result) if result != 
         try:
             device_requests = []
             if use_gpu:
-                device_requests = [
-                    DeviceRequest(count=-1, capabilities=[["gpu"]])
-                ]
+                device_requests = [DeviceRequest(count=-1, capabilities=[["gpu"]])]
 
             container_output = self.docker_client.containers.run(
                 image_tag,
                 command=["python3", "-c", test_script],
                 remove=True,
-                network="privbench_default", 
+                network="privbench_default",
                 device_requests=device_requests,
                 stdout=True,
-                stderr=True
+                stderr=True,
             )
 
             output = container_output.decode("utf-8")

@@ -140,7 +140,7 @@ const UserSubmissions = () => {
     const { id, templateName, ...metadata } = template;
     navigate("/upload", {
       state: {
-        currentStep: 1,
+        currentStep: 2,
         metadata: metadata,
         templateId: id,
       },
