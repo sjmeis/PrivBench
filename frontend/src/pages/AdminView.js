@@ -32,7 +32,7 @@ const AdminView = () => {
     <MainLayout>
     <Box
       sx={{
-        #display: "flex",
+        //display: "flex",
         minHeight: "100vh",
         bgcolor: "background.body",
         // marginTop: "-10px",
