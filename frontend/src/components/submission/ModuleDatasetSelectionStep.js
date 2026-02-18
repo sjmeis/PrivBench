@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { Box, Typography, Table, Sheet, Select, Option } from "@mui/joy";
+import { Box, Chip, Typography, Table, Sheet } from "@mui/joy";
 import { InfoOutlined } from "@mui/icons-material";
 import { ModuleService } from "../../services/ModuleService";
 
-const ModuleDatasetSelectionStep = ({ datasetChoices, onChoicesChange }) => {
+const ModuleDatasetSelectionStep = ({ onRequiredDatasetsResolved }) => {
   const [modules, setModules] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -13,30 +13,14 @@ const ModuleDatasetSelectionStep = ({ datasetChoices, onChoicesChange }) => {
         const data = await ModuleService.fetchModulesWithDatasets();
         setModules(data);
 
-        // Initialize choices for all modules; auto-select when only one dataset
-        const autoSelected = { ...datasetChoices };
-        let changed = false;
+        // Derive unique required datasets across all modules
+        const uniqueDatasets = new Map();
         for (const mod of data) {
-          const hasKey = Object.prototype.hasOwnProperty.call(autoSelected, mod.id);
-
-          if (!hasKey) {
-            if (mod.compatibleDatasets.length === 1) {
-              autoSelected[mod.id] = mod.compatibleDatasets[0].id;
-            } else {
-              autoSelected[mod.id] = null;
-            }
-            changed = true;
-          } else if (
-            mod.compatibleDatasets.length === 1 &&
-            !autoSelected[mod.id]
-          ) {
-            autoSelected[mod.id] = mod.compatibleDatasets[0].id;
-            changed = true;
+          for (const ds of mod.compatibleDatasets) {
+            uniqueDatasets.set(ds.id, ds);
           }
         }
-        if (changed) {
-          onChoicesChange(autoSelected);
-        }
+        onRequiredDatasetsResolved(Array.from(uniqueDatasets.values()));
       } catch (error) {
         console.error("Error fetching modules with datasets:", error);
       } finally {
@@ -47,16 +31,11 @@ const ModuleDatasetSelectionStep = ({ datasetChoices, onChoicesChange }) => {
     // eslint-disable-next-line
   }, []);
 
-  const handleDatasetSelect = (moduleId, datasetId) => {
-    const updated = { ...datasetChoices, [moduleId]: datasetId };
-    onChoicesChange(updated);
-  };
-
   if (loading) {
     return (
       <Box>
         <Typography level="h2" mb={2}>
-          Select Datasets for Modules
+          Dataset Overview
         </Typography>
         <Typography>Loading modules...</Typography>
       </Box>
@@ -66,7 +45,7 @@ const ModuleDatasetSelectionStep = ({ datasetChoices, onChoicesChange }) => {
   return (
     <Box>
       <Typography level="h2" mb={2}>
-        Select Datasets for Modules
+        Dataset Overview
       </Typography>
       <Typography
         sx={{ marginY: 2, p: 1 }}
@@ -75,8 +54,9 @@ const ModuleDatasetSelectionStep = ({ datasetChoices, onChoicesChange }) => {
         color="neutral"
         level="body1"
       >
-        For each benchmark module, select one compatible dataset that you will
-        privatize and upload.
+        Each benchmark module uses one or more datasets. The table below shows
+        which datasets are required for each module. You will need to download
+        and privatize all unique datasets listed.
       </Typography>
 
       <Sheet variant="outlined" sx={{ borderRadius: "sm", overflow: "auto" }}>
@@ -84,7 +64,7 @@ const ModuleDatasetSelectionStep = ({ datasetChoices, onChoicesChange }) => {
           <thead>
             <tr>
               <th style={{ width: "50%" }}>Module</th>
-              <th style={{ width: "50%" }}>Dataset</th>
+              <th style={{ width: "50%" }}>Required Datasets</th>
             </tr>
           </thead>
           <tbody>
@@ -96,26 +76,13 @@ const ModuleDatasetSelectionStep = ({ datasetChoices, onChoicesChange }) => {
                   </Typography>
                 </td>
                 <td>
-                  {module.compatibleDatasets.length === 1 ? (
-                    <Typography level="body-sm">
-                      {module.compatibleDatasets[0].name}
-                    </Typography>
-                  ) : (
-                    <Select
-                      size="sm"
-                      placeholder="Select dataset"
-                      value={datasetChoices[module.id] || null}
-                      onChange={(_, value) =>
-                        handleDatasetSelect(module.id, value)
-                      }
-                    >
-                      {module.compatibleDatasets.map((ds) => (
-                        <Option key={ds.id} value={ds.id}>
-                          {ds.name}
-                        </Option>
-                      ))}
-                    </Select>
-                  )}
+                  <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap" }}>
+                    {module.compatibleDatasets.map((ds) => (
+                      <Chip key={ds.id} size="sm" variant="soft" color="primary">
+                        {ds.name}
+                      </Chip>
+                    ))}
+                  </Box>
                 </td>
               </tr>
             ))}

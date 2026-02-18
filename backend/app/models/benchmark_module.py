@@ -35,6 +35,7 @@ class BenchmarkModule(db.Model):
     device_specification = db.Column(db.String(50), default="cpu")
     use_gpu = db.Column(db.Boolean, default=False)
     is_installed = db.Column(db.Boolean, default=False)
+    sample_count = db.Column(db.Integer, nullable=False, default=1000)
 
     # One-to-many relationships
     benchmark_scores = db.relationship(
