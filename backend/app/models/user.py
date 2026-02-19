@@ -19,7 +19,7 @@ class User(db.Model):
     # One-to-many relationship with Submission
     submissions = db.relationship('Submission', back_populates='user', cascade="all, delete-orphan", lazy=True)
 
-    def __init__(self, username, password, mail_address, research_institute, badges=None, admin=False, bio=""):
+    def __init__(self, username, password, mail_address, research_institute, badges=None, admin=False, bio="", is_verified=False):
         self.username = username
         self.mail_address = mail_address
         self.password = generate_password_hash(password)
@@ -27,3 +27,4 @@ class User(db.Model):
         self.research_institute = research_institute
         self.admin = admin
         self.bio = bio
+        self.is_verified = is_verified
