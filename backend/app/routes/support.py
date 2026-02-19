@@ -19,7 +19,6 @@ def contact_admin():
     if not message:
         return jsonify({"message": "Message content is required"}), 400
 
-    # Send email to YOUR email address
     send_support_email(
         sender_email=user.mail_address,
         sender_username=user.username,
