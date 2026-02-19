@@ -57,7 +57,7 @@ function App() {
                 />
                 <Route path="/information" element={<Information />} />
                 <Route path="/register" element={<Register />} />
-                <Route path="/verify-email/:token" element={<VerifyEmail />} />
+                <Route path="/verify-email/*" element={<VerifyEmail />} />
                 <Route path="/imprint" element={<Imprint />} />
                 <Route path="/privacy" element={<PrivacyPolicy />} />
 
