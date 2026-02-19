@@ -16,9 +16,11 @@ with app.app_context():
             password="sebis01.12.040",
             research_institute='test',
             admin=True,
-            is_verified=True,
-            profile_picture_path=None
+            is_verified=True
         )
+        admin.daily_submission_limit = 100 
+        admin.profile_picture_path = None
+
         db.session.add(admin)
         db.session.commit()
         print("Admin user created successfully.")
