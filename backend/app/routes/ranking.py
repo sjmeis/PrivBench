@@ -212,6 +212,15 @@ def make_submission_public():
 def get_user_submissions():
     try:
         current_user_id = get_jwt_identity()
+        user = User.query.get(current_user_id)
+
+        limit_window = datetime.utcnow() - timedelta(hours=24)
+        count = Submission.query.filter(
+            Submission.user_id == current_user_id, 
+            Submission.submission_date >= limit_window
+        ).count()
+        
+        remaining = max(0, user.daily_submission_limit - count)
 
         submissions = (
             db.session.query(Submission)
@@ -354,7 +363,7 @@ def get_user_submissions():
 
             submissions_data.append(submission_detail)
 
-        return jsonify({"submissions": submissions_data}), 200
+        return jsonify({"submissions": submissions_data, "remaining": remaining, "limit": user.daily_submission_limit}), 200
 
     except Exception as e:
         return jsonify({"message": "Internal server error", "error": str(e)}), 500

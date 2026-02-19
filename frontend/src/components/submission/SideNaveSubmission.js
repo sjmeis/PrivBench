@@ -1,10 +1,10 @@
 import * as React from 'react';
 import Box from '@mui/joy/Box';
 import StepIndicator, {stepIndicatorClasses} from "@mui/joy/StepIndicator";
-import {Step, stepClasses, Stepper, Typography} from "@mui/joy";
+import {Divider, Step, stepClasses, Stepper, Typography} from "@mui/joy";
 import {BarChart, CloudUploadRounded, GetAppRounded, InfoRounded, ListAlt} from "@mui/icons-material";
 
-export function SideNaveSubmission({ currentStep, handleStepClick }) {
+export function SideNaveSubmission({ currentStep, handleStepClick, quota }) {
 
     return (
         <Box
@@ -27,6 +27,29 @@ export function SideNaveSubmission({ currentStep, handleStepClick }) {
                 },
             }}
         >
+
+            {quota && (
+                <Box sx={{ 
+                    mb: 3, p: 2, borderRadius: 'sm', 
+                    bgcolor: 'background.level1', border: '1px solid', borderColor: 'divider'
+                }}>
+                    <Typography level="body-xs" sx={{ fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                        Daily Submission Quota
+                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, mt: 0.5 }}>
+                        <Typography level="h3" color={quota.remaining === 0 ? 'danger' : 'primary'}>
+                            {quota.remaining ?? '-'}
+                        </Typography>
+                        <Typography level="body-sm">/ {quota.limit} left</Typography>
+                    </Box>
+                    <Typography level="body-xs" sx={{ mt: 1, fontStyle: 'italic' }}>
+                        Resets on a rolling 24h basis.
+                    </Typography>
+                </Box>
+            )}
+            
+            <Divider />
+
             <Stepper
                 orientation="vertical"
                 size="lg"
