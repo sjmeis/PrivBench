@@ -77,7 +77,7 @@ const Login = () => {
 
         setIsLoading(true); // Reusing your existing loading state
         try {
-            await axios.post(`${API_BASE_URL}/auth/resend-verification`, { 
+            await axios.post(`${API_BASE_URL}/resend-verification`, { 
                 mailAddress: formData.username 
             });
             

@@ -76,7 +76,7 @@ def register():
         confirm_url = f"{current_app.config['FRONTEND_URL']}/verify-email/{token}"
 
         msg = Message("Confirm Your PrivBench Account", recipients=[new_user.mail_address])
-        msg.body = f"Hi {new_user.username},\n\nWelcome to PrivBench! Click here to verify your account: {confirm_url}\nThis link expires in 24 hours.\n\n Best regards,\nThe PrivBench Team"
+        msg.body = f"Hi {new_user.username},\n\nWelcome to PrivBench! Click here to verify your account: {confirm_url}\nThis link expires in 24 hours.\n\nBest regards,\nThe PrivBench Team"
         mail.send(msg)
 
         return jsonify({"message": "Verification email sent"}), 201
