@@ -44,7 +44,7 @@ export function SideNaveSubmission({ currentStep, handleStepClick, quota }) {
                             {quota.remaining ?? 0}
                         </Typography>
                         <Typography level="body-sm">
-                            / {quota.limit ?? '-'} left
+                            / {quota.limit !== undefined ? quota.limit : '-'} left
                         </Typography>
                     </Box>
                     <Typography level="body-xs" sx={{ mt: 1, fontStyle: 'italic' }}>
