@@ -2,12 +2,42 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from ..models import Submission, SubmissionMetadata, TemplateMetadata, User
-from datetime import datetime
+from datetime import datetime, timedelta
 from ..extensions import db
 from ..enums import License
 
 metadata_bp = Blueprint("metadata", __name__)
 
+@metadata_bp.route("/quota-status", methods=["GET"])
+@jwt_required()
+def get_quota_status():
+    try:
+        user_id = get_jwt_identity()
+        user = User.query.get(user_id)
+        
+        if not user:
+            return jsonify({"message": "User not found"}), 404
+
+        # Calculate the 24-hour rolling window
+        limit_window = datetime.utcnow() - timedelta(hours=24)
+
+        # Count existing submissions in that window
+        usage_count = Submission.query.filter(
+            Submission.user_id == user.id,
+            Submission.submission_date >= limit_window
+        ).count()
+
+        remaining = max(0, user.daily_submission_limit - usage_count)
+
+        return jsonify({
+            "usage": usage_count,
+            "limit": user.daily_submission_limit,
+            "remaining": remaining,
+            "reset_info": "Rolling 24-hour window."
+        }), 200
+
+    except Exception as e:
+        return jsonify({"message": "Internal server error", "error": str(e)}), 500
 
 @metadata_bp.route("/metadata", methods=["POST"])
 @jwt_required()
@@ -19,6 +49,19 @@ def save_metadata():
         user = User.query.get(user_id)
         if not user:
             return jsonify({"message": "User not found"}), 404
+        
+        limit_window = datetime.utcnow() - timedelta(hours=24)
+
+        recent_submissions_count = Submission.query.filter(
+            Submission.user_id == user.id,
+            Submission.submission_date >= limit_window
+        ).count()
+
+        if recent_submissions_count >= user.daily_submission_limit:
+            return jsonify({
+                "message": f"Daily limit reached. Your current limit is {user.daily_submission_limit} submissions per 24 hours.",
+                "remaining": 0
+            }), 429
 
         new_submission = Submission(
             name=data.get("modelName", "Unnamed Submission"),
@@ -54,11 +97,13 @@ def save_metadata():
         db.session.add(metadata)
         db.session.commit()
 
+        remaining = user.daily_submission_limit - (recent_submissions_count + 1)
         return (
             jsonify(
                 {
                     "message": "Submission and metadata saved successfully",
                     "submission_id": new_submission.id,
+                    "remaining_slots": max(0, remaining)
                 }
             ),
             201,
@@ -67,7 +112,6 @@ def save_metadata():
     except Exception as e:
         db.session.rollback()
         return jsonify({"message": str(e)}), 500
-
 
 @metadata_bp.route("/metadata", methods=["PUT"])
 @jwt_required()

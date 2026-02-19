@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { Box, Button } from "@mui/joy";
+import { Box, Button, Typography } from "@mui/joy";
 import { Bookmark, Done, East, Save, Update, West } from "@mui/icons-material";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useSnackbar } from "../contexts/SnackbarProvider";
 import ModuleDatasetSelectionStep from "../components/submission/ModuleDatasetSelectionStep";
 import DownloadStep from "../components/submission/DownloadStep";
@@ -19,6 +19,10 @@ import { ModuleService } from "../services/ModuleService";
 const Upload = () => {
   const location = useLocation();
   const { state } = location;
+
+  const [remainingSubmissions, setRemainingSubmissions] = useState(null);
+  const [isOverLimit, setIsOverLimit] = useState(false);
+  const [dailyLimit, setDailyLimit] = useState(5);
 
   const [currentStep, setCurrentStep] = useState(state?.currentStep || 0);
   const [submissionId, setSubmissionId] = useState(state?.submissionId || null);
@@ -45,6 +49,7 @@ const Upload = () => {
   const [isMetadataValid, setIsMetadataValid] = useState(false);
   const [initialMetadata, setInitialMetadata] = useState({});
   const { showSnackbar } = useSnackbar();
+  const navigate = useNavigate();
 
   const fetchUserSubmission = async () => {
     // If metadata is already loaded from a template, don't overwrite it.
@@ -56,6 +61,20 @@ const Upload = () => {
     }
     try {
       const data = await getUserSubmissions();
+
+      // Block only if NO remaining slots AND NO active submission to resume
+      setRemainingSubmissions(data.remaining); 
+      setDailyLimit(data.limit || 5);
+      const hasActiveSubmission = data.submissions.find(s => 
+          s.status === SubmissionStatus.PENDING || s.status === SubmissionStatus.IN_PROGRESS
+      );
+
+      if (data.remaining <= 0 && !hasActiveSubmission) {
+          setIsOverLimit(true);
+      } else {
+          setIsOverLimit(false); // Reset if they deleted an old submission
+      }
+
       const pendingSubmission = data.submissions.find(
         (sub) => sub.status === SubmissionStatus.PENDING
       );
@@ -419,9 +438,25 @@ const Upload = () => {
         <SideNaveSubmission
           currentStep={currentStep}
           handleStepClick={handleStepClick}
+          quota={{ 
+            remaining: remainingSubmissions, 
+            limit: dailyLimit 
+          }}
         />
 
         <Box sx={{ flex: 1, p: 3 }}>
+          {isOverLimit && currentStep === 0 ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mt: 10 }}>
+              <Typography level="h3" color="danger">Daily Submission Limit Reached</Typography>
+              <Typography level="body-md" sx={{ mt: 2 }}>
+                You have already made 5 submissions in the last 24 hours. 
+                Please come back later to start more submissions.
+              </Typography>
+              <Button variant="outlined" sx={{ mt: 4 }} onClick={() => navigate('/rankings')}>
+                View Current Rankings
+              </Button>
+            </Box>
+          ) : (<>
           {currentStep !== 4 && (
             <Box
               sx={{
@@ -544,6 +579,8 @@ const Upload = () => {
 
             {currentStep === 4 && <FinalStep />}
           </Box>
+          </>
+          )}
         </Box>
       </Box>
     </MainLayout>
