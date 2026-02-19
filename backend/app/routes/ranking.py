@@ -11,6 +11,7 @@ from .. import db
 from ..enums import SubmissionStatus, License
 from ..utils.version_utils import parse_version
 from sqlalchemy import or_, and_, distinct
+from sqlalchemy.orm import joinedload
 from flask_jwt_extended import (
     get_jwt_identity,
     jwt_required,
@@ -384,8 +385,10 @@ def get_all_filtered():
 
         # Base query
         query = (
+            # db.session.query(Submission)
+            # .join(User)
             db.session.query(Submission)
-            .join(User)
+            .options(joinedload(Submission.user), joinedload(Submission.version_scores), joinedload(Submission.benchmark_scores).joinedload(BenchmarkScore.benchmark_module))
             .filter(
                 or_(
                     and_(
@@ -570,11 +573,13 @@ def get_all_filtered():
         # Pagination
         offset = (page - 1) * limit
         paginated_results = sorted_submissions[offset : offset + limit]
+        total_pages = (total + limit - 1) // limit if total > 0 else 1
 
         response = {
             "results": paginated_results,
             "totalEntries": total,
-            "totalPages": (total + limit - 1) // limit,
+            #"totalPages": (total + limit - 1) // limit,
+            "totalPages": total_pages,
             "currentPage": page,
         }
         return jsonify(response), 200
@@ -588,6 +593,13 @@ def get_submission_detail():
     try:
         data = request.get_json()
         submission_id = data.get("id")
+
+        module_weights = data.get("moduleWeights", {})
+
+        if module_weights:
+            total_w = sum(module_weights.values())
+            if not (0.99 <= total_w <= 1.01):
+                return jsonify({"message": "Weights must sum to 100%"}), 400
 
         if not submission_id:
             return jsonify({"message": "Submission ID is required"}), 400
