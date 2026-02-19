@@ -13,6 +13,7 @@ class User(db.Model):
     admin = db.Column(db.Boolean, default=False, nullable=False)
     bio = db.Column(db.String(400), nullable=True)
     profile_picture_path = db.Column(db.String(255), nullable=True)
+    is_verified = db.Column(db.Boolean, default=False)
 
     # One-to-many relationship with Submission
     submissions = db.relationship('Submission', back_populates='user', cascade="all, delete-orphan", lazy=True)

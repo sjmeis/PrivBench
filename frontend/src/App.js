@@ -27,6 +27,7 @@ import Imprint from "./pages/Imprint";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import VerifyEmail from './pages/VerifyEmail';
 
 function App() {
   return (
@@ -56,6 +57,7 @@ function App() {
                 />
                 <Route path="/information" element={<Information />} />
                 <Route path="/register" element={<Register />} />
+                <Route path="/verify-email/:token" element={<VerifyEmail />} />
                 <Route path="/imprint" element={<Imprint />} />
                 <Route path="/privacy" element={<PrivacyPolicy />} />
 

@@ -18,6 +18,9 @@ import { FormHelperText, IconButton } from '@mui/joy';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import InfoOutlined from '@mui/icons-material/InfoOutlined';
+import { useSnackbar } from '../contexts/SnackbarProvider';
+import axios from 'axios';
+import { API_BASE_URL } from '../config';
 
 const Register = () => {
     const [formData, setFormData] = useState({
@@ -30,6 +33,7 @@ const Register = () => {
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [isSubmitted, setIsSubmitted] = useState(false);
 
     const isPasswordSecure = (pwd) => /^(?=.*[A-Za-z])(?=.*\d).{8,}$/.test(pwd);
     
@@ -83,15 +87,59 @@ const Register = () => {
         setIsLoading(true);
 
         try {
-            const { confirmPassword, ...payload } = trimmedData;
+            const { confirmPassword, ...payload } = formData;
             await register(payload);
-            navigate(from, { replace: true });
+            setIsSubmitted(true); 
         } catch (err) {
             setError(err.message);
         } finally {
             setIsLoading(false);
         }
     };
+
+    if (isSubmitted) {
+        const [isResending, setIsResending] = useState(false);
+        const { showSnackbar } = useSnackbar();
+
+        const handleResend = async () => {
+            setIsResending(true);
+            try {
+                await axios.post(`${API_BASE_URL}/auth/resend-verification`, { 
+                    mailAddress: formData.mailAddress 
+                });
+                showSnackbar("New verification link sent!", "success");
+            } catch (err) {
+                showSnackbar(err.response?.data?.message || "Failed to resend", "error");
+            } finally {
+                setIsResending(false);
+            }
+        };
+
+        return (
+            <MainLayout>
+                <Box sx={{ maxWidth: 400, mx: 'auto', my: 8, textAlign: 'center', p: 3, border: '1px solid', borderColor: 'divider', borderRadius: 'sm' }}>
+                    <Typography level="h4" mb={2}>Check your email!</Typography>
+                    <Typography level="body-md" mb={3}>
+                        We've sent a confirmation link to <strong>{formData.mailAddress}</strong>. 
+                        Please click the link to verify your account.
+                    </Typography>
+                    <Stack spacing={1}>
+                        <Button variant="outlined" fullWidth onClick={() => navigate('/login')}>
+                            Back to Login
+                        </Button>
+                        <Button 
+                            variant="plain" 
+                            size="sm" 
+                            loading={isResending} 
+                            onClick={handleResend}
+                        >
+                            Didn't receive an email? Click to resend link.
+                        </Button>
+                    </Stack>
+                </Box>
+            </MainLayout>
+        );
+    }
 
     return (
         <MainLayout>

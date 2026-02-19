@@ -8,6 +8,7 @@ from flask_jwt_extended import (
     decode_token
 )
 from werkzeug.security import check_password_hash, generate_password_hash
+from itsdangerous import URLSafeTimedSerializer
 
 from datetime import timedelta
 from flask_mail import Message
@@ -19,6 +20,9 @@ import re
 
 auth_bp = Blueprint("auth", __name__)
 
+def generate_verification_token(email):
+    serializer = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+    return serializer.dumps(email, salt='email-confirm')
 
 @auth_bp.route("/register", methods=["POST"])
 def register():
@@ -60,25 +64,79 @@ def register():
         new_user = User(
             username=username,
             mail_address=mail_address,
-            research_institute=data["researchInstitute"],
+            research_institute=data.get("researchInstitute", ""),
             password=password,
         )
 
         db.session.add(new_user)
         db.session.commit()
 
-        # Create and set access token immediately after registration
-        access_token = create_access_token(identity=str(new_user.id))
-        response = jsonify({"message": "Registration successful!", "success": True})
-        set_access_cookies(response, access_token)
+        token = generate_verification_token(new_user.mail_address)
+        confirm_url = f"{current_app.config['FRONTEND_URL']}/verify-email/{token}"
 
-        return response, 201
+        msg = Message("Confirm Your PrivBench Account", recipients=[new_user.mail_address])
+        msg.body = f"Hi {new_user.username},\n\nWelcome to PrivBench! Click here to verify your account: {confirm_url}\nThis link expires in 24 hours.\n\n Best regards,\nThe PrivBench Team"
+        mail.send(msg)
+
+        return jsonify({"message": "Verification email sent"}), 201
+
+        # Create and set access token immediately after registration
+        # access_token = create_access_token(identity=str(new_user.id))
+        # response = jsonify({"message": "Registration successful!", "success": True})
+        # set_access_cookies(response, access_token)
+
+        #return response, 201
 
     except Exception as e:
         db.session.rollback()  # Rollback in case of error
         current_app.logger.error(f"Registration error: {str(e)}")
         return jsonify({"message": "Internal server error"}), 500
 
+@auth_bp.route('/verify-email/<token>', methods=['GET'])
+def verify_email(token):
+    serializer = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+    try:
+        # Token expires in 24 hours (86400 seconds)
+        email = serializer.loads(token, salt='email-confirm', max_age=86400)
+    except:
+        return jsonify({"message": "The confirmation link is invalid or has expired."}), 400
+
+    user = User.query.filter_by(mail_address=email).first_or_404()
+    
+    if user.is_verified:
+        return jsonify({"message": "Account already verified."}), 200
+
+    user.is_verified = True
+    db.session.commit()
+    return jsonify({"message": "Account verified successfully!"}), 200
+
+@auth_bp.route("/resend-verification", methods=["POST"])
+def resend_verification():
+    data = request.get_json()
+    identifier = data.get("mailAddress")
+
+    user = User.query.filter(
+        (User.mail_address == identifier) | (User.username == identifier)
+    ).first()
+
+    if not user:
+        return jsonify({"message": "If the account exists, a link has been sent."}), 200
+
+    if user.is_verified:
+        return jsonify({"message": "Account already verified."}), 400
+
+    try:
+        token = generate_verification_token(user.mail_address)
+        confirm_url = f"{current_app.config['FRONTEND_URL']}/verify-email/{token}"
+
+        msg = Message("Confirm Your PrivBench Account (Resend)", recipients=[user.mail_address])
+        msg.body = f"Hi {user.username},\n\nYou requested a new verification link. Click here to verify your account: {confirm_url}\nThis link expires in 24 hours.\n\nBest regards,\nThe PrivBench Team"
+        mail.send(msg)
+
+        return jsonify({"message": "If the account exists, a link has been sent."}), 200
+    except Exception as e:
+        current_app.logger.error(f"Resend error: {str(e)}")
+        return jsonify({"message": "Failed to send email. Please try again later."}), 500
 
 @auth_bp.route("/login", methods=["POST"])
 def login():
@@ -96,6 +154,8 @@ def login():
         user = User.query.filter_by(username=data["username"].strip()).first()
         if not user or not check_password_hash(user.password, data["password"]):
             return jsonify({"message": "Invalid username or password!"}), 401
+        if not user.is_verified:
+            return jsonify({"message": "Please verify your email address before logging in."}), 401
 
         access_token = create_access_token(identity=str(user.id))
 
