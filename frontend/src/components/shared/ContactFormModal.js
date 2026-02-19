@@ -1,11 +1,17 @@
 import React, { useState } from 'react';
+import { useNavigate } from "react-router-dom";
 import { Button, Modal, ModalDialog, DialogTitle, Textarea, FormControl, FormLabel, Input, Stack } from '@mui/joy';
-import { Send, ContactSupport } from '@mui/icons-material';
+import { Send } from '@mui/icons-material';
 import axios from 'axios';
 import { API_BASE_URL } from '../../config';
 import { useSnackbar } from '../../contexts/SnackbarProvider';
+import { useAuth } from '../../contexts/AuthContext';
+import { Alert } from '@mui/joy';
+import { InfoOutlined } from '@mui/icons-material';
 
 export const ContactFormModal = ({ open, onClose, initialSubject = "" }) => {
+    const { user } = useAuth();
+    const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [subject, setSubject] = useState(initialSubject);
     const [message, setMessage] = useState('');
@@ -34,26 +40,37 @@ export const ContactFormModal = ({ open, onClose, initialSubject = "" }) => {
         <Modal open={open} onClose={onClose}>
             <ModalDialog sx={{ width: 400 }}>
                 <DialogTitle>Contact PrivBench</DialogTitle>
-                <form onSubmit={handleSubmit}>
-                    <Stack spacing={2}>
-                        <FormControl>
-                            <FormLabel>Subject</FormLabel>
-                            <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Limit Increase / Bug Report / etc." />
-                        </FormControl>
-                        <FormControl required>
-                            <FormLabel>Message</FormLabel>
-                            <Textarea 
-                                minRows={4} 
-                                value={message} 
-                                onChange={(e) => setMessage(e.target.value)} 
-                                placeholder="How can we help you?" 
-                            />
-                        </FormControl>
-                        <Button type="submit" loading={loading} endDecorator={<Send />}>
-                            Send Message
+                {!user ? (
+                    <Stack spacing={2} sx={{ mt: 2 }}>
+                        <Alert color="warning" variant="soft" startDecorator={<InfoOutlined />}>
+                            You must be logged in to send a support request so we can get back to you.
+                        </Alert>
+                        <Button onClick={() => { onClose(); navigate('/login'); }}>
+                            Go to Login
                         </Button>
                     </Stack>
-                </form>
+                ) : (
+                    <form onSubmit={handleSubmit}>
+                        <Stack spacing={2}>
+                            <FormControl>
+                                <FormLabel>Subject</FormLabel>
+                                <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Limit Increase / Bug Report / etc." />
+                            </FormControl>
+                            <FormControl required>
+                                <FormLabel>Message</FormLabel>
+                                <Textarea 
+                                    minRows={4} 
+                                    value={message} 
+                                    onChange={(e) => setMessage(e.target.value)} 
+                                    placeholder="How can we help you?" 
+                                />
+                            </FormControl>
+                            <Button type="submit" loading={loading} endDecorator={<Send />}>
+                                Send Message
+                            </Button>
+                        </Stack>
+                    </form>
+                )}
             </ModalDialog>
         </Modal>
     );
