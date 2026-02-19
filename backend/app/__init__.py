@@ -74,6 +74,7 @@ def create_app():
     from .routes.module import module_bp
     from .routes.user import user_bp
     from .routes.email import email_bp
+    from .routes.admin import admin_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
@@ -84,6 +85,7 @@ def create_app():
     app.register_blueprint(module_bp)
     app.register_blueprint(user_bp)
     app.register_blueprint(email_bp)
+    app.register_blueprint(admin_bp)
 
     @app.cli.command("start-containers")
     def start_containers():
