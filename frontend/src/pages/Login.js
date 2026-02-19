@@ -114,18 +114,8 @@ const Login = () => {
                 Login to PrivBench
             </Typography>
 
-            {error && (
-                <Alert
-                    variant="soft"
-                    color="danger"
-                    sx={{ mb: 2, width: '100%' }}
-                >
-                    {error}
-                </Alert>
-            )}
-
             {showVerifiedAlert && (
-                <Alert color="success" variant="soft" sx={{ mb: 2 }}>
+                <Alert color="success" variant="soft" sx={{ mb: 2, width: '100%' }}>
                     Account verified successfully! You can now log in.
                 </Alert>
             )}
@@ -134,7 +124,7 @@ const Login = () => {
                 <Alert 
                     color="danger" 
                     variant="soft" 
-                    sx={{ mb: 2, flexDirection: 'column', alignItems: 'flex-start' }}
+                    sx={{ mb: 2, width: '100%', flexDirection: 'column', alignItems: 'flex-start' }}
                 >
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Typography level="body-sm" color="danger">{error}</Typography>
