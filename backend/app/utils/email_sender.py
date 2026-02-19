@@ -45,6 +45,7 @@ def send_email(to, subject, body, redirect_url=None):
 def send_support_email(sender_email, sender_username, subject, body):
     msg = Message(
         subject=f"[PrivBench Support] {subject}",
+        sender=current_app.config['MAIL_USERNAME'],
         recipients=[current_app.config['ADMIN_EMAIL']],
         reply_to=sender_email
     )
