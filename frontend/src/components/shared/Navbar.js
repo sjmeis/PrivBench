@@ -27,6 +27,7 @@ import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import { getGravatarUrl } from "../../utils/Gravatar";
 import ViewModuleIcon from "@mui/icons-material/ViewModule";
 import InsertDriveFileIcon from "@mui/icons-material/InsertDriveFile";
+import GroupIcon from '@mui/icons-material/Group';
 import { useSnackbar } from "../../contexts/SnackbarProvider";
 import { ModuleService } from "../../services/ModuleService";
 
@@ -269,7 +270,7 @@ const Navbar = () => {
                           navigate("/admin", { state: "users" })
                         }
                       >
-                        <InsertDriveFileIcon />
+                        <GroupIcon />
                         Users
                       </MenuItem>
                     </>

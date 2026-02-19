@@ -158,7 +158,8 @@ def login():
         if not user.is_verified:
             return jsonify({"message": "Please verify your email address before logging in."}), 401
 
-        access_token = create_access_token(identity=str(user.id))
+        additional_claims = {"is_admin": user.admin}
+        access_token = create_access_token(identity=str(user.id), additional_claims=additional_claims)
 
         response = jsonify(
             {
