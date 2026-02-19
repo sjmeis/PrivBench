@@ -466,6 +466,7 @@ const Upload = () => {
                 <Button 
                     variant="solid" 
                     color="primary" 
+                    sx={{ mt: 4 }}
                     startDecorator={<ContactSupport />}
                     onClick={() => setIsSupportOpen(true)}
                 >
@@ -475,7 +476,7 @@ const Upload = () => {
               <ContactFormModal 
                   open={isSupportOpen} 
                   onClose={() => setIsSupportOpen(false)} 
-                  initialSubject={`Limit Increase Request: ${dailyLimit} -> 10`}
+                  initialSubject={`Limit Increase Request`}
               />
             </Box>
           ) : (<>
