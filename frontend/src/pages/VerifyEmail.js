@@ -13,7 +13,9 @@ const VerifyEmail = () => {
     const { showSnackbar } = useSnackbar();
 
     useEffect(() => {
-        const token = paramToken || location.pathname.split('/').pop();
+        const pathParts = location.pathname.split('/');
+        const manualToken = pathParts[pathParts.length - 1];
+        const token = paramToken || manualToken;
 
         const verify = async () => {
             if (!token || token === 'verify-email') {
@@ -23,7 +25,7 @@ const VerifyEmail = () => {
             }
 
             try {
-                await axios.get(`${API_BASE_URL}/auth/verify-email/${token}`);
+                await axios.get(`${API_BASE_URL}/verify-email/${token}`);
                 showSnackbar("Account verified! You can now log in.", "success");
                 navigate('/login', { state: { verified: true } });
             } catch (err) {
