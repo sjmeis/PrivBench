@@ -41,3 +41,27 @@ def send_email(to, subject, body, redirect_url=None):
     except Exception as e:
         current_app.logger.error(f"Failed to send email to {to}: {e}")
         raise
+
+def send_support_email(sender_email, sender_username, subject, body):
+    msg = Message(
+        subject=f"[PrivBench Support] {subject}",
+        recipients=[current_app.config['ADMIN_EMAIL']],
+        reply_to=sender_email
+    )
+    
+    msg.body = f"""
+    New support request from PrivBench:
+    
+    User: {sender_username}
+    Email: {sender_email}
+    Subject: {subject}
+    
+    Message:
+    --------------------------------------------------
+    {body}
+    --------------------------------------------------
+    
+    (You can reply directly to this email to reach the user.)
+    """
+    
+    mail.send(msg)
