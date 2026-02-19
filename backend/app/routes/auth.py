@@ -66,6 +66,7 @@ def register():
             mail_address=mail_address,
             research_institute=data.get("researchInstitute", ""),
             password=password,
+            is_verified=False
         )
 
         db.session.add(new_user)
