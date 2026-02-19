@@ -64,7 +64,8 @@ const getDynamicRowPerPageCount = () => {
   const viewportHeight = window.innerHeight;
   const availableHeight = viewportHeight - 350;
   const rowHeight = 45;
-  return Math.floor(availableHeight / rowHeight);
+  return Math.max(1, Math.floor(availableHeight / rowHeight));
+  //return Math.floor(availableHeight / rowHeight);
 };
 
 const Rankings = () => {
@@ -87,6 +88,8 @@ const Rankings = () => {
   const timerRef = useRef(null);
   const navigate = useNavigate();
   const { user } = useAuth();
+
+  const [isLoading, setIsLoading] = useState(false);
 
   const validWeights = useMemo(() => {
     const total = Object.values(moduleWeights).reduce(
@@ -166,7 +169,12 @@ const Rankings = () => {
 
   useEffect(() => {
     const loadRankings = async () => {
+      if (selectedModules.length >= 2 && validWeights === "invalid") {
+        return; 
+      }
+
       try {
+        setIsLoading(true)
         const moduleIds = selectedModules.map((module) => module.id);
 
         const weightsToSend =
@@ -187,7 +195,9 @@ const Rankings = () => {
         setCurrentPage(data.currentPage);
       } catch (error) {
         console.error("Failed to load rankings:", error);
-      }
+      } finally {
+            setIsLoading(false);
+        }
     };
 
     loadRankings();
@@ -820,6 +830,17 @@ const Rankings = () => {
           borderRadius: "sm",
         }}
       >
+        <Box sx={{ position: 'relative' }}>
+        {isLoading && (
+          <Box sx={{
+            position: 'absolute',
+            top: 0, left: 0, right: 0, bottom: 0,
+            bgcolor: 'rgba(255,255,255,0.5)',
+            zIndex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center'
+          }}>
+            <Typography level="title-lg">Loading...</Typography>
+          </Box>
+        )}
         <Table
           aria-labelledby="tableTitle"
           sx={{ minWidth: 750, "--TableCell-paddingX": "10px" }}
@@ -858,69 +879,79 @@ const Rankings = () => {
             </tr>
           </thead>
           <tbody>
-            {rankings.map((row) => (
-              <tr
-                style={{
-                  backgroundColor: isCurrentUser(row.user.id)
-                    ? "var(--joy-palette-background-level1)"
-                    : "inherit",
-                }}
-                key={row.id}
-              >
-                <td>
-                  {isNewDate(row.submissionDate) &&
-                    !isSubmissionOutdated(row.status) && (
-                      <Chip color="success" variant="soft">
-                        New
-                      </Chip>
-                    )}
-                  {isSubmissionOutdated(row.status) && (
-                    <Chip color="danger" variant="soft">
-                      Outdated
-                    </Chip>
-                  )}
-                </td>
-                <td>{formatToTwoDecimals(row.overallScore)}</td>
-                <td>{row.name}</td>
-                <td>{getDateString(row.submissionDate)}</td>
-                <td>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                    <Avatar
-                      size="sm"
-                      src={getGravatarUrl(row.user.mailAddress)}
-                    />
-                    <Typography noWrap>{row.user.username}</Typography>
-                  </Box>
-                </td>
-                <td>{row.user.researchInstitute}</td>
-                <td>
-                  <Stack justifyContent="end" direction="row" spacing={1}>
-                    {isCurrentUser(row.user.id) && (
-                      <Button
-                        size="sm"
-                        variant="outlined"
-                        color="neutral"
-                        startDecorator={<Edit />}
-                        onClick={() =>
-                          navigate("/profile", { state: "submissions" })
-                        }
-                      >
-                        Edit{" "}
-                      </Button>
-                    )}
-                    <Button
-                      size="sm"
-                      variant="soft"
-                      color="primary"
-                      startDecorator={<Visibility />}
-                      onClick={() => onViewClick(row)}
-                    >
-                      View
-                    </Button>
-                  </Stack>
+            {rankings.length === 0 ? (
+              <tr>
+                <td colSpan={7} style={{ textAlign: "center", padding: "40px" }}>
+                  <Typography level="body-md" color="neutral">
+                    No public submissions. {searchTerm && "Maybe try adjusting your search filters?"}
+                  </Typography>
                 </td>
               </tr>
-            ))}
+            ) : (
+              {rankings.map((row) => (
+                <tr
+                  style={{
+                    backgroundColor: isCurrentUser(row.user.id)
+                      ? "var(--joy-palette-background-level1)"
+                      : "inherit",
+                  }}
+                  key={row.id}
+                >
+                  <td>
+                    {isNewDate(row.submissionDate) &&
+                      !isSubmissionOutdated(row.status) && (
+                        <Chip color="success" variant="soft">
+                          New
+                        </Chip>
+                      )}
+                    {isSubmissionOutdated(row.status) && (
+                      <Chip color="danger" variant="soft">
+                        Outdated
+                      </Chip>
+                    )}
+                  </td>
+                  <td>{formatToTwoDecimals(row.overallScore)}</td>
+                  <td>{row.name}</td>
+                  <td>{getDateString(row.submissionDate)}</td>
+                  <td>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                      <Avatar
+                        size="sm"
+                        src={getGravatarUrl(row.user.mailAddress)}
+                      />
+                      <Typography noWrap>{row.user.username}</Typography>
+                    </Box>
+                  </td>
+                  <td>{row.user.researchInstitute}</td>
+                  <td>
+                    <Stack justifyContent="end" direction="row" spacing={1}>
+                      {isCurrentUser(row.user.id) && (
+                        <Button
+                          size="sm"
+                          variant="outlined"
+                          color="neutral"
+                          startDecorator={<Edit />}
+                          onClick={() =>
+                            navigate("/profile", { state: "submissions" })
+                          }
+                        >
+                          Edit{" "}
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="soft"
+                        color="primary"
+                        startDecorator={<Visibility />}
+                        onClick={() => onViewClick(row)}
+                      >
+                        View
+                      </Button>
+                    </Stack>
+                  </td>
+                </tr>
+              ))}
+            )}
           </tbody>
           <tfoot>
             <tr>
@@ -932,22 +963,30 @@ const Rankings = () => {
                     alignItems: "center",
                   }}
                 >
-                  <Typography>{`Rows per page: ${
-                    rankings.length > rowsPerPage
-                      ? rowsPerPage
-                      : rankings.length
-                  }`}</Typography>
+                  <Typography level="body-sm">
+                    {rankings.length === 0 
+                      ? "No public results (yet)!" 
+                      : `Showing ${rankings.length} results.`}
+                  </Typography>
                   <Box sx={{ display: "flex", alignItems: "center" }}>
                     <IconButton
+                      size="sm"
+                      color="neutral"
+                      variant="outlined"
                       onClick={onPreviousPageClick}
-                      disabled={currentPage === 1}
+                      disabled={currentPage <= 1}
                     >
                       <KeyboardArrowLeftIcon />
                     </IconButton>
-                    <Typography>{`Page ${currentPage} of ${totalPages}`}</Typography>
+                    <Typography level="body-sm">
+                      Page {rankings.length === 0 ? 0 : currentPage} of {Math.max(totalPages, rankings.length > 0 ? 1 : 0)}
+                    </Typography>
                     <IconButton
+                      size="sm"
+                      color="neutral"
+                      variant="outlined"
                       onClick={onNextPageClick}
-                      disabled={currentPage === totalPages}
+                      disabled={currentPage >= totalPages || totalPages === 0}
                     >
                       <KeyboardArrowRightIcon />
                     </IconButton>
@@ -957,6 +996,7 @@ const Rankings = () => {
             </tr>
           </tfoot>
         </Table>
+        </Box>
       </Sheet>
     </Box>
     </MainLayout>
