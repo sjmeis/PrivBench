@@ -35,6 +35,9 @@ const Register = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
 
+    const [isResending, setIsResending] = useState(false);
+    const { showSnackbar } = useSnackbar();
+
     const isPasswordSecure = (pwd) => /^(?=.*[A-Za-z])(?=.*\d).{8,}$/.test(pwd);
     
     const navigate = useNavigate();
@@ -98,9 +101,6 @@ const Register = () => {
     };
 
     if (isSubmitted) {
-        const [isResending, setIsResending] = useState(false);
-        const { showSnackbar } = useSnackbar();
-
         const handleResend = async () => {
             setIsResending(true);
             try {
