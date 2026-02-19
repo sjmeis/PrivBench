@@ -15,6 +15,8 @@ import { SubmissionStatus } from "src/enums/SubmissionStatus";
 import { API_BASE_URL } from "../config";
 import MainLayout from "../components/layout/MainLayout";
 import { ModuleService } from "../services/ModuleService";
+import { ContactFormModal } from "../components/shared/ContactFormModal";
+import ContactSupport from '@mui/icons-material/ContactSupport';
 
 const Upload = () => {
   const location = useLocation();
@@ -23,6 +25,7 @@ const Upload = () => {
   const [remainingSubmissions, setRemainingSubmissions] = useState(null);
   const [isOverLimit, setIsOverLimit] = useState(false);
   const [dailyLimit, setDailyLimit] = useState(null);
+  const [isSupportOpen, setIsSupportOpen] = useState(false);
 
   const [currentStep, setCurrentStep] = useState(state?.currentStep || 0);
   const [submissionId, setSubmissionId] = useState(state?.submissionId || null);
@@ -456,9 +459,24 @@ const Upload = () => {
                 You have already made {dailyLimit} submissions in the last 24 hours. 
                 Please come back later to start more submissions.
               </Typography>
-              <Button variant="outlined" sx={{ mt: 4 }} onClick={() => navigate('/rankings')}>
-                View Current Rankings
-              </Button>
+              <Box sx={{ display: 'flex', gap: 2, mt: 4 }}>
+                <Button variant="outlined" sx={{ mt: 4 }} onClick={() => navigate('/rankings')}>
+                  View Current Rankings
+                </Button>
+                <Button 
+                    variant="solid" 
+                    color="primary" 
+                    startDecorator={<ContactSupport />}
+                    onClick={() => setIsSupportOpen(true)}
+                >
+                    Request Limit Increase
+                </Button>
+              </Box>
+              <ContactFormModal 
+                  open={isSupportOpen} 
+                  onClose={() => setIsSupportOpen(false)} 
+                  initialSubject={`Limit Increase Request: ${dailyLimit} -> 10`}
+              />
             </Box>
           ) : (<>
           {currentStep !== 4 && (
