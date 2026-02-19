@@ -26,7 +26,7 @@ export const ContactFormModal = ({ open, onClose, initialSubject = "" }) => {
                 message 
             }, { withCredentials: true });
             
-            showSnackbar("Message sent to an admin! Sit tight :)", "success");
+            showSnackbar("Message sent to an admin. Thank you! Now just sit tight :)", "success");
             setMessage('');
             onClose();
         } catch (err) {
