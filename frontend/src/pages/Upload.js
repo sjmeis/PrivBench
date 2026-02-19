@@ -22,7 +22,7 @@ const Upload = () => {
 
   const [remainingSubmissions, setRemainingSubmissions] = useState(null);
   const [isOverLimit, setIsOverLimit] = useState(false);
-  const [dailyLimit, setDailyLimit] = useState(5);
+  const [dailyLimit, setDailyLimit] = useState(null);
 
   const [currentStep, setCurrentStep] = useState(state?.currentStep || 0);
   const [submissionId, setSubmissionId] = useState(state?.submissionId || null);
@@ -449,7 +449,7 @@ const Upload = () => {
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mt: 10 }}>
               <Typography level="h3" color="danger">Daily Submission Limit Reached</Typography>
               <Typography level="body-md" sx={{ mt: 2 }}>
-                You have already made 5 submissions in the last 24 hours. 
+                You have already made {dailyLimit} submissions in the last 24 hours. 
                 Please come back later to start more submissions.
               </Typography>
               <Button variant="outlined" sx={{ mt: 4 }} onClick={() => navigate('/rankings')}>
