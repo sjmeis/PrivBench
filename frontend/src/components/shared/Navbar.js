@@ -264,6 +264,14 @@ const Navbar = () => {
                         <InsertDriveFileIcon />
                         Datasets
                       </MenuItem>
+                      <MenuItem
+                        onClick={() =>
+                          navigate("/admin", { state: "users" })
+                        }
+                      >
+                        <InsertDriveFileIcon />
+                        Users
+                      </MenuItem>
                     </>
                   ) : (
                     <>
