@@ -888,7 +888,7 @@ const Rankings = () => {
                 </td>
               </tr>
             ) : (
-              {rankings.map((row) => (
+              rankings.map((row) => (
                 <tr
                   style={{
                     backgroundColor: isCurrentUser(row.user.id)
@@ -950,7 +950,7 @@ const Rankings = () => {
                     </Stack>
                   </td>
                 </tr>
-              ))}
+              ))
             )}
           </tbody>
           <tfoot>
