@@ -14,6 +14,7 @@ class User(db.Model):
     bio = db.Column(db.String(400), nullable=True)
     profile_picture_path = db.Column(db.String(255), nullable=True)
     is_verified = db.Column(db.Boolean, default=False)
+    daily_submission_limit = db.Column(db.Integer, default=5, nullable=False)
 
     # One-to-many relationship with Submission
     submissions = db.relationship('Submission', back_populates='user', cascade="all, delete-orphan", lazy=True)
