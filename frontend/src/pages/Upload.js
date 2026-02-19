@@ -62,9 +62,13 @@ const Upload = () => {
     try {
       const data = await getUserSubmissions();
 
+      const remaining = data.remaining ?? 0;
+      const limit = data.limit ?? 5;
+
       // Block only if NO remaining slots AND NO active submission to resume
-      setRemainingSubmissions(data.remaining); 
-      setDailyLimit(data.limit || 5);
+      setRemainingSubmissions(remaining); 
+      setDailyLimit(limit);
+      
       const hasActiveSubmission = data.submissions.find(s => 
           s.status === SubmissionStatus.PENDING || s.status === SubmissionStatus.IN_PROGRESS
       );
