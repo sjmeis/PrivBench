@@ -15,6 +15,9 @@ import {
 import {Login as LoginIcon, PersonAdd} from "@mui/icons-material";
 import { useAuth } from '../contexts/AuthContext';
 import MainLayout from "../components/layout/MainLayout";
+import { useSnackbar } from '../contexts/SnackbarProvider';
+import axios from 'axios';
+import { API_BASE_URL } from '../config';
 
 const Login = () => {
     const [formData, setFormData] = useState({
@@ -22,11 +25,15 @@ const Login = () => {
         password: ''
     });
     const [error, setError] = useState('');
+    const [showResend, setShowResend] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
     const navigate = useNavigate();
     const location = useLocation();
+    const [showVerifiedAlert, setShowVerifiedAlert] = useState(location.state?.verified || false);
     const { login } = useAuth();
+
+    const { showSnackbar } = useSnackbar();
 
     const from = location.state?.from?.pathname || "/";
 
@@ -42,6 +49,7 @@ const Login = () => {
         e.preventDefault();
         setError('');
         setIsLoading(true);
+        setShowResend(false);
 
         const trimmedData = Object.keys(formData).reduce((acc, key) => {
             acc[key] = typeof formData[key] === 'string' ? formData[key].trim() : formData[key];
@@ -53,6 +61,31 @@ const Login = () => {
             navigate(from, { replace: true });
         } catch (err) {
             setError(err.message);
+            if (err.message.toLowerCase().includes("verify your email")) {
+                setShowResend(true);
+            }
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleResendFromLogin = async () => {
+        if (!formData.username) {
+            setError("Please enter your email address first so we know where to send the link.");
+            return;
+        }
+
+        setIsLoading(true); // Reusing your existing loading state
+        try {
+            await axios.post(`${API_BASE_URL}/auth/resend-verification`, { 
+                mailAddress: formData.username 
+            });
+            
+            setError("");
+            setShowResend(false);
+            showSnackbar("Verification link resent! Please check your inbox.", "success");
+        } catch (err) {
+            setError(err.response?.data?.message || "Failed to resend link.");
         } finally {
             setIsLoading(false);
         }
@@ -88,6 +121,35 @@ const Login = () => {
                     sx={{ mb: 2, width: '100%' }}
                 >
                     {error}
+                </Alert>
+            )}
+
+            {showVerifiedAlert && (
+                <Alert color="success" variant="soft" sx={{ mb: 2 }}>
+                    Account verified successfully! You can now log in.
+                </Alert>
+            )}
+
+            {error && (
+                <Alert 
+                    color="danger" 
+                    variant="soft" 
+                    sx={{ mb: 2, flexDirection: 'column', alignItems: 'flex-start' }}
+                >
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography level="body-sm" color="danger">{error}</Typography>
+                    </Box>
+                    
+                    {showResend && (
+                        <Button 
+                            variant="link" 
+                            size="sm" 
+                            onClick={handleResendFromLogin}
+                            sx={{ p: 0, mt: 1, textDecoration: 'underline' }}
+                        >
+                            Click here to resend verification email.
+                        </Button>
+                    )}
                 </Alert>
             )}
 

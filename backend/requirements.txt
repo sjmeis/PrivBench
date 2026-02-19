@@ -8,6 +8,7 @@ Flask-Migrate==4.0.4
 Werkzeug==2.2.2
 Flask-Mail==0.10.0
 python-dotenv==1.0.0
+itsdangerous
 
 # Database
 psycopg2-binary==2.9.3
