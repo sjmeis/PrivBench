@@ -37,10 +37,15 @@ export function SideNaveSubmission({ currentStep, handleStepClick, quota }) {
                         Daily Submission Quota
                     </Typography>
                     <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, mt: 0.5 }}>
-                        <Typography level="h3" color={quota.remaining === 0 ? 'danger' : 'primary'}>
-                            {quota.remaining ?? '-'}
+                        <Typography 
+                            level="h3" 
+                            color={quota.remaining === 0 ? 'danger' : 'primary'}
+                        >
+                            {quota.remaining ?? 0}
                         </Typography>
-                        <Typography level="body-sm">/ {quota.limit} left</Typography>
+                        <Typography level="body-sm">
+                            / {quota.limit ?? '-'} left
+                        </Typography>
                     </Box>
                     <Typography level="body-xs" sx={{ mt: 1, fontStyle: 'italic' }}>
                         Resets on a rolling 24h basis.
