@@ -1,18 +1,17 @@
 from flask import Flask
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
-from flask_migrate import Migrate
 from flask_mail import Mail
 from celery import Celery
 
 from .utils.container_manager import container_manager
 from .config import Config
-from .extensions import db, mail
+from .extensions import db, mail, migrate
 import logging
 import os
 
 jwt = JWTManager()
-migrate = Migrate()
+#migrate = Migrate()
 #mail = Mail()
 
 
