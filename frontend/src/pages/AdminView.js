@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { SideNavAdmin } from "../components/admin/SideNavAdmin";
 import DatasetManagement from "../components/admin/DatasetManagement";
 import ModuleManagement from "../components/admin/ModuleManagement";
+import UserManagement from "../components/admin/UserManagement";
 import MainLayout from "../components/layout/MainLayout";
 
 const AdminView = () => {
@@ -23,6 +24,8 @@ const AdminView = () => {
         return <ModuleManagement />;
       case "datasets":
         return <DatasetManagement />;
+      case "users":
+        return <UserManagement />;
       default:
         return <ModuleManagement />;
     }
