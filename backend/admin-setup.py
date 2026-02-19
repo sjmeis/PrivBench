@@ -16,7 +16,8 @@ with app.app_context():
             password="sebis01.12.040",
             research_institute='test',
             admin=True,
-            is_verified=True
+            is_verified=True,
+            profile_picture_path=None
         )
         db.session.add(admin)
         db.session.commit()
