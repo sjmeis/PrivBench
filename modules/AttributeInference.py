@@ -46,6 +46,8 @@ class AttributeInference(BaseBenchmark):
             model=model_checkpoint,
             device=self.device,
             batch_size=self.batch_size,
+            truncation=True,
+            max_length=512
         )
 
     def _predict_labels(self, texts):

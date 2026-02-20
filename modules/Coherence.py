@@ -1,9 +1,7 @@
 import evaluate
-from transformers import pipeline
 import torch
 import pandas as pd
-import json
-from sklearn.metrics import f1_score
+from transformers import AutoTokenizer
 from benchmarks.base_benchmark import BaseBenchmark
 from benchmarks.benchmark_utils import with_progress_tracking
 
@@ -12,51 +10,30 @@ class PPL:
         self.ppl = evaluate.load("perplexity", module_type="metric")
         self.model_checkpoint = model_checkpoint
         self.max_len = max_len
+
+        self.tokenizer = AutoTokenizer.from_pretrained(model_checkpoint)
+        if self.tokenizer.pad_token is None:
+            self.tokenizer.pad_token = self.tokenizer.eos_token
     
     def score(self, data, internal_progress_callback=None):
-        processed_data = []
-        
-        # Only process rows 0 and 80
-        selected_indices = [0, 80]  
-        
-        for idx, text in enumerate(data):
-            if idx in selected_indices:
-                truncated_text = " ".join(text.split()[:self.max_len])
-                processed_data.append(truncated_text)
-                if internal_progress_callback:
-                    internal_progress_callback()
+        processed_data = [str(x) for x in data if pd.notna(x) and str(x).strip() != ""]
+
+        if not processed_data:
+            return 0.0
+
+        truncated_data = [" ".join(text.split()[:self.max_len]) for text in processed_data]
+
+        if internal_progress_callback:
+            for _ in truncated_data:
+                internal_progress_callback()
                     
         score = self.ppl.compute(
             predictions=processed_data, 
             model_id=self.model_checkpoint
+            device="cuda" if torch.cuda.is_available() else "cpu"
         )["mean_perplexity"]
         
         return round(score, 3)
-    
-# class SNIPS:
-#     def __init__(self, model_checkpoint="benayas/roberta-full-finetuned-snips_100pct_v2"):
-#         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-#         self.clf = pipeline("text-classification", model=model_checkpoint, device=self.device)
-
-#         with open("benchmarks/baselines.json", 'r') as f:
-#             self.baseline = json.load(f)["snips"]
-#         self.labels = pd.read_csv("benchmarks/snips_copy.csv")["label"].to_list()
-
-#     def score(self, data, internal_progress_callback=None):
-#         """
-#         Calculate F1 score on SNIPS with internal progress tracking.
-#         """                
-#         # Only process first row since we only have 10 labels
-#         selected_indices = [0]  # Changed to only use first row
-#         selected_data = [text for idx, text in enumerate(data) if idx in selected_indices]
-        
-#         predictions = self.clf(selected_data)
-#         predictions = [x["label"] for x in predictions]
-#         # Also need to filter labels to match the selected indices
-#         selected_labels = [self.labels[idx] for idx in selected_indices]
-#         f1 = f1_score(selected_labels, predictions, average="micro")
-
-#         return round((f1 / self.baseline)*100, 3)
 
 @with_progress_tracking
 class Coherence(BaseBenchmark):
@@ -81,7 +58,5 @@ class Coherence(BaseBenchmark):
         ppl_score = (o / p)*100
         if ppl_score > 100:
             ppl_score = 100
-
-        #snips_score = self.snips.score(private)
 
         return round(ppl_score, 3)

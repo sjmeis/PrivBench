@@ -7,7 +7,7 @@ from benchmarks.benchmark_utils import with_progress_tracking
 
 @with_progress_tracking
 class NearestNeighbor(BaseBenchmark):
-    def __init__(self, top_k=1000, model_checkpoint="thenlper/gte-small"):
+    def __init__(self, top_k=1000, model_checkpoint="sentence-transformers/all-MiniLM-L6-v2"):
         """Initialize NearestNeighbor calculator"""
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model = SentenceTransformer(model_checkpoint, device=self.device)
@@ -57,10 +57,11 @@ class NearestNeighbor(BaseBenchmark):
             except ValueError:
                 find = self.top_k
             
+            # lower is better
             found += find
-            total += 1
+            total += self.top_k
             
             if progress_callback:
-                progress_callback()  # Signal completion of each original text processing
+                progress_callback()
         
         return round(found / total, 3)
