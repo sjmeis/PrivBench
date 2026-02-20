@@ -68,14 +68,14 @@ with app.app_context():
 
     db.session.commit()
 
-    admin = User(
-        username='admin',
-        mail_address='admin@privbench.com',
-        password="test123",
-        research_institute='test',
-        admin=True,
-    )
-    db.session.add(admin)
+    # admin = User(
+    #     username='admin',
+    #     mail_address='admin@privbench.com',
+    #     password="test123",
+    #     research_institute='test',
+    #     admin=True,
+    # )
+    # db.session.add(admin)
 
     privatization_models = [
         "Privacy Transformer",
@@ -146,21 +146,21 @@ with app.app_context():
                     tags = random.sample(sample_tags, 2),
                     authors=fake.name(),
                     research_paper_url="https://arxiv.org/abs/2306.01457",
-                    github_url="https://github.com/github/dependency-submission-toolkit",
-                    bibtex_citation="@article{Arnold_Yesilbas_Weinzierl_2023, "
-                                    "title={Driving context into text-to-text privatization}, "
-                                    "DOI={10.18653/v1/2023.trustnlp-1.2}, "
-                                    "journal={Proceedings of the 3rd Workshop on Trustworthy Natural Language Processing (TrustNLP 2023)}, "
-                                    "author={Arnold, Stefan and Yesilbas, Dilara and Weinzierl, Sven}, "
-                                    "year={2023}, "
-                                    "pages={15–25}} "
+                    github_url="https://github.com/",
+                    bibtex_citation="@article{example, "
+                                    "title={Article Title}, "
+                                    "DOI={10.1000/199}, "
+                                    "journal={Example Proceedings}, "
+                                    "author={The PrivBench Team}, "
+                                    "year={2026}, "
+                                    "pages={11-22}} "
                 )
                 db.session.add(submission_metadata)
                 db.session.commit()
 
 
                 privatized_datasets = []
-                for _ in range(len(benchmark_modules)):  # Each submission has 2 privatized datasets
+                for _ in range(len(benchmark_modules)): 
                     privatized_dataset = PrivatizedDataset(
                         submission_id=submission.id,
                         original_dataset_id=fake.random_element(elements=[d.id for d in datasets]),
