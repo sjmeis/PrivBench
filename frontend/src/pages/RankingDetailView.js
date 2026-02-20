@@ -6,7 +6,7 @@ import Link from "@mui/joy/Link";
 import HomeRoundedIcon from "@mui/icons-material/HomeRounded";
 import Typography from "@mui/joy/Typography";
 import React, {useEffect, useState} from "react";
-import {useLocation} from "react-router-dom";
+import {useLocation, useParams} from "react-router-dom";
 import {fetchSubmissionDetails} from "../services/RankingsService"
 import LoadingSpinner from "../components/shared/LoadingSpinner";
 import ModelCard from "../components/ranking/ModelCard";
@@ -18,17 +18,18 @@ import MainLayout from "../components/layout/MainLayout";
 import { useSnackbar } from "../contexts/SnackbarProvider";
 
 const RankingDetailView = () => {
-    const {state} = useLocation();
+    const { id } = useParams();
     const [submission, setSubmission] = useState(null);
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(true)
     const [copied, setCopied] = useState(false);
     const { showSnackbar } = useSnackbar();
 
-    useEffect(() => {
-        if (state.id) {
+   useEffect(() => {
+        if (id) {
             const getSubmissionDetails = async () => {
-                const data = await fetchSubmissionDetails(state.id);
+                setLoading(true);
+                const data = await fetchSubmissionDetails(id);
                 if (data.error) {
                     setError(data.error);
                     setLoading(false)
@@ -40,7 +41,7 @@ const RankingDetailView = () => {
 
             getSubmissionDetails();
         }
-    }, [state.id]);
+    }, [id]);
 
     const handleShare = async () => {
         try {

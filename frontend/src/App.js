@@ -51,10 +51,7 @@ function App() {
                 <Route path="/rankings" element={<Rankings />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} /> 
                 <Route path="/reset-password/:token" element={<ResetPassword />} />
-                <Route
-                  path="/rankings/detail"
-                  element={<RankingDetailView />}
-                />
+                <Route path="/rankings/detail/:id" element={<RankingDetailView />} />
                 <Route path="/information" element={<Information />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/verify-email/:token" element={<VerifyEmail />} />
