@@ -2,7 +2,10 @@ import numpy as np
 
 from benchmarks.base_benchmark import BaseBenchmark
 from benchmarks.benchmark_utils import with_progress_tracking
-from modules.AttributeInference import AttributeInference
+try:
+    from modules.AttributeInference import AttributeInference
+except ImportError:
+    from AttributeInference import AttributeInference
 
 
 @with_progress_tracking

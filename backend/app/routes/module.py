@@ -480,7 +480,7 @@ def create_benchmark_module():
             module_path=algo_path,
             requirements_path=requirements_path if requirements_path else None,
             is_new_module=True,
-            device_specification=device_spec,
+            use_gpu=device_spec == "gpu",
         )
 
         return (
