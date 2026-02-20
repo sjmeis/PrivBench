@@ -109,7 +109,7 @@ def replace_dataset_file(dataset_id):
     upload_path = os.path.join(DATASET_FOLDER, original_name)
     file.save(upload_path)
     
-    dataset.file_path = original_name
+    dataset.file_path = os.path.join(DATASET_FOLDER, original_name)
     dataset.created_at = datetime.utcnow() # Update timestamp
     db.session.commit()
 
