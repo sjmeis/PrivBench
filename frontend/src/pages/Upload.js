@@ -54,6 +54,8 @@ const Upload = () => {
   const { showSnackbar } = useSnackbar();
   const navigate = useNavigate();
 
+  const [isLocked, setIsLocked] = useState(false);
+
   const fetchUserSubmission = async () => {
     // If metadata is already loaded from a template, don't overwrite it.
     if (state?.templateId) {
@@ -90,7 +92,14 @@ const Upload = () => {
         (sub) => sub.status === SubmissionStatus.IN_PROGRESS
       );
 
-      if (pendingSubmission) {
+      const completedSubmission = data.submissions.find(
+        (sub) => sub.status === SubmissionStatus.COMPLETED
+      );
+
+      if (completedSubmission) {
+        setIsLocked(true);
+        setCurrentStep(4);
+      } else if (pendingSubmission) {
         setCurrentStep(3);
         setMetadata(pendingSubmission.metadata);
         setInitialMetadata(pendingSubmission.metadata);
@@ -449,6 +458,7 @@ const Upload = () => {
             remaining: remainingSubmissions, 
             limit: dailyLimit 
           }}
+          disabled={isLocked}
         />
 
         <Box sx={{ flex: 1, p: 3 }}>
@@ -500,7 +510,7 @@ const Upload = () => {
                 color="neutral"
                 onClick={() => setCurrentStep((prev) => prev - 1)}
                 startDecorator={<West />}
-                disabled={currentStep === 0}
+                disabled={currentStep === 0 || isLocked}
                 size="lg"
               >
                 Back
@@ -602,7 +612,9 @@ const Upload = () => {
               />
             )}
 
-            {currentStep === 4 && <FinalStep />}
+            {currentStep === 4 && (
+              <FinalStep onComplete={() => setIsLocked(true)} onCancel={() => setIsLocked(false)} />
+            )}
           </Box>
           </>
           )}
