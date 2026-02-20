@@ -4,7 +4,9 @@ from benchmarks.base_benchmark import BaseBenchmark
 from benchmarks.benchmark_utils import with_progress_tracking
 try:
     from modules.AttributeInference import AttributeInference
-except ImportError:
+except (ImportError, ModuleNotFoundError):
+    import sys
+    sys.path.insert(0, '/app')
     from AttributeInference import AttributeInference
 
 
