@@ -2,12 +2,17 @@ from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt
 from ..models.user import User
 from ..models.submission import Submission
+from ..models.dataset import Dataset
 from .. import db
 from datetime import datetime, timedelta
 import os
 from sqlalchemy import or_
+from werkzeug.utils import secure_filename
 
 admin_bp = Blueprint("admin", __name__)
+
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
+DATASET_FOLDER = os.path.join(PROJECT_ROOT, "data/datasets")
 
 @admin_bp.route('/admin/users', methods=['GET'])
 @jwt_required()
@@ -79,6 +84,39 @@ def admin_delete_user(user_id):
     db.session.delete(user)
     db.session.commit()
     return jsonify({"message": "User successfully deleted by administrator"}), 200
+
+@admin_bp.route('/datasets/<int:dataset_id>/replace', methods=['PUT'])
+@jwt_required()
+def replace_dataset_file(dataset_id):
+    if not get_jwt().get("is_admin"):
+        return jsonify({"message": "Unauthorized"}), 403
+
+    dataset = Dataset.query.get_or_404(dataset_id)
+    
+    if 'file' not in request.files:
+        return jsonify({"message": "No file provided"}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"message": "No selected file"}), 400
+    
+    original_name = secure_filename(file.filename)
+    
+    old_path = os.path.join(DATASET_FOLDER, dataset.file_path)
+    if os.path.exists(old_path):
+        os.remove(old_path)
+
+    upload_path = os.path.join(DATASET_FOLDER, original_name)
+    file.save(upload_path)
+    
+    dataset.file_path = original_name
+    dataset.created_at = datetime.utcnow() # Update timestamp
+    db.session.commit()
+
+    return jsonify({
+        "message": f"Successfully replaced with {original_name}",
+        "fileName": original_name
+    }), 200
 
 @admin_bp.route('/submissions', methods=['GET'])
 @jwt_required()
