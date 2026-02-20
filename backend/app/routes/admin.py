@@ -5,6 +5,7 @@ from ..models.submission import Submission
 from .. import db
 from datetime import datetime, timedelta
 import os
+from sqlalchemy import or_, cast, String
 
 admin_bp = Blueprint("admin", __name__)
 
@@ -85,12 +86,42 @@ def get_all_submissions_admin():
     claims = get_jwt()
     if not claims.get("is_admin", False):
         return jsonify({"message": "Unauthorized"}), 403
-
-    submissions = Submission.query.order_by(Submission.created_at.desc()).all()
     
-    output = []
-    for sub in submissions:
-        output.append({
+    page = request.args.get('page', 1, type=int)
+    limit = request.args.get('limit', 10, type=int)
+    sort_by = request.args.get('sortBy', 'created_at')
+    sort_order = request.args.get('sortOrder', 'desc')
+    search = request.args.get('search', '').strip()
+
+    #submissions = Submission.query.order_by(Submission.created_at.desc()).all()
+
+    query = db.session.query(Submission).join(User)
+
+    # 3. Apply Search
+    if search:
+        search_term = f"%{search}%"
+        query = query.filter(or_(
+            Submission.name.ilike(search_term),
+            User.username.ilike(search_term),
+            cast(Submission.id, String).ilike(search_term)
+        ))
+
+    # 4. Sorting
+    # Map frontend keys to backend columns
+    sort_map = {
+        'name': Submission.name,
+        'username': User.username,
+        'score': Submission.score,
+        'date': Submission.created_at,
+        'status': Submission.status
+    }
+    col = sort_map.get(sort_by, Submission.created_at)
+    query = query.order_by(col.desc() if sort_order == 'desc' else col.asc())
+
+    paginated = query.paginate(page=page, per_page=limit, error_out=False)
+    
+    return jsonify({
+        "results": [{
             "id": sub.id,
             "name": sub.name,
             "username": sub.user.username,
@@ -105,8 +136,11 @@ def get_all_submissions_admin():
                 "institute": sub.user.research_institute,
                 "datasetCount": len(sub.datasets)
             }
-        })
-    return jsonify(output), 200
+        } for sub in paginated.items],
+        "total": paginated.total,
+        "pages": paginated.pages,
+        "currentPage": paginated.page
+    }), 200
 
 @admin_bp.route('/submissions/<int:sub_id>', methods=['DELETE'])
 @jwt_required()

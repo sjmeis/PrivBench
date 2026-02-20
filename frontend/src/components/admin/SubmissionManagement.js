@@ -7,6 +7,8 @@ import {
     KeyboardArrowDown, KeyboardArrowUp, DeleteForever, Visibility, Public, PublicOff 
 } from '@mui/icons-material';
 import SearchIcon from '@mui/icons-material/Search';
+import KeyboardArrowLeftIcon from "@mui/icons-material/KeyboardArrowLeft";
+import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
 import axios from 'axios';
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from '../../config';
@@ -120,18 +122,44 @@ const Row = ({ row, onDelete, onRefresh }) => {
 
 const SubmissionManagement = () => {
     const [submissions, setSubmissions] = useState([]);
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [sortBy, setSortBy] = useState('date');
+    const [sortOrder, setSortOrder] = useState('desc');
     const [searchTerm, setSearchTerm] = useState('');
+    const [searchInput, setSearchInput] = useState('')
     const [deleteId, setDeleteId] = useState(null);
     const { showSnackbar } = useSnackbar();
 
     const fetchSubmissions = async () => {
         try {
-            const res = await axios.get(`${API_BASE_URL}/submissions`, { withCredentials: true });
-            setSubmissions(res.data);
-        } catch (err) { showSnackbar("Failed to fetch submissions", "danger"); }
+            const res = await axios.get(`${API_BASE_URL}/submissions`, {
+                params: { 
+                    page, 
+                    sortBy, 
+                    sortOrder, 
+                    search: searchTerm,
+                    limit: 10 
+                },
+                withCredentials: true 
+            });
+            setSubmissions(res.data.results);
+            setTotalPages(res.data.pages);
+        } catch (err) { 
+            showSnackbar("Failed to fetch submissions", "danger"); 
+        }
     };
 
-    useEffect(() => { fetchSubmissions(); }, []);
+    useEffect(() => { fetchSubmissions(); }, [page, sortBy, sortOrder, searchTerm]);
+
+    useEffect(() => {
+        const delayDebounceFn = setTimeout(() => {
+            setSearchTerm(searchInput);
+            setPage(1);
+        }, 500);
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [searchInput]);
 
     const filteredSubmissions = submissions.filter(sub => 
         sub.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -147,6 +175,13 @@ const SubmissionManagement = () => {
         } catch (err) { showSnackbar("Delete failed", "danger"); }
     };
 
+    const requestSort = (key) => {
+        const isAsc = sortBy === key && sortOrder === 'asc';
+        setSortOrder(isAsc ? 'desc' : 'asc');
+        setSortBy(key);
+        setPage(1);
+    };
+
     return (
         <Box sx={{ p: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -155,7 +190,7 @@ const SubmissionManagement = () => {
                     placeholder="Search submission name or user..."
                     startDecorator={<SearchIcon />}
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e) => setSearchInput(e.target.value)}
                     sx={{ width: 300 }}
                 />
             </Box>
@@ -163,13 +198,17 @@ const SubmissionManagement = () => {
                 <Table>
                     <thead>
                         <tr>
+                            <tr>
                             <th style={{ width: 40 }} />
-                            <th>Method Name</th>
-                            <th>User</th>
+                            <th onClick={() => requestSort('name')} style={{ cursor: 'pointer' }}>
+                                Method Name {sortBy === 'name' && (sortOrder === 'asc' ? '↑' : '↓')}
+                            </th>
+                            <th onClick={() => requestSort('username')} style={{ cursor: 'pointer' }}>User</th>
                             <th>Visibility</th>
                             <th>Status</th>
-                            <th>Score</th>
-                            <th style={{ width: 80 }}>Actions</th>
+                            <th onClick={() => requestSort('score')} style={{ cursor: 'pointer' }}>Score</th>
+                            <th>Actions</th>
+                        </tr>
                         </tr>
                     </thead>
                     <tbody>
@@ -189,6 +228,21 @@ const SubmissionManagement = () => {
                             </tr>
                         )}
                     </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colSpan={7}>
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 2 }}>
+                                    <Typography level="body-sm">Page {page} of {totalPages}</Typography>
+                                    <IconButton size="sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>
+                                        <KeyboardArrowLeftIcon />
+                                    </IconButton>
+                                    <IconButton size="sm" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>
+                                        <KeyboardArrowRightIcon />
+                                    </IconButton>
+                                </Box>
+                            </td>
+                        </tr>
+                    </tfoot>
                 </Table>
             </Sheet>
 
