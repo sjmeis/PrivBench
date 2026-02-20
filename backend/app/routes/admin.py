@@ -6,7 +6,7 @@ from ..models.dataset import Dataset
 from .. import db
 from datetime import datetime, timedelta
 import os
-from sqlalchemy import or_
+from sqlalchemy import or_, text
 from werkzeug.utils import secure_filename
 
 admin_bp = Blueprint("admin", __name__)
@@ -192,6 +192,16 @@ def admin_delete_submission(sub_id):
             full_path = os.path.join(UPLOAD_FOLDER, p_dataset.file_path)
             if os.path.exists(full_path):
                 os.remove(full_path)
+
+    db.session.execute(
+            text("DELETE FROM benchmark_queue WHERE submission_id = :sub_id"),
+            {"sub_id": sub_id}
+        )
+
+    db.session.execute(
+        text("DELETE FROM submission_datasets WHERE submission_id = :sub_id"),
+        {"sub_id": sub_id}
+    )
 
     submission.datasets = []
     db.session.commit()
