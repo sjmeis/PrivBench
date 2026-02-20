@@ -16,7 +16,7 @@ class BenchmarkQueue(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     submission_id = db.Column(
-        db.Integer, db.ForeignKey("submission.id"), nullable=False
+        db.Integer, db.ForeignKey("submission.id", ondelete="CASCADE"), nullable=False
     )
     module_id = db.Column(
         db.Integer, db.ForeignKey("benchmark_module.id"), nullable=False
