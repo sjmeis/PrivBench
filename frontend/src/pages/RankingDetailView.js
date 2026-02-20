@@ -13,6 +13,7 @@ import CircularProgressCountUp from "../components/ranking/CircularProgressCount
 import UserCard from "../components/ranking/UserCard";
 import BenchmarkingModulesOverview from "../components/shared/BenchmarkingModulesOverview";
 import Footer from "../components/shared/Footer";
+import MainLayout from "../components/layout/MainLayout";
 
 const RankingDetailView = () => {
     const {state} = useLocation();
@@ -50,7 +51,7 @@ const RankingDetailView = () => {
         overflow: 'hidden'
     }
     return (
-        !loading && submission ? <Box>
+        !loading && submission ? <MainLayout><Box>
             <Box sx={{display: 'flex', alignItems: 'center', paddingBottom: '20px'}}>
                 <Breadcrumbs
                     size="sm"
@@ -107,6 +108,7 @@ const RankingDetailView = () => {
             </Box>
             <Footer />
         </Box>
+        </MainLayout>
 :
     <LoadingSpinner/>
 
