@@ -10,6 +10,7 @@ import ViewModuleIcon from '@mui/icons-material/ViewModule';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import GroupIcon from '@mui/icons-material/Group';
 import HistoryIcon from '@mui/icons-material/History';
+import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
 
 export function SideNavAdmin({ selectedItem, onSelect }) {
 
@@ -90,6 +91,13 @@ export function SideNavAdmin({ selectedItem, onSelect }) {
                                 <HistoryIcon fontSize="small" />
                             </ListItemDecorator>
                             <ListItemContent>Submissions</ListItemContent>
+                        </ListItemButton>
+                        <ListItemButton 
+                            selected={selectedItem === 'health'} 
+                            onClick={() => onSelect('health')}
+                            >
+                            <ListItemDecorator><MonitorHeartIcon /></ListItemDecorator>
+                            <ListItemContent>System Health</ListItemContent>
                         </ListItemButton>
                     </List>
                 </ListItem>

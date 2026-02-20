@@ -9,6 +9,14 @@ import os
 from sqlalchemy import or_, text
 from werkzeug.utils import secure_filename
 
+import psutil
+try:
+    import pynvml
+    pynvml.nvmlInit()
+    HAS_GPU = True
+except:
+    HAS_GPU = False
+
 admin_bp = Blueprint("admin", __name__)
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
@@ -223,3 +231,28 @@ def admin_toggle_visibility(sub_id):
     
     status = "public" if submission.is_public else "private"
     return jsonify({"message": f"Submission is now {status}", "isPublic": submission.is_public}), 200
+
+@admin_bp.route('/system-health')
+@jwt_required()
+def get_system_stats():
+    claims = get_jwt()
+    if not claims.get("is_admin", False):
+        return jsonify({"message": "Forbidden"}), 403
+
+    stats = {
+        "cpu": psutil.cpu_percent(interval=1),
+        "memory": psutil.virtual_memory().percent,
+        "storage": psutil.disk_usage('/').percent,
+        "gpu": None
+    }
+
+    if HAS_GPU:
+        handle = pynvml.nvmlDeviceGetHandleByIndex(0)
+        info = pynvml.nvmlDeviceGetMemoryInfo(handle)
+        util = pynvml.nvmlDeviceGetUtilizationRates(handle)
+        stats["gpu"] = {
+            "load": util.gpu,
+            "memory": round((info.used / info.total) * 100, 2)
+        }
+    
+    return jsonify(stats)
