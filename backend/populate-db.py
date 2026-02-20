@@ -62,6 +62,8 @@ with app.app_context():
             bio=fake.text(max_nb_chars=400),
             research_institute=random.choice(list(institutions)),
             password="test123",
+            is_verified=True,
+            daily_submission_limit=0
         )
         users.append(user)
         db.session.add(user)
