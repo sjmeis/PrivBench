@@ -20,10 +20,13 @@ import AutorenewIcon from '@mui/icons-material/Autorenew';
 import { useNavigate } from "react-router-dom";
 import Footer from "../components/shared/Footer";
 import RankingsPreview from "../components/ranking/RankingPreview";
+import axios from "axios";
+import { API_BASE_URL } from "../config";
 
 const Home = () => {
   const [scrolled, setScrolled] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [stats, setStats] = useState({ userCount: 0, submissionCount: 0 })
   const theme = useTheme();
   const navigate = useNavigate();
   const isLightMode = theme.palette.mode === "light";
@@ -49,6 +52,18 @@ const Home = () => {
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const response = await axios.get(`${API_BASE_URL}/stats/summary`);
+        setStats(response.data);
+      } catch (error) {
+        console.error("Error fetching stats:", error);
+      }
+    };
+    fetchStats();
+  }, []);
 
   const highlights = [
     {
@@ -92,6 +107,13 @@ const Home = () => {
         "As text privatization evaluation evolves, so will PrivBench",
     },
   ];
+
+  const formatCounter = (num) => {
+      if (!num || num < 10) return num;
+      const factor = num < 100 ? 10 : 100;
+      const rounded = Math.floor(num / factor) * factor;
+      return `${rounded}+`;
+  };
 
   return (
     <Sheet
@@ -370,9 +392,9 @@ const Home = () => {
                 color: isLightMode ? "text.secondary" : "neutral.300",
               }}
             >
-              Compare your privacy preservation methods against other
+              Compare your text-to-text privatization methods against other
               researchers and institutions. Our ranking system provides
-              transparent metrics and fair comparisons across different
+              transparent, holistic, and diverse metrics, enabling fair comparisons across different
               approaches.
             </Typography>
             <Grid container spacing={2} sx={{ mb: 4 }}>
@@ -386,7 +408,7 @@ const Home = () => {
                   }}
                 >
                   <Typography level="h3" sx={{ color: "primary.500" }}>
-                    100+
+                    {formatCounter(stats.userCount) || "10+"}
                   </Typography>
                   <Typography level="body-sm">Active Researchers</Typography>
                 </Card>
@@ -401,7 +423,7 @@ const Home = () => {
                   }}
                 >
                   <Typography level="h3" sx={{ color: "primary.500" }}>
-                    500+
+                    {formatCounter(stats.submissionCount) || "100+"}
                   </Typography>
                   <Typography level="body-sm">Submissions</Typography>
                 </Card>
@@ -475,7 +497,7 @@ const Home = () => {
             >
               Monitor your privacy metrics in real-time with our comprehensive
               overview. Track performance, publish results, and make data-driven
-              decisions to enhance your privacy preservation methods.
+              decisions to advance your text-to-text privatization methods.
             </Typography>
             <Button
               size="lg"
