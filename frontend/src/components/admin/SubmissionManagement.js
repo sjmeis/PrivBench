@@ -222,11 +222,11 @@ const SubmissionManagement = () => {
                             <th style={{ width: '15%' }}>Status</th>
                             <th 
                                 onClick={() => requestSort('score')} 
-                                style={{ cursor: 'pointer', width: '10%' }}
+                                style={{ cursor: 'pointer', width: '15%' }}
                             >
                                 Score
                             </th>
-                            <th style={{ width: '120px', textAlign: 'right' }}>Actions</th>
+                            <th style={{ width: '10%'  }}>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
