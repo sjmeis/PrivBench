@@ -311,6 +311,7 @@ const Rankings = () => {
     const isAsc = orderBy === property && order === "asc";
     setOrder(isAsc ? "desc" : "asc");
     setOrderBy(property);
+    setCurrentPage(1);
   };
 
   const onViewClick = (row) => {
