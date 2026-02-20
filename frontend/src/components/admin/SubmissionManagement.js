@@ -21,7 +21,7 @@ const Row = ({ row, onDelete, onRefresh }) => {
     const handleToggleVisibility = async () => {
         setToggling(true);
         try {
-            await axios.put(`${API_BASE_URL}/admin/submissions/${row.id}/toggle-visibility`, {}, { withCredentials: true });
+            await axios.put(`${API_BASE_URL}/submissions/${row.id}/toggle-visibility`, {}, { withCredentials: true });
             showSnackbar("Visibility updated", "success");
             onRefresh(); // Refresh the list to show new state
         } catch (err) {
@@ -126,7 +126,7 @@ const SubmissionManagement = () => {
 
     const fetchSubmissions = async () => {
         try {
-            const res = await axios.get(`${API_BASE_URL}/admin/submissions`, { withCredentials: true });
+            const res = await axios.get(`${API_BASE_URL}/submissions`, { withCredentials: true });
             setSubmissions(res.data);
         } catch (err) { showSnackbar("Failed to fetch submissions", "danger"); }
     };
@@ -140,7 +140,7 @@ const SubmissionManagement = () => {
 
     const handleDelete = async () => {
         try {
-            await axios.delete(`${API_BASE_URL}/admin/submissions/${deleteId}`, { withCredentials: true });
+            await axios.delete(`${API_BASE_URL}/submissions/${deleteId}`, { withCredentials: true });
             showSnackbar("Submission deleted", "success");
             setDeleteId(null);
             fetchSubmissions();
