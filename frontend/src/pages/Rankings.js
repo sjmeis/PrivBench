@@ -270,13 +270,13 @@ const Rankings = () => {
     clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
       setSearchTerm(newInputValue);
-      setCurrentPage(1); // Reset to first page when searching
+      setCurrentPage(1);
     }, 500);
   };
 
   const handleVersionChange = (event, newValue) => {
     setSelectedVersion(newValue || "");
-    setCurrentPage(1); // Reset to first page when filtering
+    setCurrentPage(1);
   };
 
   const handleModuleChange = (event, newValue) => {
