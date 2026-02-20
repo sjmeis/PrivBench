@@ -105,7 +105,7 @@ const ModuleManagement = () => {
 
   return (
     <Box sx={{ width: selectedModule ? "calc(70vw - 270px)" : "100%" }}>
-      <Typography level="h2">Dataset Management</Typography>
+      <Typography level="h2">Module Management</Typography>
       <Box>
         <Box
           className="SearchAndFilters-tabletUp"
