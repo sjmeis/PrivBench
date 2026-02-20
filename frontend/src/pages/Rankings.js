@@ -315,7 +315,7 @@ const Rankings = () => {
   };
 
   const onViewClick = (row) => {
-    navigate("/rankings/detail", { state: row });
+    navigate(`/rankings/detail/${row.id}`);
   };
 
   const onNextPageClick = () => {

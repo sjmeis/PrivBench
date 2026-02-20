@@ -79,7 +79,7 @@ const Row = ({ row, onDelete, onRefresh }) => {
                                         variant="solid" 
                                         color="primary"
                                         startDecorator={<Visibility />}
-                                        onClick={() => navigate("/rankings/detail", { state: row })}
+                                        onClick={() => navigate(`/rankings/detail/${row.id}`)}
                                     >
                                         View Full Report
                                     </Button>
