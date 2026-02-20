@@ -45,21 +45,37 @@ def run_benchmark(
             shutil.copy2(dataset_path, temp_path / "dataset.csv")
             shutil.copy2(priv_dataset_path, temp_path / "privatized_dataset.csv")
 
+            host_benchmarks = Path("/app/benchmarks") 
+            if host_benchmarks.exists():
+                shutil.copytree(host_benchmarks, temp_path / "benchmarks", dirs_exist_ok=True)
+
             # Create runner script with simple progress output
             runner_script = f"""
 import pandas as pd
 import sys
 import json
 import importlib.util
+import types
 from pathlib import Path
+
+sys.path.insert(0, '/app')
+
+if 'modules' not in sys.modules:
+    m = types.ModuleType('modules')
+    m.__path__ = ['/app']
+    sys.modules['modules'] = m
+
+benchmarks_init = Path('/app/benchmarks/__init__.py')
+if not benchmarks_init.exists():
+    benchmarks_init.touch()
 
 def run():
     try:
         # Load module
         module_path = Path('/app/{module_name}.py')
-        spec = importlib.util.spec_from_file_location(module_path.stem, module_path)
+        spec = importlib.util.spec_from_file_location('{module_name}', module_path)
         module = importlib.util.module_from_spec(spec)
-        sys.modules[module_path.stem] = module
+        sys.modules['{module_name}'] = module
         spec.loader.exec_module(module)
         
         # Create benchmark instance
