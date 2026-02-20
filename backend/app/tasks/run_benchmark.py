@@ -139,7 +139,7 @@ if __name__ == '__main__':
                 result = container.exec_run(["ls", "-la", "/app"])
                 logger.info(f"Container directory after copy: {result.output.decode()}")
                 # Run benchmark
-                result = container.exec_run(["python", "/app/runner.py"], stream=True)
+                result = container.exec_run(["python3", "/app/runner.py"], stream=True)
 
                 # Process output
                 score = None

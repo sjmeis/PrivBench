@@ -21,9 +21,10 @@ class LengthVariation(BaseBenchmark):
     def __init__(self, eps: float = 1e-6):
         self.eps = eps
 
-    def _length(self, text: str) -> int:
-        return len(text.split()) # word-level length
-        # return len(text) # character-level length
+    def _length(self, text) -> int:
+        if not isinstance(text, str):
+            text = str(text) if text is not None else ""
+        return len(text.split())
 
     def score(self, original, private, progress_callback=None):
 
