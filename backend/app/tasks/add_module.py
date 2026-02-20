@@ -20,7 +20,6 @@ def install_and_load_module(
     requirements_path,
     is_new_module=False,
     restart_container=False,
-    device_specification="cpu",
     use_gpu=False
 ):
     """Celery task to install and load a module."""
@@ -29,7 +28,6 @@ def install_and_load_module(
         from app.utils.container_manager import container_manager
 
         # Simple device handling
-        #if device_specification == "gpu":
         if use_gpu == True:
             if not _gpu_available():
                 logger.error(
@@ -61,7 +59,6 @@ def install_and_load_module(
             module_path=module_path,
             module_name=module_name,
             requirements_path=requirements_path,
-            #use_gpu=device_specification == "gpu",
             use_gpu=use_gpu
         )
 
