@@ -346,7 +346,15 @@ const FinalStep = () => {
 
   return (
     <>
-      <Box sx={{ width: "100%", maxWidth: 1000, mx: "auto", p: 3 }}>
+      <Box sx={{ 
+        width: "100%", 
+        maxWidth: 1000, 
+        mx: "auto", 
+        p: 3,
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: 0
+      }}>
         <Typography level="h2" mb={2}>
           {loading ? "Evaluation in Progress" : "Evaluation Summary"}
         </Typography>
@@ -358,7 +366,11 @@ const FinalStep = () => {
               variant="outlined"
               color="danger"
               onClick={() => setIsCancelModalOpen(true)}
-              sx={{ mt: 2 }}
+              sx={{ 
+                mt: 2, 
+                alignSelf: 'flex-start',
+                mb: 5
+              }}
             >
               Cancel Evaluation
             </Button>
