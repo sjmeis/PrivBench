@@ -1,3 +1,4 @@
 mauve-text
 torch
 transformers
+pandas

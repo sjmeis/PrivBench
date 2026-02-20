@@ -23,7 +23,7 @@ class BLEU:
         return round(score, 3)
 
 class CS:
-    def __init__(self, model_checkpoint="thenlper/gte-small", progress_bar=False):
+    def __init__(self, model_checkpoint="sentence-transformers/all-MiniLM-L6-v2", progress_bar=False):
         """Initialize Cosine Similarity scorer"""
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model = SentenceTransformer(model_checkpoint, device=self.device)
@@ -54,7 +54,7 @@ class CS:
 
 @with_progress_tracking
 class Similarity(BaseBenchmark):
-    def __init__(self, normalize=True, model_checkpoint="thenlper/gte-small", progress_bar=False):
+    def __init__(self, normalize=True, model_checkpoint="sentence-transformers/all-MiniLM-L6-v2", progress_bar=False):
         """Initialize Similarity calculator using BLEU and CS"""
         self.bleu = BLEU(normalize=normalize)
         self.cs = CS(model_checkpoint=model_checkpoint, progress_bar=progress_bar)

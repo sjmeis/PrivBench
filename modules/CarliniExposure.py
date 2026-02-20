@@ -1,5 +1,6 @@
 import math
 from typing import List, Sequence
+import pandas as pd
 
 from benchmarks.base_benchmark import BaseBenchmark
 from benchmarks.benchmark_utils import with_progress_tracking
@@ -57,6 +58,10 @@ class CarliniExposure(BaseBenchmark):
         total = len(original)
 
         for i, (secret, candidates) in enumerate(zip(original, private)):
+            secret = str(secret) if not pd.isna(secret) else ""
+            if not isinstance(candidates, (list, tuple)):
+                candidates = []
+
             exp = self._single_exposure(secret, candidates)
             exposures.append(exp)
 

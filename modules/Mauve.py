@@ -1,5 +1,6 @@
 import torch
 import mauve
+import pandas as pd
 
 from benchmarks.base_benchmark import BaseBenchmark
 from benchmarks.benchmark_utils import with_progress_tracking
@@ -39,8 +40,11 @@ class Mauve(BaseBenchmark):
         self.mauve_kwargs = mauve_kwargs
 
     def score(self, original, private, progress_callback=None):
+        original = [str(x) for x in original if pd.notna(x)]
+        private = [str(x) for x in private if pd.notna(x)]
+
         if not original or not private:
-            raise ValueError("Both `original` and `private` must be non-empty lists of strings.")
+            return 0.0
 
         result = mauve.compute_mauve(
             p_text=original,
