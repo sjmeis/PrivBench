@@ -15,8 +15,8 @@ class PPL:
         self.ppl_tokenizer = AutoTokenizer.from_pretrained(self.model_checkpoint)
 
         self.max_len = max_len
-        if self.tokenizer.pad_token is None:
-            self.tokenizer.pad_token = self.tokenizer.eos_token
+        if self.ppl_tokenizer.pad_token is None:
+            self.ppl_tokenizer.pad_token = self.ppl_tokenizer.eos_token
 
     def compute_ppl(self, predictions, batch_size: int = 16, add_start_token: bool = True, max_length=512):
         # if batch_size > 1 (which generally leads to padding being required), and
