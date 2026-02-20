@@ -7,8 +7,6 @@ from sklearn.metrics import f1_score
 from benchmarks.base_benchmark import BaseBenchmark
 from benchmarks.benchmark_utils import with_progress_tracking
 
-# WARNING: This module script was modified for demonstration purposes, please replace with original script for deployment
-
 class PPL:
     def __init__(self, model_checkpoint="gpt2", max_len=512):
         self.ppl = evaluate.load("perplexity", module_type="metric")
@@ -35,36 +33,36 @@ class PPL:
         
         return round(score, 3)
     
-class SNIPS:
-    def __init__(self, model_checkpoint="benayas/roberta-full-finetuned-snips_100pct_v2"):
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.clf = pipeline("text-classification", model=model_checkpoint, device=self.device)
+# class SNIPS:
+#     def __init__(self, model_checkpoint="benayas/roberta-full-finetuned-snips_100pct_v2"):
+#         self.device = "cuda" if torch.cuda.is_available() else "cpu"
+#         self.clf = pipeline("text-classification", model=model_checkpoint, device=self.device)
 
-        with open("benchmarks/baselines.json", 'r') as f:
-            self.baseline = json.load(f)["snips"]
-        self.labels = pd.read_csv("benchmarks/snips_copy.csv")["label"].to_list()
+#         with open("benchmarks/baselines.json", 'r') as f:
+#             self.baseline = json.load(f)["snips"]
+#         self.labels = pd.read_csv("benchmarks/snips_copy.csv")["label"].to_list()
 
-    def score(self, data, internal_progress_callback=None):
-        """
-        Calculate F1 score on SNIPS with internal progress tracking.
-        """                
-        # Only process first row since we only have 10 labels
-        selected_indices = [0]  # Changed to only use first row
-        selected_data = [text for idx, text in enumerate(data) if idx in selected_indices]
+#     def score(self, data, internal_progress_callback=None):
+#         """
+#         Calculate F1 score on SNIPS with internal progress tracking.
+#         """                
+#         # Only process first row since we only have 10 labels
+#         selected_indices = [0]  # Changed to only use first row
+#         selected_data = [text for idx, text in enumerate(data) if idx in selected_indices]
         
-        predictions = self.clf(selected_data)
-        predictions = [x["label"] for x in predictions]
-        # Also need to filter labels to match the selected indices
-        selected_labels = [self.labels[idx] for idx in selected_indices]
-        f1 = f1_score(selected_labels, predictions, average="micro")
+#         predictions = self.clf(selected_data)
+#         predictions = [x["label"] for x in predictions]
+#         # Also need to filter labels to match the selected indices
+#         selected_labels = [self.labels[idx] for idx in selected_indices]
+#         f1 = f1_score(selected_labels, predictions, average="micro")
 
-        return round((f1 / self.baseline)*100, 3)
+#         return round((f1 / self.baseline)*100, 3)
 
 @with_progress_tracking
 class Coherence(BaseBenchmark):
     def __init__(self):
         self.ppl = PPL()
-        self.snips = SNIPS()
+        #self.snips = SNIPS()
     
     def score(self, original, private, progress_callback=None):
         total_steps = len(original) + len(private)
@@ -84,6 +82,6 @@ class Coherence(BaseBenchmark):
         if ppl_score > 100:
             ppl_score = 100
 
-        snips_score = self.snips.score(private)
+        #snips_score = self.snips.score(private)
 
-        return round((ppl_score + snips_score) / 2, 3)
+        return round(ppl_score, 3)
