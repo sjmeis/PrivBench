@@ -35,8 +35,9 @@ class ModuleManager:
         return f"""
         FROM {base}
         WORKDIR /app
+        RUN ln -s /usr/bin/python3 /usr/bin/python || true 
         ENV PYTHONPATH=/app
-        RUN pip install --no-cache-dir pandas
+        UN pip install --no-cache-dir pandas
         COPY {requirements_filename} /app/requirements.txt
         RUN pip install --no-cache-dir -r requirements.txt || true
         COPY . /app
