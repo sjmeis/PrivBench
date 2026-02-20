@@ -9,6 +9,7 @@ import ListItemContent from '@mui/joy/ListItemContent';
 import ViewModuleIcon from '@mui/icons-material/ViewModule';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import GroupIcon from '@mui/icons-material/Group';
+import HistoryIcon from '@mui/icons-material/History';
 
 export function SideNavAdmin({ selectedItem, onSelect }) {
 
@@ -80,7 +81,16 @@ export function SideNavAdmin({ selectedItem, onSelect }) {
                             </ListItemDecorator>
                             <ListItemContent>Users</ListItemContent>
                         </ListItemButton>
-                    </ListItem>
+                        </ListItem>
+                        <ListItemButton
+                            selected={selectedItem === 'submissions'}
+                            onClick={() => onSelect('submissions')}
+                        >
+                            <ListItemDecorator>
+                                <HistoryIcon fontSize="small" />
+                            </ListItemDecorator>
+                            <ListItemContent>Submissions</ListItemContent>
+                        </ListItemButton>
                     </List>
                 </ListItem>
             </List>
