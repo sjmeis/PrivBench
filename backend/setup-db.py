@@ -68,14 +68,15 @@ with app.app_context():
             logger.warning(f"Dataset file not found: {file_path} — skipping")
 
     # ── Modules ───────────────────────────────────────────────────────────
-    # Each entry: (name, file_name, reqs_file, title, description)
+    # Each entry: (name, file_name, reqs_file, title, description, use_gpu)
     module_defs = [
         (
             "Similarity",
             "Similarity.py",
             "similarity-reqs.txt",
             "Semantic Similarity",
-            "Semantic similarity measures the likeness between two pieces of text, commonly used in search engines, clustering, and recommendation tasks.",
+            "Semantic similarity measures the semantic likeness between two pieces of text, which is a signal of utility preservation in text privatization.",
+            True
         ),
         (
             "MaskedTokenInference",
@@ -83,13 +84,15 @@ with app.app_context():
             "masked-token-reqs.txt",
             "Masked Token Inference Protection",
             "In this module, we test for a privatization method's ability to defend against masked token prediction. Here, an attacker is simulated who attempts to infer tokens from the original text by leveraging the surrounding context. An effective privatization method should therefore not divulge information about the original content given the private context.",
+            True
         ),
         (
             "AttributeInference",
             "AttributeInference.py",
             "attribute-inference-reqs.txt",
             "Attribute Inference Protection",
-            "This module evaluates whether a privatization method can prevent attribute inference attacks. An attacker uses a text classifier to predict implicit attributes (e.g., sentiment, authorship) from privatized text. Effective privatization should obfuscate these attributes.",
+            "This module evaluates whether a privatization method can prevent attribute inference attacks. An attacker uses a text classifier to predict implicit attributes (e.g., authorship) from privatized text. Effective privatization should obfuscate these attributes.",
+            True
         ),
         (
             "CarliniExposure",
@@ -97,20 +100,23 @@ with app.app_context():
             "carlini-exposure-reqs.txt",
             "Exposure Defense",
             "This module measures a privatization method's resilience against exposure attacks, where an adversary attempts to determine whether specific text was part of the training data.",
+            True
         ),
         (
             "Coherence",
             "Coherence.py",
             "coh-reqs.txt",
             "Text Coherence",
-            "This module evaluates the coherence of text, ensuring logical flow and semantic connectivity between sentences and paragraphs.",
+            "This module evaluates the coherence of text, ensuring logical flow and semantic connectivity within the text.",
+            True
         ),
         (
             "LengthRobustness",
             "LengthRobustness.py",
             "length-robustness-reqs.txt",
             "Private Text Length Robustness",
-            "This module evaluates how robust a privatization method is across different text lengths, measuring whether privacy guarantees hold for both short and long inputs.",
+            "This module evaluates how robust a privatization method is across different text lengths, measuring whether privacy protections hold for both short and long inputs.",
+            True
         ),
         (
             "LengthVariation",
@@ -118,6 +124,7 @@ with app.app_context():
             "length-variation-reqs.txt",
             "Private Text Length Variance",
             "This module measures how much the length of text changes after privatization, assessing the degree of structural alteration introduced by the method.",
+            False
         ),
         (
             "Mauve",
@@ -125,6 +132,7 @@ with app.app_context():
             "mauve-reqs.txt",
             "Distribution Preservation",
             "This module computes the MAUVE score to quantify how well the distribution of privatized text matches the original text distribution.",
+            True
         ),
         (
             "NearestNeighbor",
@@ -132,6 +140,7 @@ with app.app_context():
             "nearest-neighbor-reqs.txt",
             "Nearest Neighbor Privacy",
             "This module evaluates privacy by checking whether the nearest neighbor of a privatized text is the corresponding original text, indicating potential information leakage.",
+            True
         ),
         (
             "NERpriv",
@@ -139,6 +148,7 @@ with app.app_context():
             "nerpriv-reqs.txt",
             "Private Entity Masking",
             "Text privatization should pay particular attention to named entities — words or groups of words that point to real-world objects, persons, or organizations. Ensuring that such entities are not leaked into the privatized text, while also balancing the preservation of semantics, is the mark of an effective privatization method.",
+            False
         ),
     ]
 
@@ -159,7 +169,7 @@ with app.app_context():
     modules = {}
 
     # Create and install modules one-by-one with retries
-    for name, file_name, reqs_file, title, description in module_defs:
+    for name, file_name, reqs_file, title, description, use_gpu in module_defs:
         module_path = os.path.join(MODULE_FOLDER, file_name)
         requirements_path = os.path.join(MODULE_FOLDER, reqs_file)
 
@@ -180,6 +190,7 @@ with app.app_context():
                 is_active=True,
                 path=module_path,
                 dataset_id=None,
+                use_gpu=use_gpu
             )
             db.session.add(module_record)
             db.session.commit()
@@ -211,6 +222,7 @@ with app.app_context():
                     module_name=name,
                     module_path=module_record.path,
                     requirements_path=requirements_path,
+                    use_gpu=use_gpu
                 )
 
                 result = task.get(timeout=600)
