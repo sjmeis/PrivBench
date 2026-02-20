@@ -58,9 +58,8 @@ class CarliniExposure(BaseBenchmark):
         total = len(original)
 
         for i, (secret, candidates) in enumerate(zip(original, private)):
-            secret = str(secret) if not pd.isna(secret) else ""
-            if not isinstance(candidates, (list, tuple)):
-                candidates = []
+            if not candidates or len(candidates) == 0:
+                exposures.append(0.0)
 
             exp = self._single_exposure(secret, candidates)
             exposures.append(exp)

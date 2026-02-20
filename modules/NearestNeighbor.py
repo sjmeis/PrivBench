@@ -64,4 +64,4 @@ class NearestNeighbor(BaseBenchmark):
             if progress_callback:
                 progress_callback()
         
-        return round(found / total, 3)
+        return round((found / total)*100, 3)
