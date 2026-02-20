@@ -62,7 +62,7 @@ const Row = ({ row, onDelete, onRefresh }) => {
                     {open && (
                         <Sheet variant="soft" sx={{ p: 3, m: 1, borderRadius: 'md', bgcolor: 'background.level1', border: '1px solid', borderColor: 'divider' }}>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                <Typography level="title-lg">Submission Deep-Dive</Typography>
+                                <Typography level="title-lg">Submission Details</Typography>
                                 <Stack direction="row" spacing={1}>
                                     <Button 
                                         size="sm" 
@@ -195,20 +195,38 @@ const SubmissionManagement = () => {
                 />
             </Box>
             <Sheet variant="outlined" sx={{ borderRadius: 'sm', overflow: 'auto' }}>
-                <Table>
+                <Table 
+                    sx={{ 
+                        tableLayout: 'fixed',
+                        width: '100%',
+                        '& th': { verticalAlign: 'middle' },
+                        '& td': { verticalAlign: 'middle', overflow: 'hidden', textOverflow: 'ellipsis' }
+                    }}
+                >
                     <thead>
                         <tr>
-                            <tr>
-                            <th style={{ width: 40 }} />
-                            <th onClick={() => requestSort('name')} style={{ cursor: 'pointer' }}>
+                            <th style={{ width: '40px' }} /> 
+                            <th 
+                                onClick={() => requestSort('name')} 
+                                style={{ cursor: 'pointer', width: '25%' }}
+                            >
                                 Method Name {sortBy === 'name' && (sortOrder === 'asc' ? '↑' : '↓')}
                             </th>
-                            <th onClick={() => requestSort('username')} style={{ cursor: 'pointer' }}>User</th>
-                            <th>Visibility</th>
-                            <th>Status</th>
-                            <th onClick={() => requestSort('score')} style={{ cursor: 'pointer' }}>Score</th>
-                            <th>Actions</th>
-                        </tr>
+                            <th 
+                                onClick={() => requestSort('username')} 
+                                style={{ cursor: 'pointer', width: '20%' }}
+                            >
+                                User
+                            </th>
+                            <th style={{ width: '15%' }}>Visibility</th>
+                            <th style={{ width: '15%' }}>Status</th>
+                            <th 
+                                onClick={() => requestSort('score')} 
+                                style={{ cursor: 'pointer', width: '10%' }}
+                            >
+                                Score
+                            </th>
+                            <th style={{ width: '120px', textAlign: 'right' }}>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
