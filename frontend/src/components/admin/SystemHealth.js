@@ -1,6 +1,10 @@
 import * as React from 'react';
 import { Box, Card, Typography, CircularProgress, Grid, Divider, Stack } from '@mui/joy';
-import { Cpu, Memory, Storage, Thermostat, Router } from '@mui/icons-material';
+import MemoryIcon from '@mui/icons-material/Memory';
+import StorageIcon from '@mui/icons-material/Storage'; 
+import DeveloperBoardIcon from '@mui/icons-material/DeveloperBoard';
+import SettingsInputComponentIcon from '@mui/icons-material/SettingsInputComponent';
+import ThermostatIcon from '@mui/icons-material/Thermostat';
 import { API_BASE_URL } from '../../config';
 
 const MetricCard = ({ title, value, icon, color, subtext = "" }) => (
@@ -62,41 +66,41 @@ const SystemHealth = () => {
       
       <Grid container spacing={3} sx={{ flexGrow: 1 }}>
         <Grid xs={12} sm={6} md={3}>
-          <MetricCard 
+            <MetricCard 
             title="CPU Usage" 
             value={stats.cpu} 
-            icon={<Cpu />} 
+            icon={<MemoryIcon />} 
             color="primary" 
-          />
+            />
         </Grid>
         <Grid xs={12} sm={6} md={3}>
-          <MetricCard 
+            <MetricCard 
             title="Memory (RAM)" 
             value={stats.memory} 
-            icon={<Memory />} 
+            icon={<DeveloperBoardIcon />} 
             color="warning" 
-          />
+            />
         </Grid>
         <Grid xs={12} sm={6} md={3}>
-          <MetricCard 
+            <MetricCard 
             title="Storage" 
             value={stats.storage} 
-            icon={<Storage />} 
+            icon={<StorageIcon />} 
             color="neutral" 
             subtext="Disk space utilization"
-          />
+            />
         </Grid>
 
         {stats.gpu && (
-          <Grid xs={12} sm={6} md={3}>
+            <Grid xs={12} sm={6} md={3}>
             <MetricCard 
-              title="GPU Utilization" 
-              value={stats.gpu.load} 
-              icon={<Router />} 
-              color="success" 
-              subtext={`VRAM: ${stats.gpu.memory}% | Temp: ${stats.gpu.temp}°C`}
+                title="GPU Utilization" 
+                value={stats.gpu.load} 
+                icon={<SettingsInputComponentIcon />} 
+                color="success" 
+                subtext={`VRAM: ${stats.gpu.memory}% | Temp: ${stats.gpu.temp}°C`}
             />
-          </Grid>
+            </Grid>
         )}
       </Grid>
 
