@@ -186,16 +186,17 @@ def admin_delete_submission(sub_id):
         return jsonify({"message": "Forbidden"}), 403
 
     submission = Submission.query.get_or_404(sub_id)
-    submission.datasets = []
-    db.session.commit()
-    db.session.delete(submission)
-    db.session.commit()
 
     for p_dataset in submission.privatized_datasets:
         if p_dataset.file_path:
             full_path = os.path.join(UPLOAD_FOLDER, p_dataset.file_path)
             if os.path.exists(full_path):
                 os.remove(full_path)
+
+    submission.datasets = []
+    db.session.commit()
+    db.session.delete(submission)
+    db.session.commit()
 
     return jsonify({"message": "Submission deleted by admin"}), 200
 
