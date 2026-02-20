@@ -145,7 +145,7 @@ with app.app_context():
                     license=random.choice(list(License)),
                     tags = random.sample(sample_tags, 2),
                     authors=fake.name(),
-                    research_paper_url="https://arxiv.org/abs/2306.01457",
+                    research_paper_url="https://arxiv.org/",
                     github_url="https://github.com/",
                     bibtex_citation="@article{example, "
                                     "title={Article Title}, "
