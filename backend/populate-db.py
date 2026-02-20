@@ -134,7 +134,8 @@ with app.app_context():
                     user_id=user.id,
                     status=SubmissionStatus.COMPLETED,
                     score=0.0,
-                    is_public=True
+                    is_public=True,
+                    version="1.0.0"
                 )
                 db.session.add(submission)
                 db.session.commit()
