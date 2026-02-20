@@ -47,3 +47,10 @@ class Submission(db.Model):
         back_populates="submission",
         cascade="all, delete-orphan",
     )
+
+    tasks_in_queue = db.relationship(
+        "BenchmarkQueue",
+        back_populates="submission",
+        cascade="all, delete-orphan",
+        passive_deletes=True
+    )
