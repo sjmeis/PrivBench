@@ -43,3 +43,7 @@ sentence-transformers
 tqdm
 nltk
 scikit-learn
+
+# Health
+psutil==5.9.8
+nvidia-ml-py==12.535.133

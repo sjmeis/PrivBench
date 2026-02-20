@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt
+from ..utils.monitor import system_stats
 from ..models.user import User
 from ..models.submission import Submission
 from ..models.dataset import Dataset
@@ -234,25 +235,9 @@ def admin_toggle_visibility(sub_id):
 
 @admin_bp.route('/system-health')
 @jwt_required()
-def get_system_stats():
+def system_health():
     claims = get_jwt()
     if not claims.get("is_admin", False):
         return jsonify({"message": "Forbidden"}), 403
-
-    stats = {
-        "cpu": psutil.cpu_percent(interval=1),
-        "memory": psutil.virtual_memory().percent,
-        "storage": psutil.disk_usage('/').percent,
-        "gpu": None
-    }
-
-    if HAS_GPU:
-        handle = pynvml.nvmlDeviceGetHandleByIndex(0)
-        info = pynvml.nvmlDeviceGetMemoryInfo(handle)
-        util = pynvml.nvmlDeviceGetUtilizationRates(handle)
-        stats["gpu"] = {
-            "load": util.gpu,
-            "memory": round((info.used / info.total) * 100, 2)
-        }
     
-    return jsonify(stats)
+    return jsonify(system_stats)

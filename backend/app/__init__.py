@@ -4,6 +4,7 @@ from flask_jwt_extended import JWTManager
 from flask_mail import Mail
 from celery import Celery
 
+from .utils.monitor import start_monitor
 from .utils.container_manager import container_manager
 from .config import Config
 from .extensions import db, mail, migrate
@@ -123,6 +124,9 @@ def create_app():
     @app.route("/health")
     def health_check():
         return {"status": "healthy"}, 200
+    
+    with app.app_context():
+        start_monitor()
 
     return app
 
