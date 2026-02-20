@@ -15,6 +15,7 @@ from sqlalchemy.orm import joinedload
 from flask_jwt_extended import (
     get_jwt_identity,
     jwt_required,
+    get_jwt
 )
 from datetime import datetime, timedelta
 
@@ -589,6 +590,7 @@ def get_all_filtered():
 
 
 @ranking_bp.route("/ranking/detail", methods=["POST"])
+@jwt_required(optional=True)
 def get_submission_detail():
     try:
         data = request.get_json()
@@ -618,6 +620,15 @@ def get_submission_detail():
 
         if not submission:
             return jsonify({"message": "Submission not found"}), 404
+        
+        current_user_id = get_jwt_identity()
+        claims = get_jwt()
+        is_admin = claims.get("is_admin", False)
+
+        # if not public, you must be the owner OR an admin
+        if not submission.is_public:
+            if not current_user_id or (current_user_id != submission.user_id and not is_admin):
+                return jsonify({"message": "This submission is private."}), 403
 
         submission_detail = {
             "id": submission.id,

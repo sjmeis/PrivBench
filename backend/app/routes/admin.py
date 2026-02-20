@@ -78,3 +78,58 @@ def admin_delete_user(user_id):
     db.session.delete(user)
     db.session.commit()
     return jsonify({"message": "User successfully deleted by administrator"}), 200
+
+@admin_bp.route('/submissions', methods=['GET'])
+@jwt_required()
+def get_all_submissions_admin():
+    claims = get_jwt()
+    if not claims.get("is_admin", False):
+        return jsonify({"message": "Unauthorized"}), 403
+
+    submissions = Submission.query.order_by(Submission.created_at.desc()).all()
+    
+    output = []
+    for sub in submissions:
+        output.append({
+            "id": sub.id,
+            "name": sub.name,
+            "username": sub.user.username,
+            "userEmail": sub.user.mail_address,
+            "status": sub.status.value,
+            "score": sub.score,
+            "isPublic": sub.is_public,
+            "date": sub.created_at.isoformat(),
+            "version": sub.version,
+            "metadata": {
+                "description": sub.submission_metadata.model_description if sub.submission_metadata else "N/A",
+                "institute": sub.user.research_institute,
+                "datasetCount": len(sub.datasets)
+            }
+        })
+    return jsonify(output), 200
+
+@admin_bp.route('/submissions/<int:sub_id>', methods=['DELETE'])
+@jwt_required()
+def admin_delete_submission(sub_id):
+    claims = get_jwt()
+    if not claims.get("is_admin", False):
+        return jsonify({"message": "Forbidden"}), 403
+
+    submission = Submission.query.get_or_404(sub_id)
+    db.session.delete(submission)
+    db.session.commit()
+    return jsonify({"message": "Submission deleted by admin"}), 200
+
+@admin_bp.route('/submissions/<int:sub_id>/toggle-visibility', methods=['PUT'])
+@jwt_required()
+def admin_toggle_visibility(sub_id):
+    claims = get_jwt()
+    if not claims.get("is_admin", False):
+        return jsonify({"message": "Forbidden"}), 403
+
+    submission = Submission.query.get_or_404(sub_id)
+    submission.is_public = not submission.is_public
+    db.session.commit()
+    
+    status = "public" if submission.is_public else "private"
+    return jsonify({"message": f"Submission is now {status}", "isPublic": submission.is_public}), 200

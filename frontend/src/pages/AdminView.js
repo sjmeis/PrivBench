@@ -6,6 +6,7 @@ import { SideNavAdmin } from "../components/admin/SideNavAdmin";
 import DatasetManagement from "../components/admin/DatasetManagement";
 import ModuleManagement from "../components/admin/ModuleManagement";
 import UserManagement from "../components/admin/UserManagement";
+import SubmissionManagement from "../components/admin/SubmissionManagement";
 import MainLayout from "../components/layout/MainLayout";
 
 const AdminView = () => {
@@ -26,6 +27,8 @@ const AdminView = () => {
         return <DatasetManagement />;
       case "users":
         return <UserManagement />;
+      case 'submissions':
+        return <SubmissionManagement />;
       default:
         return <ModuleManagement />;
     }

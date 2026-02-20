@@ -28,6 +28,7 @@ import { getGravatarUrl } from "../../utils/Gravatar";
 import ViewModuleIcon from "@mui/icons-material/ViewModule";
 import InsertDriveFileIcon from "@mui/icons-material/InsertDriveFile";
 import GroupIcon from '@mui/icons-material/Group';
+import HistoryIcon from '@mui/icons-material/History';
 import { useSnackbar } from "../../contexts/SnackbarProvider";
 import { ModuleService } from "../../services/ModuleService";
 
@@ -272,6 +273,14 @@ const Navbar = () => {
                       >
                         <GroupIcon />
                         Users
+                      </MenuItem>
+                      <MenuItem
+                        onClick={() =>
+                          navigate("/admin", { state: "submissions" })
+                        }
+                      >
+                        <HistoryIcon />
+                        Submissions
                       </MenuItem>
                     </>
                   ) : (
