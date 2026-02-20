@@ -21,23 +21,13 @@ class ModuleManager:
     def create_dockerfile(self, requirements_filename, use_gpu=False):
         """Create a Dockerfile for the module container"""
         base = self.base_image_gpu if use_gpu else self.base_image_cpu
-
-        # if not use_gpu:
-        #     return f"""
-        #     FROM {self.base_image_cpu}
-        #     WORKDIR /app
-        #     ENV PYTHONPATH=/app
-        #     COPY {requirements_filename} /app/requirements.txt
-        #     RUN pip install --no-cache-dir -r requirements.txt
-        #     COPY . /app
-        #     """
-
+        
         return f"""
         FROM {base}
         WORKDIR /app
         RUN ln -s /usr/bin/python3 /usr/bin/python || true 
         ENV PYTHONPATH=/app
-        UN pip install --no-cache-dir pandas
+        RUN pip install --no-cache-dir pandas
         COPY {requirements_filename} /app/requirements.txt
         RUN pip install --no-cache-dir -r requirements.txt || true
         COPY . /app
