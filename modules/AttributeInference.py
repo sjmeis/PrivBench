@@ -1,4 +1,5 @@
 import torch
+import pandas as pd
 from transformers import pipeline
 from sklearn.metrics import f1_score
 
@@ -63,15 +64,21 @@ class AttributeInference(BaseBenchmark):
             raise ValueError("`original` and `private` must have the same length.")
         if not original:
             raise ValueError("Inputs must be non-empty.")
+        
+        original_cleaned = [str(x) for x in original if pd.notna(x) and str(x).strip() != ""]
+        private_cleaned = [str(x) for x in private if pd.notna(x) and str(x).strip() != ""]
+
+        if not original_cleaned or not private_cleaned:
+            return 0.0
 
         # We treat the attacker's predictions on the ORIGINAL texts as a proxy
         # for ground-truth attributes, and measure how often they are recovered
         # from PRIVATIZED texts.
-        orig_labels = self._predict_labels(original)
+        orig_labels = self._predict_labels(original_cleaned)
         if progress_callback:
             progress_callback()
 
-        priv_labels = self._predict_labels(private)
+        priv_labels = self._predict_labels(private_cleaned)
         if progress_callback:
             progress_callback()
 
