@@ -8,7 +8,7 @@ import { useNavigate } from "react-router-dom";
 import CancelEvaluationModal from "./CancelEvaluationModal";
 import { API_BASE_URL } from "../../config";
 
-const FinalStep = () => {
+const FinalStep = ({ onComplete, onCancel }) => {
   const [loading, setLoading] = useState(true);
   const [averageScore, setAverageScore] = useState(null);
   const [moduleScores, setModuleScores] = useState([]);
@@ -272,6 +272,7 @@ const FinalStep = () => {
         const allFinished = updatedTasks.every((t) => t.completed || t.error);
         if (allFinished) {
           setLoading(false);
+          if (onComplete) onComplete();
           // Final score calculation
           const successfulTasks = updatedTasks.filter((t) => t.completed);
           if (successfulTasks.length > 0) {
@@ -337,6 +338,7 @@ const FinalStep = () => {
       localStorage.removeItem("tasks");
       localStorage.removeItem("queueEntries");
       localStorage.removeItem("submission_id");
+      if (onCancel) onCancel();
       navigate("/profile?state=submissions");
     } catch (error) {
       console.error("Error cancelling benchmark:", error);
