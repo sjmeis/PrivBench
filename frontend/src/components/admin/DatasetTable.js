@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { useState, useRef } from 'react';
 import Typography from '@mui/joy/Typography';
 import Table from '@mui/joy/Table';
 import { Box, Chip, IconButton, Sheet, Stack } from "@mui/joy";
@@ -12,12 +13,18 @@ import {useSnackbar} from "../../contexts/SnackbarProvider";
 import { Modal, ModalDialog, DialogTitle, DialogContent, DialogActions, Button, Divider } from "@mui/joy";
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
 import WarningRoundedIcon from "@mui/icons-material/WarningRounded";
+import EditIcon from '@mui/icons-material/Edit';
 
 
 const DatasetTable = ({datasets , onRefresh}) => {
     const {showSnackbar} = useSnackbar()
     const [deleteId, setDeleteId] = React.useState(null);
     const [isDeleting, setIsDeleting] = React.useState(false);
+    const [replacingId, setReplacingId] = useState(null);
+
+    const fileInputRef = useRef(null);
+    const [targetId, setTargetId] = React.useState(null);
+    
     const downloadDataset = (dataset) => {
         console.log(dataset)
         DatasetService.downloadDatasets([dataset.name])
@@ -44,6 +51,29 @@ const DatasetTable = ({datasets , onRefresh}) => {
         }
     };
 
+    const handleFileChange = async (event) => {
+        const file = event.target.files[0];
+        if (!file || !targetId) return;
+
+        setReplacingId(targetId);
+        try {
+            await DatasetService.replaceDatasetFile(targetId, file);
+            showSnackbar("Dataset file replaced successfully", "success");
+            onRefresh();
+        } catch (error) {
+            showSnackbar("Failed to replace file", "error");
+        } finally {
+            setReplacingId(null);
+            setTargetId(null);
+            event.target.value = null;
+        }
+    };
+
+    const triggerReplace = (id) => {
+        setTargetId(id);
+        fileInputRef.current.click();
+    };
+
     return (
         <Sheet
             variant="outlined"
@@ -53,6 +83,13 @@ const DatasetTable = ({datasets , onRefresh}) => {
                 display: { xs: 'none', md: 'flex' },
             }}
         >
+            <input
+                type="file"
+                ref={fileInputRef}
+                style={{ display: 'none' }}
+                accept=".csv"
+                onChange={handleFileChange}
+            />
             <div>
                 <Table
                     hoverRow
@@ -121,6 +158,14 @@ const DatasetTable = ({datasets , onRefresh}) => {
                             </td>
                             <td style={{ textAlign: "right" }}>
                                 <Stack direction="row" spacing={1} justifyContent="flex-end">
+                                    <IconButton 
+                                        variant='soft' 
+                                        color='primary' 
+                                        loading={replacingId === item.id} 
+                                        onClick={() => triggerReplace(item.id)}
+                                    >
+                                        <EditIcon />
+                                    </IconButton>
                                     <IconButton variant='soft' color='primary' onClick={() => downloadDataset(item)}>
                                         <CloudDownloadRounded />
                                     </IconButton>

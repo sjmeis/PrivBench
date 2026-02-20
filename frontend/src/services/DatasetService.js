@@ -188,6 +188,22 @@ const deleteDataset = async (id) => {
     return await axios.delete(`${API_BASE_URL}/datasets/${id}`, { withCredentials: true });
 };
 
+const replaceDatasetFile = async (datasetId, file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+        const response = await axios.put(`${API_BASE_URL}/datasets/${datasetId}/replace`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+            withCredentials: true
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Error replacing dataset file:', error);
+        throw error;
+    }
+};
+
 export const DatasetService = {
     fetchAllDatasets,
     fetchAllDatasetsForUpdate,
@@ -195,5 +211,6 @@ export const DatasetService = {
     downloadDatasets,
     uploadPrivatizedDataset,
     uploadDataset,
-    deleteDataset
+    deleteDataset,
+    replaceDatasetFile
 };
