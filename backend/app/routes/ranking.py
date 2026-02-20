@@ -444,6 +444,7 @@ def get_all_filtered():
                 or_(
                     Submission.name.ilike(search_term),
                     User.username.ilike(search_term),
+                    User.research_institute.ilike(search_term)
                 )
             )
 

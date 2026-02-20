@@ -5,7 +5,7 @@ from ..models.submission import Submission
 from .. import db
 from datetime import datetime, timedelta
 import os
-from sqlalchemy import or_, cast, String
+from sqlalchemy import or_
 
 admin_bp = Blueprint("admin", __name__)
 
@@ -97,17 +97,14 @@ def get_all_submissions_admin():
 
     query = db.session.query(Submission).join(User)
 
-    # 3. Apply Search
     if search:
         search_term = f"%{search}%"
         query = query.filter(or_(
             Submission.name.ilike(search_term),
             User.username.ilike(search_term),
-            cast(Submission.id, String).ilike(search_term)
+            User.research_institute.ilike(search_term)
         ))
 
-    # 4. Sorting
-    # Map frontend keys to backend columns
     sort_map = {
         'name': Submission.name,
         'username': User.username,
