@@ -563,6 +563,8 @@ const Upload = () => {
             padding={2}
             sx={{
               maxHeight: "calc(100vh - 80px)",
+              overflowY: "auto",
+              pb: 10,
             }}
           >
             {currentStep === 0 && (
