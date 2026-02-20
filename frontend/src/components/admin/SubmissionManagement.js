@@ -187,7 +187,7 @@ const SubmissionManagement = () => {
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography level="h2">Submission Management</Typography>
                 <Input
-                    placeholder="Search submission name or user..."
+                    placeholder="Search submission name, user, or research institute..."
                     startDecorator={<SearchIcon />}
                     value={searchTerm}
                     onChange={(e) => setSearchInput(e.target.value)}

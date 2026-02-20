@@ -391,7 +391,7 @@ const Rankings = () => {
           <FormLabel>Search</FormLabel>
           <Input
             variant="outlined"
-            placeholder="Search for username or privatization method"
+            placeholder="Search for username, reserach institute, or privatization method"
             name="searchTerm"
             value={searchValue}
             onChange={handleSearchInputChange}
