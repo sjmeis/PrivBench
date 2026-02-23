@@ -52,7 +52,7 @@ const UploadStep = ({ submissionId, datasets, uploadedFiles, onFileUploaded }) =
                 Upload the privatized datasets
             </Typography>
             <Typography sx={{ marginY: 2, p: 1 }} startDecorator={<InfoOutlined />} variant="soft" color="neutral" level="body1">
-                For every dataset listed below there needs to be uploaded the privatized counterpart in .csv format
+                For every dataset listed below there needs to be uploaded the privatized counterpart in .csv format. Make sure that you only alter the "text" column. The corresponding IDs should be left as in and in the same order!
             </Typography>
 
             <UploadTable

@@ -171,11 +171,21 @@ def upload_privatized_dataset():
         if not original_dataset or not os.path.isfile(original_dataset.file_path):
             return jsonify({"error": "Original dataset not found"}), 404
 
-        # Read original dataset header and row count
+        # Read original dataset header and row count, fetch IDs
+        orig_ids = []
         with open(original_dataset.file_path, "r", newline="") as f:
             reader = csv.reader(f)
             orig_header = next(reader, None)
-            orig_row_count = sum(1 for _ in reader) + 1  # +1 for header
+
+            if not orig_header or "id" not in [col.lower() for col in orig_header]:
+                return jsonify({"error": "Internal Error: Original dataset missing 'id' column"}), 500
+            
+            id_index = [col.lower() for col in orig_header].index("id")
+            for row in reader:
+                if row:
+                    orig_ids.append(row[id_index])
+
+        orig_row_count = sum(1 for _ in reader) + 1  # +1 for header
 
         # Read uploaded file using csv.reader to handle quoted fields correctly
         file_content = file.read().decode("utf-8")
@@ -196,6 +206,17 @@ def upload_privatized_dataset():
         if uploaded_row_count != orig_row_count:
             return jsonify({
                 "error": f"Row count mismatch: expected {orig_row_count}, got {uploaded_row_count}"
+            }), 400
+        
+        # validate IDs and their order against the original
+        uploaded_ids = [row[id_index] for row in uploaded_rows[1:]] # Skip header
+        if uploaded_ids != orig_ids:
+            # Optional: Find where the mismatch starts for better error reporting
+            mismatch_idx = next((i for i, (a, b) in enumerate(zip(uploaded_ids, orig_ids)) if a != b), 0)
+            return jsonify({
+                "error": f"ID sequence mismatch starting at row {mismatch_idx + 2}. "
+                         f"Expected ID '{orig_ids[mismatch_idx]}', got '{uploaded_ids[mismatch_idx]}'. "
+                         "Datasets must maintain the exact original row order."
             }), 400
 
         filename = secure_filename(
