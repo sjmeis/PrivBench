@@ -70,7 +70,8 @@ const SystemHealth = () => {
             title="CPU Usage" 
             value={stats.cpu} 
             icon={<MemoryIcon />} 
-            color="primary" 
+            color="primary"
+            subtext="Current load"
             />
         </Grid>
         <Grid xs={12} sm={6} md={3}>
@@ -79,6 +80,7 @@ const SystemHealth = () => {
             value={stats.memory} 
             icon={<DeveloperBoardIcon />} 
             color="warning" 
+            subtext="Current utilization"
             />
         </Grid>
         <Grid xs={12} sm={6} md={3}>
