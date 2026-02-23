@@ -14,7 +14,7 @@ from benchmarks.benchmark_utils import with_progress_tracking
 class UtilityPreservation(BaseBenchmark):
     def __init__(
         self,
-        model_checkpoint: str = "sjmeis/imdb_sentiment",
+        model_checkpoint: str = "sjmeis/imdb_sentiment_small",
         batch_size: int = 16,
     ):
         """

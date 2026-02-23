@@ -18,7 +18,7 @@ class PPL:
         if self.ppl_tokenizer.pad_token is None:
             self.ppl_tokenizer.pad_token = self.ppl_tokenizer.eos_token
 
-    def compute_ppl(self, predictions, batch_size: int = 16, add_start_token: bool = True, max_length=512):
+    def compute_ppl(self, predictions, batch_size: int = 8, add_start_token: bool = True, max_length=512):
         # if batch_size > 1 (which generally leads to padding being required), and
         # if there is not an already assigned pad_token, assign an existing
         # special token to also be the padding token
