@@ -188,8 +188,12 @@ def upload_privatized_dataset():
         orig_row_count = sum(1 for _ in reader) + 1  # +1 for header
 
         # Read uploaded file using csv.reader to handle quoted fields correctly
-        file_content = file.read().decode("utf-8")
-        uploaded_rows = list(csv.reader(file_content.strip().splitlines()))
+        file_content_bytes = file.read()
+        if not file_content_bytes:
+            return jsonify({"error": "Uploaded file is empty"}), 400
+        
+        file_content_str = file_content_bytes.decode("utf-8")
+        uploaded_rows = list(csv.reader(file_content_str.strip().splitlines()))
         if not uploaded_rows:
             return jsonify({"error": "Uploaded file is empty"}), 400
 
@@ -211,7 +215,7 @@ def upload_privatized_dataset():
         # validate IDs and their order against the original
         uploaded_ids = [row[id_index] for row in uploaded_rows[1:]] # Skip header
         if uploaded_ids != orig_ids:
-            # Optional: Find where the mismatch starts for better error reporting
+            # find where the mismatch starts for better error reporting
             mismatch_idx = next((i for i, (a, b) in enumerate(zip(uploaded_ids, orig_ids)) if a != b), 0)
             return jsonify({
                 "error": f"ID sequence mismatch starting at row {mismatch_idx + 2}. "
@@ -225,8 +229,8 @@ def upload_privatized_dataset():
         file_path = os.path.join(PRIVATIZED_DATASETS_FOLDER, filename)
 
         # Write the already-read content to disk
-        with open(file_path, "w") as f:
-            f.write(file_content)
+        with open(file_path, "wb") as f:
+            f.write(file_content_bytes)
 
         privatized_dataset = PrivatizedDataset(
             submission_id=submission_id,
