@@ -100,7 +100,7 @@ with app.app_context():
             "carlini-exposure-reqs.txt",
             "Exposure Defense",
             "This module measures a privatization method's resilience against exposure attacks, where an adversary attempts to determine whether specific text was part of the training data.",
-            True
+            False
         ),
         (
             "Coherence",
@@ -116,7 +116,7 @@ with app.app_context():
             "length-robustness-reqs.txt",
             "Private Text Length Robustness",
             "This module evaluates how robust a privatization method is across different text lengths, measuring whether privacy protections hold for both short and long inputs.",
-            True
+            False
         ),
         (
             "LengthVariation",

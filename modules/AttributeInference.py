@@ -34,7 +34,7 @@ class AttributeInference(BaseBenchmark):
 
     def __init__(
         self,
-        model_checkpoint: str = "sjmeis/yelp_authorship",
+        model_checkpoint: str = "sjmeis/yelp_authorship_small",
         batch_size: int = 16,
     ):
         """
