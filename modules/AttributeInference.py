@@ -2,6 +2,8 @@ import torch
 import pandas as pd
 from transformers import pipeline
 from sklearn.metrics import f1_score
+import json
+import os
 
 from benchmarks.base_benchmark import BaseBenchmark
 from benchmarks.benchmark_utils import with_progress_tracking
@@ -31,16 +33,13 @@ class AttributeInference(BaseBenchmark):
 
     def __init__(
         self,
-        model_checkpoint: str = "distilbert-base-uncased-finetuned-sst-2-english",
+        model_checkpoint: str = "sjmeis/yelp_authorship",
         batch_size: int = 16,
     ):
         """
         :param model_checkpoint: Hugging Face model to use as the attacker.
-                                 For real use, this should be an authorship /
-                                 attribute classifier (e.g., trained on Yelp,
-                                 Trustpilot, or blog corpus).
         """
-        self.device = 0 if torch.cuda.is_available() else -1
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.batch_size = batch_size
         self.clf = pipeline(
             "text-classification",
@@ -50,6 +49,17 @@ class AttributeInference(BaseBenchmark):
             truncation=True,
             max_length=512
         )
+
+        self.label_path = "/app/authorship_labels.json"
+        self.labels = self._load_labels()
+
+    def _load_labels(self):
+        if os.path.exists(self.label_path):
+            with open(self.label_path, 'r') as f:
+                return json.load(f)
+        else:
+            print(f"Warning: {self.label_path} not found.")
+            return {}
 
     def _predict_labels(self, texts):
         if not texts:
@@ -85,7 +95,8 @@ class AttributeInference(BaseBenchmark):
         if len(orig_labels) != len(priv_labels):
             raise RuntimeError("Attacker returned mismatched number of predictions.")
 
-        adv_f1 = f1_score(orig_labels, priv_labels, average="micro")
+        og_f1 = f1_score(orig_labels, self.labels, average="micro")
+        priv_f1 = f1_score(priv_labels, self.labels, average="micro")
 
-        privacy_score = (1.0 - adv_f1) * 100.0
+        privacy_score = min(100.0, (1.0 - (priv_f1/og_f1)) * 100.0)
         return round(privacy_score, 3)
