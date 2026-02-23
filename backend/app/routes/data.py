@@ -173,7 +173,8 @@ def upload_privatized_dataset():
 
         # Read original dataset header and row count, fetch IDs
         orig_ids = []
-        with open(original_dataset.file_path, "r", newline="") as f:
+        orig_header = None
+        with open(original_dataset.file_path, "r", newline="", encoding="utf-8") as f:
             reader = csv.reader(f)
             orig_header = next(reader, None)
 
@@ -185,7 +186,7 @@ def upload_privatized_dataset():
                 if row:
                     orig_ids.append(row[id_index])
 
-        orig_row_count = sum(1 for _ in reader) + 1  # +1 for header
+        orig_row_count = len(orig_ids) + 1 # +1 for header
 
         # Read uploaded file using csv.reader to handle quoted fields correctly
         file_content_bytes = file.read()
