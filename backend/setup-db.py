@@ -150,13 +150,21 @@ with app.app_context():
             "Text privatization should pay particular attention to named entities — words or groups of words that point to real-world objects, persons, or organizations. Ensuring that such entities are not leaked into the privatized text, while also balancing the preservation of semantics, is the mark of an effective privatization method.",
             False
         ),
+        (
+            "UtilityPreservation",
+            "UtilityPreservation.py",
+            "utility-preservation-reqs.txt",
+            "Downstream Utility Preservation",
+            "While privacy is very important, privatized texts should also maintain usability in downstream tasks, e.g., with sentiment analysis. This module evaluates the degree to which downstream task performance is preserved.",
+            True
+        ),
     ]
 
     # ── Dataset-Module Compatibility Mapping ──────────────────────────────
     compatibility_map = {
         "Similarity":          ["yelp.csv", "glue.csv"],
         "MaskedTokenInference": ["wikitext.csv"],
-        "AttributeInference":  ["yelp.csv", "imdb.csv"],
+        "AttributeInference":  ["yelp.csv"],
         "CarliniExposure":     ["wikitext.csv"],
         "Coherence":           ["imdb.csv", "wikitext.csv"],
         "LengthRobustness":    ["yelp.csv"],
@@ -164,6 +172,7 @@ with app.app_context():
         "Mauve":               ["yelp.csv", "wikitext.csv"],
         "NearestNeighbor":     ["yelp.csv", "wikitext.csv"],
         "NERpriv":             ["wikitext.csv"],
+        "UtilityPreservation": ["imdb.csv"]
     }
 
     modules = {}
