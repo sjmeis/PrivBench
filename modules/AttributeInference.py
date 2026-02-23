@@ -4,6 +4,7 @@ from transformers import pipeline
 from sklearn.metrics import f1_score
 import json
 import os
+import gc
 
 from benchmarks.base_benchmark import BaseBenchmark
 from benchmarks.benchmark_utils import with_progress_tracking
@@ -45,10 +46,12 @@ class AttributeInference(BaseBenchmark):
             "text-classification",
             model=model_checkpoint,
             device=self.device,
+            model_kwargs={"torch_dtype": torch.float16},
             batch_size=self.batch_size,
             truncation=True,
             max_length=512
         )
+        self.clf.model = self.clf.model.to_bettertransformer()
 
         self.label_path = "/app/authorship_labels.json"
         self.labels = self._load_labels()
@@ -70,33 +73,40 @@ class AttributeInference(BaseBenchmark):
         return [p["label"] for p in preds]
 
     def score(self, original, private, progress_callback=None):
-        if len(original) != len(private):
-            raise ValueError("`original` and `private` must have the same length.")
-        if not original:
-            raise ValueError("Inputs must be non-empty.")
-        
-        original_cleaned = [str(x) for x in original if pd.notna(x) and str(x).strip() != ""]
-        private_cleaned = [str(x) for x in private if pd.notna(x) and str(x).strip() != ""]
+        try:
+            if len(original) != len(private):
+                raise ValueError("`original` and `private` must have the same length.")
+            if not original:
+                raise ValueError("Inputs must be non-empty.")
+            
+            original_cleaned = [str(x) for x in original if pd.notna(x) and str(x).strip() != ""]
+            private_cleaned = [str(x) for x in private if pd.notna(x) and str(x).strip() != ""]
 
-        if not original_cleaned or not private_cleaned:
-            return 0.0
+            if not original_cleaned or not private_cleaned:
+                return 0.0
 
-        # We treat the attacker's predictions on the ORIGINAL texts as a proxy
-        # for ground-truth attributes, and measure how often they are recovered
-        # from PRIVATIZED texts.
-        orig_labels = self._predict_labels(original_cleaned)
-        if progress_callback:
-            progress_callback()
+            # We treat the attacker's predictions on the ORIGINAL texts as a proxy
+            # for ground-truth attributes, and measure how often they are recovered
+            # from PRIVATIZED texts.
+            orig_labels = self._predict_labels(original_cleaned)
+            if progress_callback:
+                progress_callback()
 
-        priv_labels = self._predict_labels(private_cleaned)
-        if progress_callback:
-            progress_callback()
+            priv_labels = self._predict_labels(private_cleaned)
+            if progress_callback:
+                progress_callback()
 
-        if len(orig_labels) != len(priv_labels):
-            raise RuntimeError("Attacker returned mismatched number of predictions.")
+            if len(orig_labels) != len(priv_labels):
+                raise RuntimeError("Attacker returned mismatched number of predictions.")
 
-        og_f1 = f1_score(orig_labels, self.labels, average="micro")
-        priv_f1 = f1_score(priv_labels, self.labels, average="micro")
+            og_f1 = f1_score(orig_labels, self.labels, average="micro")
+            priv_f1 = f1_score(priv_labels, self.labels, average="micro")
 
-        privacy_score = min(100.0, (1.0 - (priv_f1/og_f1)) * 100.0)
-        return round(privacy_score, 3)
+            privacy_score = min(100.0, (1.0 - (priv_f1/og_f1)) * 100.0)
+            return round(privacy_score, 3)
+        finally:
+            del self.clf
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                torch.cuda.ipc_collect()
