@@ -4,11 +4,15 @@ from ..utils.monitor import system_stats
 from ..models.user import User
 from ..models.submission import Submission
 from ..models.dataset import Dataset
+from ..models.benchmark_module import BenchmarkModule
+from ..models.benchmark_score import BenchmarkScore
+from ..models.benchmark_queue import BenchmarkQueue
 from .. import db
 from datetime import datetime, timedelta
 import os
 from sqlalchemy import or_, text
 from werkzeug.utils import secure_filename
+import docker
 
 import psutil
 try:
@@ -19,6 +23,7 @@ except:
     HAS_GPU = False
 
 admin_bp = Blueprint("admin", __name__)
+client = docker.from_env()
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
 DATASET_FOLDER = os.path.join(PROJECT_ROOT, "data/datasets")
@@ -241,3 +246,76 @@ def system_health():
         return jsonify({"message": "Forbidden"}), 403
     
     return jsonify(system_stats)
+
+@admin_bp.route('/modules/status', methods=['GET'])
+@jwt_required()
+def get_modules_status():
+    claims = get_jwt()
+    if not claims.get("is_admin", False):
+        return jsonify({"message": "Forbidden"}), 403
+
+    modules = BenchmarkModule.query.all()
+    results = []
+    
+    # Get all running containers to check status
+    containers = {c.name: c.status for c in client.containers.list(all=True)}
+    
+    for m in modules:
+        tag = f"module-{m.name.lower()}"
+        container_name = f"module-container-{m.name.lower()}"
+        
+        # Check if image exists
+        image_exists = False
+        try:
+            client.images.get(tag)
+            image_exists = True
+        except docker.errors.ImageNotFound:
+            pass
+
+        results.append({
+            "id": m.id,
+            "name": m.name,
+            "use_gpu": m.use_gpu,
+            "db_status": "Active",
+            "image_exists": image_exists,
+            "container_status": containers.get(container_name, "Not Created")
+        })
+    return jsonify(results)
+
+@admin_bp.route('/modules/rebuild/<int:module_id>', methods=['POST'])
+@jwt_required()
+def rebuild_module(module_id):
+    claims = get_jwt()
+    if not claims.get("is_admin", False):
+        return jsonify({"message": "Forbidden"}), 403
+
+    module = BenchmarkModule.query.get_or_404(module_id)
+    module_name = module.name
+    tag = f"module-{module_name.lower()}"
+    container_name = f"module-container-{module_name.lower()}"
+
+    try:
+        # Kill and Remove Container
+        try:
+            container = client.containers.get(container_name)
+            container.remove(force=True)
+        except:
+            pass
+
+        # Remove Image
+        try:
+            client.images.remove(image=tag, force=True)
+        except:
+            pass
+
+        # Clear DB records for this module
+        BenchmarkScore.query.filter_by(module_id=module_id).delete()
+        BenchmarkQueue.query.filter_by(module_id=module_id).delete()
+        db.session.delete(module)
+        db.session.commit()
+
+        # Trigger Re-setup (The setup-db logic)
+        # You can call your setup script logic here to re-add and re-build
+        return jsonify({"message": f"Module {module_name} purged. Re-run setup-db to rebuild."})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

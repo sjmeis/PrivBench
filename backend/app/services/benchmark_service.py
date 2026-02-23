@@ -296,7 +296,7 @@ Your latest submission has been evaluated successfully.<br>
 You can now visit the platform and see how your model performed.<br><br>
 
 Best regards,<br>
-PrivBench Team
+The PrivBench Team
 """
 
                         try:
