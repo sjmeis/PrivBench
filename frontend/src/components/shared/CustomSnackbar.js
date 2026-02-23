@@ -10,12 +10,9 @@ const CustomSnackbar = ({ open, message, severity = "info", onClose }) => {
             onClose={onClose}
             anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
             sx={{
-                bgcolor: severity === 'success' ? 'success.600' : 'danger.600',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                width: '350px',
-                height: '50px'
+                width: 'auto',
+                height: 'auto',
+                p: 0
             }}
         >
             <Alert
@@ -26,9 +23,16 @@ const CustomSnackbar = ({ open, message, severity = "info", onClose }) => {
                 sx={{
                     bgcolor: severity === 'success' ? 'success.600' : 'danger.600',
                     color: 'primary.50',
+                    minWidth: '300px',
+                    maxWidth: '500px',
                     textAlign: 'center',
-                    width: '100%',
-                    height: '100%'
+                    height: 'auto',
+                    '& .MuiAlert-content': {
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word',
+                        textAlign: 'left',
+                    },
+                    boxShadow: 'md',
                 }}
                 endDecorator={
                     <Fragment>
