@@ -31,7 +31,6 @@ class UtilityPreservation(BaseBenchmark):
             truncation=True,
             max_length=512
         )
-        self.clf.model = self.clf.model.to_bettertransformer()
 
         self.label_path = "/app/utility_labels.json"
         self.labels = self._load_labels()

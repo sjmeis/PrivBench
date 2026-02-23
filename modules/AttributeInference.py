@@ -51,7 +51,6 @@ class AttributeInference(BaseBenchmark):
             truncation=True,
             max_length=512
         )
-        self.clf.model = self.clf.model.to_bettertransformer()
 
         self.label_path = "/app/authorship_labels.json"
         self.labels = self._load_labels()
