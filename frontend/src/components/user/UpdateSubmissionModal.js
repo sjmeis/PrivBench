@@ -817,13 +817,13 @@ const formatDatasetReasonText = (reasons = []) => {
         <DialogContent sx={{ overflowX: "hidden" }}>
           {loading ? (
             <>
-              <Typography level="h3">Evaluation in Progress</Typography>
+              <Typography level="h3">Evaluation in progress!</Typography>
               {tasks.length > 0 ? (
                 <>
                   <TaskProgressCard tasks={tasks} queueEntries={queueEntries} />
                   <Typography level="body2" sx={{ mt: 2, textAlign: "center" }}>
                     Processing continues even if you close this window. Reopen the
-                    modal from the submissions table at any time to check progress.
+                    modal from the submissions table at any time to check the progress.
                   </Typography>
                 </>
               ) : (

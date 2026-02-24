@@ -358,7 +358,7 @@ const FinalStep = ({ onComplete, onCancel }) => {
         minHeight: 0
       }}>
         <Typography level="h2" mb={2}>
-          {loading ? "Evaluation in Progress" : "Evaluation Summary"}
+          {loading ? "Evaluation in progress!" : "Evaluation Summary"}
         </Typography>
 
         {loading ? (
