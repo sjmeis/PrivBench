@@ -1,4 +1,0 @@
-pandas
-torch
-sentence-transformers
-tqdm
