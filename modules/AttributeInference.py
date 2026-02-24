@@ -52,7 +52,7 @@ class AttributeInference(BaseBenchmark):
             max_length=512
         )
 
-        self.label_path = "/app/authorship_labels.json"
+        self.label_path = "/app/modules/authorship_labels.json"
         self.labels = self._load_labels()
 
     def _load_labels(self):
@@ -61,7 +61,7 @@ class AttributeInference(BaseBenchmark):
                 return json.load(f)
         else:
             print(f"Warning: {self.label_path} not found.")
-            return {}
+            return []
 
     def _predict_labels(self, texts):
         if not texts:
@@ -89,14 +89,18 @@ class AttributeInference(BaseBenchmark):
             original_cleaned, private_cleaned = zip(*valid_pairs)
             original_cleaned = list(original_cleaned)
             private_cleaned = list(private_cleaned)
-            
+
+            num_samples = len(original_cleaned)
+            if num_samples == 0:
+                return 0.0
+
             orig_labels = self._predict_labels(original_cleaned)
             if progress_callback:
-                progress_callback()
+                progress_callback(num_samples // 2)
 
             priv_labels = self._predict_labels(private_cleaned)
             if progress_callback:
-                progress_callback()
+                progress_callback(num_samples)
 
             if len(orig_labels) != len(priv_labels):
                 raise RuntimeError("Attacker returned mismatched number of predictions.")
