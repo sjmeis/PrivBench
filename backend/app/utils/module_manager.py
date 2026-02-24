@@ -44,14 +44,11 @@ class ModuleManager:
             requirements_dest = temp_path / "requirements.txt"
 
             # Copy and log module file
-            #shutil.copy2(module_path, module_dest)
             source_modules_dir = Path(module_path).parent
-            # for py_file in source_modules_dir.glob("*.py"):
-            #     shutil.copy2(py_file, temp_path / py_file.name)
-            for file in source_modules_dir.glob("*"):
+            for file in source_modules_dir.iterdir():
                 if file.is_file():
                     shutil.copy2(file, temp_path / file.name)
-                    logger.debug(f"File copied to build context: {file.name}")
+                    logger.debug(f"Copied to context: {file.name}")
             logger.debug(f"Module file copied to: {module_dest}")
             logger.debug(f"Module contents: {module_dest.read_text()}")
 

@@ -52,8 +52,7 @@ class AttributeInference(BaseBenchmark):
             max_length=512
         )
 
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        self.label_path = os.path.join(base_dir, "authorship_labels.json")
+        self.label_path = "/app/authorship_labels.json"
         self.labels = self._load_labels()
 
     def _load_labels(self):
