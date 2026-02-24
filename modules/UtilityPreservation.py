@@ -32,23 +32,11 @@ class UtilityPreservation(BaseBenchmark):
             max_length=512
         )
 
-        possible_paths = [
-            "/app/utility_labels.json",
-            "/app/modules/utility_labels.json",
-            "./utility_labels.json"
-        ]
-        
-        for p in possible_paths:
-            if os.path.exists(p):
-                self.label_path = p
-                break
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        self.label_path = os.path.join(base_dir, "utility_labels.json")
         self.labels = self._load_labels()
 
     def _load_labels(self):
-        if not self.label_path:
-            print("CRITICAL: utility_labels.json not found in any expected directory!")
-            return []
-
         try:
             with open(self.label_path, 'r') as f:
                 data = json.load(f)
