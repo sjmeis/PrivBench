@@ -5,6 +5,7 @@ import json
 import logging
 import shutil
 from docker.types import DeviceRequest
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -45,12 +46,25 @@ class ModuleManager:
 
             # Copy and log module file
             source_modules_dir = Path(module_path).parent
-            for file in source_modules_dir.iterdir():
-                if file.is_file():
-                    shutil.copy2(file, temp_path / file.name)
-                    logger.debug(f"Copied to context: {file.name}")
-            logger.debug(f"Module file copied to: {module_dest}")
-            logger.debug(f"Module contents: {module_dest.read_text()}")
+            # for file in source_modules_dir.iterdir():
+            #     if file.is_file():
+            #         shutil.copy2(file, temp_path / file.name)
+            #         logger.debug(f"Copied to context: {file.name}")
+            # logger.debug(f"Module file copied to: {module_dest}")
+            # logger.debug(f"Module contents: {module_dest.read_text()}")
+            try:
+                shutil.copytree(source_modules_dir, temp_path, dirs_exist_ok=True)
+                logger.info(f"Successfully mirrored {source_modules_dir} to build context")
+            except Exception as e:
+                logger.error(f"Failed to copy module files: {str(e)}")
+                raise
+
+            # Verification: Force a log of what is about to be built
+            context_files = os.listdir(temp_path)
+            logger.info(f"Build context for {module_name} contains: {context_files}")
+
+            if "authorship_labels.json" not in context_files:
+                logger.error(f"FATAL: authorship_labels.json missing from context! Source: {source_modules_dir}")
 
             # Copy files from benchmarks folder
             benchmarks_path = Path(
