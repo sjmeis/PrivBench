@@ -58,11 +58,17 @@ class UtilityPreservation(BaseBenchmark):
             if not original:
                 raise ValueError("Inputs must be non-empty.")
             
-            original_cleaned = [str(x) for x in original if pd.notna(x) and str(x).strip() != ""]
-            private_cleaned = [str(x) for x in private if pd.notna(x) and str(x).strip() != ""]
+            valid_pairs = []
+            for og, priv in zip(original, private):
+                if pd.notna(og) and pd.notna(priv) and str(og).strip() != "" and str(priv).strip() != "":
+                    valid_pairs.append((str(og), str(priv)))
 
-            if not original_cleaned or not private_cleaned:
+            if not valid_pairs:
                 return 0.0
+
+            original_cleaned, private_cleaned = zip(*valid_pairs)
+            original_cleaned = list(original_cleaned)
+            private_cleaned = list(private_cleaned)
 
             orig_labels = self._predict_labels(original_cleaned)
             if progress_callback:
