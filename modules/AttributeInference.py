@@ -70,7 +70,7 @@ class AttributeInference(BaseBenchmark):
         preds = self.clf(texts)
         if isinstance(preds, dict):
             preds = [preds]
-        return [p["label"] for p in preds]
+        return [int(p["label"]) for p in preds]
 
     def score(self, original, private, progress_callback=None):
         try:
