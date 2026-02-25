@@ -61,7 +61,7 @@ class UtilityPreservation(BaseBenchmark):
             
             valid_pairs = []
             for og, priv in zip(original, private):
-                if pd.notna(og) and pd.notna(priv) and str(og).strip() != "" and str(priv).strip() != "":
+                if pd.notna(og) and pd.notna(priv):
                     valid_pairs.append((str(og), str(priv)))
 
             if not valid_pairs:
@@ -81,7 +81,7 @@ class UtilityPreservation(BaseBenchmark):
 
             priv_labels = self._predict_labels(private_cleaned)
             if progress_callback:
-                progress_callback()
+                progress_callback(num_samples)
 
             og_f1 = f1_score(orig_labels, self.labels, average="micro")
             priv_f1 = f1_score(priv_labels, self.labels, average="micro")
