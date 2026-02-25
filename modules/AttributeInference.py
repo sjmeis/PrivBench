@@ -81,7 +81,7 @@ class AttributeInference(BaseBenchmark):
             
             valid_pairs = []
             for og, priv in zip(original, private):
-                if pd.notna(og) and pd.notna(priv) and str(og).strip() != "" and str(priv).strip() != "":
+                if pd.notna(og) and pd.notna(priv):
                     valid_pairs.append((str(og), str(priv)))
 
             if not valid_pairs:
