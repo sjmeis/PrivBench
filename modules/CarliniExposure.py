@@ -58,15 +58,14 @@ class CarliniExposure(BaseBenchmark):
         total = len(original)
 
         for i, (secret, candidates) in enumerate(zip(original, private)):
-            candidates = [x if pd.isnull(x) == False else " " for x in candidates]
-            if not candidates or len(candidates) == 0:
+            if pd.isnull(candidates) == True or len(candidates) == 0:
                 exposures.append(0.0)
                 continue
 
             exp = self._single_exposure(secret, candidates)
             exposures.append(exp)
 
-            if progress_callback and (i + 1) % 100 == 0:
+            if progress_callback:# and (i + 1) % 100 == 0:
                 progress_callback()
 
         avg_exposure = sum(exposures) / len(exposures)
