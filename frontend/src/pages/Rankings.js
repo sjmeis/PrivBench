@@ -935,7 +935,7 @@ const Rankings = () => {
 
                             {row.user.bio ? (
                               <Typography level="body-xs" sx={{ fontStyle: 'italic', color: 'text.secondary' }}>
-                                "{row.user.bio}"
+                                {row.user.bio}
                               </Typography>
                             ) : (
                               <></>

@@ -28,6 +28,9 @@ const UserCard = ({user, cardStyle}) => {
                             <Typography level="body-md" color="neutral">
                                 {user.researchInstitute}
                             </Typography>
+                            <Typography level="body-md" sx={{ fontStyle: 'italic', color: 'text.secondary' }}>
+                                {user.bio}
+                            </Typography>
                         </Box>
                     </Box>
                     <Divider sx={{m: 1}} orientation="horizontal"/>

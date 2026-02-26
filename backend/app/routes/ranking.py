@@ -552,6 +552,8 @@ def get_all_filtered():
                     "mailAddress": submission.user.mail_address,
                     "badges": submission.user.badges,
                     "researchInstitute": submission.user.research_institute,
+                    "profilePicturePath": submission.user.profile_picture_path,
+                    "bio": submission.user.bio
                 },
             }
 
@@ -647,6 +649,8 @@ def get_submission_detail():
                 "mailAddress": submission.user.mail_address,
                 "badges": submission.user.badges or [],
                 "researchInstitute": submission.user.research_institute,
+                "profilePicturePath": submission.user.profile_picture_path,
+                "bio": submission.user.bio
             },
             "benchmarkScores": [],
         }
@@ -767,6 +771,8 @@ def update_submission_detail():
                 "mailAddress": submission.user.mail_address,
                 "badges": submission.user.badges or [],
                 "researchInstitute": submission.user.research_institute,
+                "profilePicturePath": submission.user.profile_picture_path,
+                "bio": submission.user.bio
             },
             "benchmarkScores": [],
         }
