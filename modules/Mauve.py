@@ -27,7 +27,7 @@ class Mauve(BaseBenchmark):
     def __init__(
         self,
         featurize_model_name: str = "gpt2",
-        max_text_length: int = 128,
+        max_text_length: int = 64,
         device_id: int | None = None,
         **mauve_kwargs,
     ):
@@ -40,8 +40,8 @@ class Mauve(BaseBenchmark):
         self.mauve_kwargs = mauve_kwargs
 
     def score(self, original, private, progress_callback=None):
-        original = [str(x) for x in original if pd.notna(x)]
-        private = [str(x) for x in private if pd.notna(x)]
+        original = [str(x) if pd.notna(x) else " " for x in original]
+        private = [str(x) if pd.notna(x) else " " for x in private]
 
         if not original or not private:
             return 0.0
