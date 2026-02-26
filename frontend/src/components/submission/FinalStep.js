@@ -272,23 +272,28 @@ const FinalStep = ({ onComplete, onCancel }) => {
         const allFinished = updatedTasks.every((t) => t.completed || t.error);
         if (allFinished) {
           setLoading(false);
-          if (onComplete) onComplete();
-          // Final score calculation
-          const successfulTasks = updatedTasks.filter((t) => t.completed);
-          if (successfulTasks.length > 0) {
-            const scores = successfulTasks.map((t) => ({
-              module_name: t.module_name,
-              score: t.score,
-            }));
-            setModuleScores(scores);
-            setAverageScore(
-              scores.reduce((sum, curr) => sum + curr.score, 0) / scores.length
-            );
-          }
+          if (onComplete) onComplete(); 
         }
-      } catch (error) {
-        console.error("Error in pollStatus:", error);
-      }
+      //   const allFinished = updatedTasks.every((t) => t.completed || t.error);
+      //   if (allFinished) {
+      //     setLoading(false);
+      //     if (onComplete) onComplete();
+      //     // Final score calculation
+      //     const successfulTasks = updatedTasks.filter((t) => t.completed);
+      //     if (successfulTasks.length > 0) {
+      //       const scores = successfulTasks.map((t) => ({
+      //         module_name: t.module_name,
+      //         score: t.score,
+      //       }));
+      //       setModuleScores(scores);
+      //       setAverageScore(
+      //         scores.reduce((sum, curr) => sum + curr.score, 0) / scores.length
+      //       );
+      //     }
+      //   }
+      // } catch (error) {
+      //   console.error("Error in pollStatus:", error);
+      // }
     };
 
     const intervalId = setInterval(pollStatus, 2000);
@@ -391,7 +396,7 @@ const FinalStep = ({ onComplete, onCancel }) => {
               onClick={handleViewSubmissions}
               endDecorator={<RemoveRedEye />}
             >
-              View My Submissions
+              Finish and View My Submissions
             </Button>
           </>
         ) : (
