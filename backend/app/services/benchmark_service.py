@@ -243,6 +243,8 @@ class BenchmarkService:
                     submission.score = overall_score
                     submission.status = SubmissionStatus.COMPLETED
 
+                    submission.is_public = False
+
                     # Ensure submission version is significant (x.y.0)
                     submission.version = get_significant_version(submission.version)
 

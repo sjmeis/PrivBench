@@ -164,8 +164,10 @@ const UserSubmissionsTableRow = ({
             {row.status === SubmissionStatus.COMPLETED && (
                <Switch
                  color="success"
+                 variant="soft"
                  checked={row.isPublic}
                  onClick={() => onTogglePublic(row.id, !row.isPublic)}
+                 title={row.isPublic ? "Make private" : "Make public"}
                />
             )}
             
