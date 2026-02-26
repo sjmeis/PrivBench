@@ -120,9 +120,20 @@ const UserSubmissions = () => {
     setSubmission(null);
   };
 
+  const handleViewProgress = (submission) => {
+    navigate("/upload", {
+      state: {
+        currentStep: 4,
+        submissionId: submission.id,
+        metadata: submission.metadata,
+      },
+    });
+  };
+
   const handleNewOrContinueSubmission = () => {
-    if (pendingSubmission) {
-      // Navigate to continue the pending submission
+    if (inProgressSubmission) {
+      handleViewProgress(inProgressSubmission);
+    } else if (pendingSubmission) {
       navigate("/upload", {
         state: {
           currentStep: 1,
@@ -131,7 +142,6 @@ const UserSubmissions = () => {
         },
       });
     } else {
-      // Navigate to start a new submission
       navigate("/upload");
     }
   };
@@ -145,6 +155,32 @@ const UserSubmissions = () => {
         templateId: id,
       },
     });
+  };
+
+  const handleCancelSubmission = async (submissionId) => {
+    if (!window.confirm("Are you sure you want to cancel this evaluation?")) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/cancel-benchmark/${submissionId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        showSnackbar("Evaluation cancelled successfully", "success");
+        localStorage.removeItem("tasks");
+        localStorage.removeItem("queueEntries");
+        localStorage.removeItem("submission_id");
+        
+        fetchSubmissionsAndTemplates();
+      } else {
+        showSnackbar("Failed to cancel evaluation", "error");
+      }
+    } catch (error) {
+      console.error("Cancel error:", error);
+      showSnackbar("An error occurred while cancelling", "error");
+    }
   };
 
   const hasActiveSubmission = !!pendingSubmission || !!inProgressSubmission;
@@ -217,6 +253,8 @@ const UserSubmissions = () => {
                           row={submission}
                           onUpdateSubmission={onUpdateSubmissionClick}
                           onTogglePublic={onTogglePublic}
+                          onViewProgress={handleViewProgress}
+                          onCancelSubmission={handleCancelSubmission}
                         />
                       ))}
                     </tbody>

@@ -11,6 +11,7 @@ import {
   Menu,
   MenuButton,
   MenuItem,
+  Stack
 } from "@mui/joy";
 import Switch from "@mui/joy/Switch";
 import Sheet from "@mui/joy/Sheet";
@@ -36,6 +37,8 @@ const UserSubmissionsTableRow = ({
   row,
   onTogglePublic,
   onUpdateSubmission,
+  onViewProgress,
+  onCancelSubmission
 }) => {
   const [open, setOpen] = useState(false);
   const [selectedVersion, setSelectedVersion] = useState(row.version);
@@ -89,6 +92,8 @@ const UserSubmissionsTableRow = ({
   const canUpdateSubmission =
     row.status === SubmissionStatus.OUTDATED ||
     row.status === SubmissionStatus.IN_PROGRESS;
+  const isProcessing = row.status === SubmissionStatus.IN_PROGRESS;
+  const isOutdated = row.status === SubmissionStatus.OUTDATED;
 
   return (
     <Fragment>
@@ -155,28 +160,49 @@ const UserSubmissionsTableRow = ({
           )}
         </td>
         <td align="center">
-          {row.status === SubmissionStatus.COMPLETED && (
-            <Switch
-              color="success"
-              variant="soft"
-              checked={row.isPublic}
-              onClick={() => onTogglePublic(row.id, !row.isPublic)}
-              title={row.isPublic ? "Make private" : "Make public"}
-            />
-          )}
-          {canUpdateSubmission && (
-            <Button
-              color="primary"
-              size="sm"
-              variant="soft"
-              onClick={() => onUpdateSubmission(row)}
-              endDecorator={<Update />}
-            >
-              {row.status === SubmissionStatus.IN_PROGRESS
-                ? "View Progress"
-                : "Update"}
-            </Button>
-          )}
+          <Stack direction="row" spacing={1} justifyContent="center">
+            {row.status === SubmissionStatus.COMPLETED && (
+               <Switch
+                 color="success"
+                 checked={row.isPublic}
+                 onClick={() => onTogglePublic(row.id, !row.isPublic)}
+               />
+            )}
+            
+            {isProcessing && (
+              <>
+                <Button
+                  color="primary"
+                  size="sm"
+                  variant="soft"
+                  onClick={() => onViewProgress(row)}
+                >
+                  View Progress
+                </Button>
+                <IconButton
+                  size="sm"
+                  variant="plain"
+                  color="danger"
+                  onClick={() => onCancelSubmission(row.id)}
+                  title="Cancel Evaluation"
+                >
+                  <Update sx={{ transform: 'rotate(45deg)', color: 'red' }} /> 
+                </IconButton>
+              </>
+            )}
+
+            {isOutdated && (
+              <Button
+                color="primary"
+                size="sm"
+                variant="soft"
+                onClick={() => onUpdateSubmission(row)}
+                endDecorator={<Update />}
+              >
+                Update
+              </Button>
+            )}
+          </Stack>
         </td>
       </tr>
       <tr>

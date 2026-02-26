@@ -916,10 +916,37 @@ const Rankings = () => {
                   <td>{getDateString(row.submissionDate)}</td>
                   <td>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                      <Tooltip
+                        variant="soft"
+                        color="neutral"
+                        placement="top-start"
+                        arrow
+                        title={
+                          <Box sx={{ p: 1, maxWidth: 250 }}>
+                            <Typography level="title-sm" sx={{ mb: 0.5 }}>
+                              {row.user.username}
+                            </Typography>
+                            
+                            {row.user.researchInstitute && (
+                              <Typography level="body-xs" fontWeight="bold" color="primary" sx={{ mb: 0.5 }}>
+                                {row.user.researchInstitute}
+                              </Typography>
+                            )}
+
+                            {row.user.bio ? (
+                              <Typography level="body-xs" sx={{ fontStyle: 'italic', color: 'text.secondary' }}>
+                                "{row.user.bio}"
+                              </Typography>
+                            ) : (
+                              <></>
+                            )}
+                          </Box>
+                        }
+                      >
                       <Avatar
-                        size="sm"
-                        src={getGravatarUrl(row.user.mailAddress)}
+                        src={row.user.profilePicturePath || getGravatarUrl(row.user.mailAddress)}
                       />
+                      </Tooltip>
                       <Typography noWrap>{row.user.username}</Typography>
                     </Box>
                   </td>
