@@ -92,7 +92,7 @@ def _compute_modules_to_update(submission: Submission):
                 continue
 
             desc = (update.description or "").lower()
-            if "dataset updated" in desc:
+            if "dataset updated" in desc or "new dataset" in desc:
                 has_dataset_update = True
             if "requirements updated" in desc:
                 has_requirements_update = True
