@@ -285,7 +285,7 @@ def get_modules_status():
     return jsonify(results)
 
 @admin_bp.route('/modules/start/<int:module_id>', methods=['POST'])
-@jwt_required
+@jwt_required()
 def start_container(module_id):
     claims = get_jwt()
     if not claims.get("is_admin", False):
@@ -320,7 +320,7 @@ def start_container(module_id):
         return jsonify({"message": str(e)}), 500
 
 @admin_bp.route('/modules/stop/<int:module_id>', methods=['POST'])
-@jwt_required
+@jwt_required()
 def stop_container(module_id):
     claims = get_jwt()
     if not claims.get("is_admin", False):
@@ -336,7 +336,7 @@ def stop_container(module_id):
         return jsonify({"message": str(e)}), 500
 
 @admin_bp.route('/modules/rebuild/<int:module_id>', methods=['POST'])
-@jwt_required
+@jwt_required()
 def rebuild_module(module_id):
     claims = get_jwt()
     if not claims.get("is_admin", False):
@@ -365,7 +365,7 @@ def rebuild_module(module_id):
         return jsonify({"message": str(e)}), 500
 
 @admin_bp.route('/modules/purge/<int:module_id>', methods=['POST'])
-@jwt_required
+@jwt_required()
 def purge_module(module_id):
     claims = get_jwt()
     if not claims.get("is_admin", False):
@@ -398,7 +398,7 @@ def purge_module(module_id):
         return jsonify({"message": str(e)}), 500
     
 @admin_bp.route('/modules/logs/<int:module_id>', methods=['GET'])
-@jwt_required
+@jwt_required()
 def get_module_logs(module_id):
     claims = get_jwt()
     if not claims.get("is_admin", False):
