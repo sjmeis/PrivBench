@@ -295,10 +295,10 @@ def benchmark():
                 body = f"""
 Dear {user.username},<br><br>
 
-Unfortunately, your latest submission has failed.<br><br>
+Unfortunately, your latest submission has failed. Please check your submission details and files, try again, or get into contact with us.<br><br>
 
 Best regards,<br>
-PrivBench Team
+The PrivBench Team
 """
 
                 try:
@@ -338,10 +338,10 @@ PrivBench Team
                 body = f"""
 Dear {user.username},<br><br>
 
-Unfortunately, your latest submission has failed.<br><br>
+Unfortunately, your latest submission has failed. Please check your submission details and files, try again, or get into contact with us.<br><br>
 
 Best regards,<br>
-PrivBench Team
+The PrivBench Team
 """
 
                 try:

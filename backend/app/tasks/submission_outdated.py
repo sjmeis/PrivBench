@@ -98,7 +98,7 @@ Please visit the platform to update your submissions with the new benchmark modu
 After 3 days, outdated submissions will not be visualized on the leaderboard anymore.<br><br>
 
 Best regards,<br>
-PrivBench Team
+The PrivBench Team
 """
             # Send email with redirect_url
             try:
