@@ -161,10 +161,10 @@ const SubmissionManagement = () => {
         return () => clearTimeout(delayDebounceFn);
     }, [searchInput]);
 
-    const filteredSubmissions = submissions.filter(sub => 
-        sub.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        sub.username.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    // const filteredSubmissions = submissions.filter(sub => 
+    //     sub.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    //     sub.username.toLowerCase().includes(searchTerm.toLowerCase())
+    // );
 
     const handleDelete = async () => {
         try {
@@ -189,9 +189,9 @@ const SubmissionManagement = () => {
                 <Input
                     placeholder="Search submission name, user, or research institute..."
                     startDecorator={<SearchIcon />}
-                    value={searchTerm}
+                    value={searchInput} 
                     onChange={(e) => setSearchInput(e.target.value)}
-                    sx={{ width: 300 }}
+                    sx={{ width: 400 }}
                 />
             </Box>
             <Sheet variant="outlined" sx={{ borderRadius: 'sm', overflow: 'auto' }}>
@@ -230,7 +230,7 @@ const SubmissionManagement = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {filteredSubmissions.map((sub) => (
+                        {submissions.map((sub) => (
                             <Row 
                                 key={sub.id} 
                                 row={sub} 
@@ -238,7 +238,7 @@ const SubmissionManagement = () => {
                                 onRefresh={fetchSubmissions}
                             />
                         ))}
-                        {filteredSubmissions.length === 0 && (
+                        {submissions.length === 0 && (
                             <tr>
                                 <td colSpan={7} style={{ textAlign: 'center', padding: '20px' }}>
                                     No submissions found matching your search.
