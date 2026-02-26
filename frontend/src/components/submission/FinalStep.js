@@ -271,26 +271,25 @@ const FinalStep = ({ onComplete, onCancel }) => {
         // Check for completion
         const allFinished = updatedTasks.every((t) => t.completed || t.error);
         if (allFinished) {
-          setLoading(false);
-          if (onComplete) onComplete(); 
+          const successfulTasks = updatedTasks.filter((t) => t.completed);
+          
+          if (successfulTasks.length > 0) {
+            const scores = successfulTasks.map((t) => ({
+              module_name: t.module_name,
+              score: t.score,
+            }));
+            
+            setModuleScores(scores);
+            setAverageScore(
+              scores.reduce((sum, curr) => sum + curr.score, 0) / scores.length
+            );
+            
+            setLoading(false);
+            if (onComplete) onComplete();
+          } else {
+            setLoading(false);
+          }
         }
-      //   const allFinished = updatedTasks.every((t) => t.completed || t.error);
-      //   if (allFinished) {
-      //     setLoading(false);
-      //     if (onComplete) onComplete();
-      //     // Final score calculation
-      //     const successfulTasks = updatedTasks.filter((t) => t.completed);
-      //     if (successfulTasks.length > 0) {
-      //       const scores = successfulTasks.map((t) => ({
-      //         module_name: t.module_name,
-      //         score: t.score,
-      //       }));
-      //       setModuleScores(scores);
-      //       setAverageScore(
-      //         scores.reduce((sum, curr) => sum + curr.score, 0) / scores.length
-      //       );
-      //     }
-      //   }
       } catch (error) {
         console.error("Error in pollStatus:", error);
       }

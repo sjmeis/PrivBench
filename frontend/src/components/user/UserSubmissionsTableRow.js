@@ -109,7 +109,9 @@ const UserSubmissionsTableRow = ({
             {open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
           </IconButton>
         </td>
-        <th scope="row">{row.name}</th>
+        <th scope="row" style={{ wordBreak: "break-word", whiteSpace: "normal" }}>
+          {row.name}
+        </th>
         <th scope="row">{getDateTimeString(row.submissionDate)}</th>
         <td>
           <Chip color={statusColor(row.status)}>{row.status}</Chip>
@@ -160,6 +162,7 @@ const UserSubmissionsTableRow = ({
           )}
         </td>
         <td align="center">
+          <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", width: "100%" }}>
           <Stack direction="row" spacing={1} justifyContent="center">
             {row.status === SubmissionStatus.COMPLETED && (
                <Switch
@@ -205,6 +208,7 @@ const UserSubmissionsTableRow = ({
               </Button>
             )}
           </Stack>
+          </Box>
         </td>
       </tr>
       <tr>
