@@ -73,7 +73,6 @@ const ModuleManagement = () => {
   const handleAddModuleSubmit = () => {
     showSnackbar("Benchmarking Module Created Successfully", "success");
     setIsModalOpen(false);
-    
     fetchModules();
     refreshPendingUpdates();
   };
@@ -91,9 +90,12 @@ const ModuleManagement = () => {
   };
 
   const onModalClose = () => {
-    fetchModules();
-    refreshPendingUpdates();
-    setIsModalOpen(false);
+    try {
+      fetchModules();
+      refreshPendingUpdates();
+    } finally {
+      setIsModalOpen(false);
+    }
   };
 
   const handlePublished = () => {
