@@ -451,21 +451,37 @@ def create_benchmark_module():
         db.session.flush()
 
         # Link compatible datasets via many-to-many
+        check_new_dataset = False
         if dataset_ids:
             datasets = Dataset.query.filter(Dataset.id.in_(dataset_ids)).all()
             new_benchmark_module.compatible_datasets = datasets
-
+            for x in datasets:
+                if len(x.compatible_modules) == 0:
+                    check_new_dataset = True
+        
         # Record a pending update entry
-        db.session.add(
-            ModuleUpdate(
-                module_id=new_benchmark_module.id,
-                update_type="new_module",
-                change_level="major",
-                description=f"New module '{name}' added",
-                is_updated=True,
-                version_id=None,
+        if check_new_dataset:
+            db.session.add(
+                ModuleUpdate(
+                    module_id=new_benchmark_module.id,
+                    update_type="new_module",
+                    change_level="major",
+                    description=f"New module '{name}' added, new dataset",
+                    is_updated=True,
+                    version_id=None,
+                )
             )
-        )
+        else:
+            db.session.add(
+                ModuleUpdate(
+                    module_id=new_benchmark_module.id,
+                    update_type="new_module",
+                    change_level="major",
+                    description=f"New module '{name}' added",
+                    is_updated=True,
+                    version_id=None,
+                )
+            )
 
         db.session.commit()
 
