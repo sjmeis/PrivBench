@@ -191,7 +191,7 @@ const SubmissionManagement = () => {
                     startDecorator={<SearchIcon />}
                     value={searchInput} 
                     onChange={(e) => setSearchInput(e.target.value)}
-                    sx={{ width: 400 }}
+                    sx={{ width: 500 }}
                 />
             </Box>
             <Sheet variant="outlined" sx={{ borderRadius: 'sm', overflow: 'auto' }}>
