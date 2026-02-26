@@ -33,7 +33,7 @@ def get_modules_folder():
     return os.path.abspath(path)
 DATASET_FOLDER = os.path.join(PROJECT_ROOT, "data", "datasets")
 #MODULES_FOLDER = os.path.join(PROJECT_ROOT, "modules")
-MODULES_FOLDER = os.path.abspath(os.path.join(current_app.root_path, "..", "modules"))
+MODULES_FOLDER = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../modules"))
 
 module_bp = Blueprint("benchmark_module", __name__)
 
