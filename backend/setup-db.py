@@ -94,14 +94,14 @@ with app.app_context():
             "This module evaluates whether a privatization method can prevent attribute inference attacks. An attacker uses a text classifier to predict implicit attributes (e.g., authorship) from privatized text. Effective privatization should obfuscate these attributes.",
             True
         ),
-        (
-            "CarliniExposure",
-            "CarliniExposure.py",
-            "carlini-exposure-reqs.txt",
-            "Exposure Defense",
-            "This module measures a privatization method's resilience against exposure attacks, where an adversary attempts to determine whether specific text was part of the training data.",
-            False
-        ),
+        # ( REMOVED FOR v1.0
+        #     "CarliniExposure",
+        #     "CarliniExposure.py",
+        #     "carlini-exposure-reqs.txt",
+        #     "Exposure Defense",
+        #     "This module measures a privatization method's resilience against exposure attacks, where an adversary attempts to determine whether specific text was part of the training data.",
+        #     False
+        # ),
         (
             "Coherence",
             "Coherence.py",
@@ -165,7 +165,7 @@ with app.app_context():
         "Similarity":          ["yelp.csv", "glue.csv"],
         "MaskedTokenInference": ["wikitext.csv"],
         "AttributeInference":  ["yelp.csv"],
-        "CarliniExposure":     ["wikitext.csv"],
+        #"CarliniExposure":     ["wikitext.csv"],
         "Coherence":           ["imdb.csv", "wikitext.csv"],
         "LengthRobustness":    ["yelp.csv"],
         "LengthVariation":     ["yelp.csv", "wikitext.csv"],
