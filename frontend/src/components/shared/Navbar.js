@@ -29,6 +29,7 @@ import ViewModuleIcon from "@mui/icons-material/ViewModule";
 import InsertDriveFileIcon from "@mui/icons-material/InsertDriveFile";
 import GroupIcon from '@mui/icons-material/Group';
 import HistoryIcon from '@mui/icons-material/History';
+import TerminalIcon from '@mui/icons-material/Terminal';
 import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
 import { useSnackbar } from "../../contexts/SnackbarProvider";
 import { ModuleService } from "../../services/ModuleService";
@@ -281,6 +282,14 @@ const Navbar = () => {
                       >
                         <HistoryIcon />
                         Submissions
+                      </MenuItem>
+                      <MenuItem
+                        onClick={() =>
+                          navigate("/admin", { state: "orchestration" })
+                        }
+                      >
+                        <TerminalIcon />
+                        Module Orchestration
                       </MenuItem>
                       <MenuItem
                         onClick={() =>

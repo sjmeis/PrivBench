@@ -10,6 +10,7 @@ import ViewModuleIcon from '@mui/icons-material/ViewModule';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import GroupIcon from '@mui/icons-material/Group';
 import HistoryIcon from '@mui/icons-material/History';
+import TerminalIcon from '@mui/icons-material/Terminal';
 import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
 
 export function SideNavAdmin({ selectedItem, onSelect }) {
@@ -92,12 +93,34 @@ export function SideNavAdmin({ selectedItem, onSelect }) {
                             </ListItemDecorator>
                             <ListItemContent>Submissions</ListItemContent>
                         </ListItemButton>
+                        <ListItemButton
+                            selected={selectedItem === 'orchestration'}
+                            onClick={() => onSelect('orchestration')}
+                            color="primary"
+                            variant={selectedItem === 'orchestration' ? 'soft' : 'plain'}
+                        >
+                            <ListItemDecorator>
+                                <TerminalIcon fontSize="small" />
+                            </ListItemDecorator>
+                            <ListItemContent>Module Orchestration</ListItemContent>
+                        </ListItemButton>
                         <ListItemButton 
                             selected={selectedItem === 'health'} 
                             onClick={() => onSelect('health')}
                             >
                             <ListItemDecorator><MonitorHeartIcon /></ListItemDecorator>
                             <ListItemContent>System Health</ListItemContent>
+                        </ListItemButton>
+                        <ListItemButton
+                            selected={selectedItem === 'orchestration'}
+                            onClick={() => onSelect('orchestration')}
+                            color="primary"
+                            variant={selectedItem === 'orchestration' ? 'soft' : 'plain'}
+                        >
+                            <ListItemDecorator>
+                                <TerminalIcon fontSize="small" />
+                            </ListItemDecorator>
+                            <ListItemContent>Container Status</ListItemContent>
                         </ListItemButton>
                     </List>
                 </ListItem>

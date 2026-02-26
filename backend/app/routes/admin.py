@@ -13,6 +13,7 @@ import os
 from sqlalchemy import or_, text
 from werkzeug.utils import secure_filename
 import docker
+from ..utils.module_manager import ModuleManager
 
 import psutil
 try:
@@ -24,6 +25,7 @@ except:
 
 admin_bp = Blueprint("admin", __name__)
 client = docker.from_env()
+module_manager = ModuleManager()
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
 DATASET_FOLDER = os.path.join(PROJECT_ROOT, "data/datasets")
@@ -282,40 +284,133 @@ def get_modules_status():
         })
     return jsonify(results)
 
+@admin_bp.route('/modules/start/<int:module_id>', methods=['POST'])
+@jwt_required
+def start_container(module_id):
+    claims = get_jwt()
+    if not claims.get("is_admin", False):
+        return jsonify({"message": "Forbidden"}), 403
+
+    module = BenchmarkModule.query.get_or_404(module_id)
+    image_tag = f"module-{module.name.lower()}:latest"
+    container_name = f"module-container-{module.name.lower()}"
+    
+    try:
+        # If an old container exists but is stopped, remove it first
+        try:
+            old_container = client.containers.get(container_name)
+            old_container.remove(force=True)
+        except:
+            pass
+
+        # Start new container
+        device_requests = []
+        if module.use_gpu:
+            device_requests = [docker.types.DeviceRequest(count=-1, capabilities=[['gpu']])]
+
+        client.containers.run(
+            image_tag,
+            name=container_name,
+            detach=True,
+            device_requests=device_requests,
+            network="privbench_default"
+        )
+        return jsonify({"message": f"Started {module.name}"}), 200
+    except Exception as e:
+        return jsonify({"message": str(e)}), 500
+
+@admin_bp.route('/modules/stop/<int:module_id>', methods=['POST'])
+@jwt_required
+def stop_container(module_id):
+    claims = get_jwt()
+    if not claims.get("is_admin", False):
+        return jsonify({"message": "Forbidden"}), 403
+
+    module = BenchmarkModule.query.get_or_404(module_id)
+    container_name = f"module-container-{module.name.lower()}"
+    try:
+        container = client.containers.get(container_name)
+        container.stop()
+        return jsonify({"message": f"Stopped {module.name}"}), 200
+    except Exception as e:
+        return jsonify({"message": str(e)}), 500
+
 @admin_bp.route('/modules/rebuild/<int:module_id>', methods=['POST'])
-@jwt_required()
+@jwt_required
 def rebuild_module(module_id):
     claims = get_jwt()
     if not claims.get("is_admin", False):
         return jsonify({"message": "Forbidden"}), 403
 
     module = BenchmarkModule.query.get_or_404(module_id)
-    module_name = module.name
-    tag = f"module-{module_name.lower()}"
-    container_name = f"module-container-{module_name.lower()}"
-
     try:
-        # Kill and Remove Container
+        # 1. Stop and remove existing container
+        container_name = f"module-container-{module.name.lower()}"
         try:
             container = client.containers.get(container_name)
             container.remove(force=True)
         except:
             pass
 
-        # Remove Image
+        # 2. Trigger ModuleManager build logic
+        # This uses the logic we fixed earlier to copy JSON files!
+        module_manager.build_module_container(
+            module_path=module.path,
+            module_name=module.name,
+            requirements_path=module.requirements_path,
+            use_gpu=module.use_gpu
+        )
+        return jsonify({"message": f"Rebuilt {module.name}"}), 200
+    except Exception as e:
+        return jsonify({"message": str(e)}), 500
+
+@admin_bp.route('/modules/purge/<int:module_id>', methods=['POST'])
+@jwt_required
+def purge_module(module_id):
+    claims = get_jwt()
+    if not claims.get("is_admin", False):
+        return jsonify({"message": "Forbidden"}), 403
+
+    module = BenchmarkModule.query.get_or_404(module_id)
+    try:
+        # 1. Kill Container
+        container_name = f"module-container-{module.name.lower()}"
         try:
-            client.images.remove(image=tag, force=True)
+            container = client.containers.get(container_name)
+            container.remove(force=True)
         except:
             pass
 
-        # Clear DB records for this module
+        # 2. Delete Image
+        image_tag = f"module-{module.name.lower()}:latest"
+        try:
+            client.images.remove(image=image_tag, force=True)
+        except:
+            pass
+
+        # 3. Wipe Database Scores (This is why it's a 'Purge')
         BenchmarkScore.query.filter_by(module_id=module_id).delete()
-        BenchmarkQueue.query.filter_by(module_id=module_id).delete()
-        db.session.delete(module)
         db.session.commit()
 
-        # Trigger Re-setup (The setup-db logic)
-        # You can call your setup script logic here to re-add and re-build
-        return jsonify({"message": f"Module {module_name} purged. Re-run setup-db to rebuild."})
+        return jsonify({"message": f"Successfully purged {module.name} and all associated scores"}), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        db.session.rollback()
+        return jsonify({"message": str(e)}), 500
+    
+@admin_bp.route('/modules/logs/<int:module_id>', methods=['GET'])
+@jwt_required
+def get_module_logs(module_id):
+    claims = get_jwt()
+    if not claims.get("is_admin", False):
+        return jsonify({"message": "Forbidden"}), 403
+
+    module = BenchmarkModule.query.get_or_404(module_id)
+    container_name = f"module-container-{module.name.lower()}"
+    try:
+        container = client.containers.get(container_name)
+        logs = container.logs(tail=100, stdout=True, stderr=True).decode('utf-8')
+        return jsonify({"logs": logs}), 200
+    except docker.errors.NotFound:
+        return jsonify({"logs": "Container not found. Start the container to see logs."}), 404
+    except Exception as e:
+        return jsonify({"logs": f"Error fetching logs: {str(e)}"}), 500
