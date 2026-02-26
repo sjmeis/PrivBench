@@ -92,30 +92,37 @@ const AddModuleModal = ({ isOpen, onClose, onSubmit, onError }) => {
   };
 
   const handleSubmit = async () => {
-    // 1. Show an immediate "Starting..." state on the button if you like, 
-    // but the most important thing is the try/catch flow.
     try {
       const response = await ModuleService.createBenchmarkingModule(formData);
       
-      // 2. Success Feedback
       showSnackbar("Module creation initiated. Building Docker image...", "success");
       
-      // 3. Trigger the parent's refresh/callback
-      if (onSubmit) onSubmit(response.data.install_task_id); 
+      if (onSubmit) {
+        const taskId = response.data?.install_task_id || response.install_task_id;
+        onSubmit(taskId); 
+      }
       
-      // 4. Close the modal immediately
+      setFormData({
+        name: "",
+        description: "",
+        deviceSpecification: "cpu",
+        algorithmFile: null,
+        requirementsFile: null,
+        selectedDatasetIds: [],
+      });
+      
       onClose(); 
+
     } catch (err) {
       console.error("Creation failed:", err);
-      onError(err.message || "Failed to initiate module creation");
+      if (onError) onError(err.message);
+      else showSnackbar(err.message || "Failed to initiate module creation", "danger");
     }
   };
 
-  const handleFormSubmit = (e) => {
+  const handleSaveConfirmation = async () => {
     setIsConfirmationOpen(false);
-    e.preventDefault();
-    handleSubmit();
-    console.log(formData);
+    await handleSubmit();
   };
 
   return (
@@ -251,7 +258,7 @@ const AddModuleModal = ({ isOpen, onClose, onSubmit, onError }) => {
           </Button>
         </DialogActions>
         <ModuleConfirmationDialog
-          handleSaveConfirmation={() => { setIsConfirmationOpen(false); handleSubmit(); }}
+          handleSaveConfirmation={handleSaveConfirmation} // Use the new wrapper
           handleCloseConfirmation={() => setIsConfirmationOpen(false)}
           isConfirmationOpen={isConfirmationOpen}
           module={formData}
