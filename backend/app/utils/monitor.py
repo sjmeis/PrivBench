@@ -26,8 +26,8 @@ def update_stats_loop():
     global system_stats
     while True:
         try:
-            # CPU (non-blocking because interval is handled by the loop sleep)
-            cpu = psutil.cpu_percent()
+            # CPU
+            cpu = psutil.cpu_percent(interval=None)
             mem = psutil.virtual_memory().percent
             disk = psutil.disk_usage('/').percent
 

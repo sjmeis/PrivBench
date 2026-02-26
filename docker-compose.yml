@@ -7,6 +7,13 @@ services:
       - .env
     ports:
       - "5000:5000"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     volumes:
       - ./data/datasets:/data/datasets
       - privatized_datasets:/data/privatized_datasets
