@@ -4,7 +4,15 @@ import StepIndicator, {stepIndicatorClasses} from "@mui/joy/StepIndicator";
 import {Divider, Step, stepClasses, Stepper, Typography} from "@mui/joy";
 import {BarChart, CloudUploadRounded, GetAppRounded, InfoRounded, ListAlt} from "@mui/icons-material";
 
-export function SideNaveSubmission({ currentStep, handleStepClick, quota }) {
+export function SideNaveSubmission({ currentStep, handleStepClick, quota, disabled }) {
+
+    const steps = [
+        { label: "Dataset Overview", icon: <ListAlt /> },
+        { label: "Download Datasets", icon: <GetAppRounded /> },
+        { label: "Privatization Method", icon: <InfoRounded /> },
+        { label: "Upload Privatized Datasets", icon: <CloudUploadRounded /> },
+        { label: "Model Evaluation", icon: <BarChart /> },
+    ];
 
     return (
         <Box
@@ -55,109 +63,56 @@ export function SideNaveSubmission({ currentStep, handleStepClick, quota }) {
             
             <Divider />
 
-            <Stepper
-                orientation="vertical"
-                size="lg"
-                sx={{
-                    paddingTop: '35px',
-                    paddingX: '12px',
-                    "--StepIndicator-size": "3rem",
-                    "--Stepper-verticalGap": "4rem",
-                    "--Step-connectorThickness": "5px",
+            <Stepper orientation="vertical" size="lg" sx={{
+                paddingTop: '35px',
+                paddingX: '12px',
+                "--StepIndicator-size": "3rem",
+                "--Stepper-verticalGap": "4rem",
+                "--Step-connectorThickness": "5px",
+                [`& .${stepIndicatorClasses.root}`]: { borderWidth: 4 },
+                [`& .${stepClasses.completed}`]: {
                     [`& .${stepIndicatorClasses.root}`]: {
-                        borderWidth: 4,
+                        borderColor: "success.600",
+                        color: "common.white",
+                        backgroundColor: "success.600",
                     },
-                    [`& .${stepClasses.completed}`]: {
-                        [`& .${stepIndicatorClasses.root}`]: {
-                            borderColor: "success.600",
-                            color: "common.white",
-                            backgroundColor: "success.600",
-                        },
-                        "&::after": {
-                            bgcolor: "success.600",
-                        },
-                    },
-                    [`& .${stepClasses.active}`]: {
-                        [`& .${stepIndicatorClasses.root}`]: {
-                            borderColor: "currentColor",
-                        },
-                    },
-                    [`& .${stepClasses.disabled} *`]: {
-                        color: "neutral.outlinedDisabledColor",
-                    },
-                }}
-            >
-                <Step
-                    completed={currentStep > 0}
-                    active={currentStep === 0}
-                    indicator={
-                        <StepIndicator
-                            variant="soft"
-                            color={currentStep === 0 ? "primary" : "neutral"}
-                            onClick={() => handleStepClick(0)}
+                    "&::after": { bgcolor: "success.600" },
+                },
+            }}>
+                {steps.map((step, index) => (
+                    <Step
+                        key={index}
+                        completed={currentStep > index}
+                        active={currentStep === index}
+                        indicator={
+                            <StepIndicator
+                                variant="soft"
+                                color={currentStep === index ? "primary" : "neutral"}
+                                onClick={() => !disabled && handleStepClick(index)}
+                                sx={{ 
+                                    cursor: disabled ? 'not-allowed' : 'pointer',
+                                    // Grey out if we are locked in another step
+                                    ...(disabled && currentStep !== index && {
+                                        filter: 'grayscale(1)',
+                                        opacity: 0.5
+                                    })
+                                }}
+                            >
+                                {step.icon}
+                            </StepIndicator>
+                        }
+                    >
+                        <Typography 
+                            sx={{
+                                marginLeft: '10px',
+                                opacity: disabled && currentStep !== index ? 0.5 : 1
+                            }} 
+                            color={currentStep === index ? 'primary': ''}
                         >
-                            <ListAlt />
-                        </StepIndicator>
-                    }
-                >
-                    <Typography sx={{marginLeft: '10px'}} color={currentStep === 0 ? 'primary': ''}>Dataset Overview</Typography>
-                </Step>
-                <Step
-                    completed={currentStep > 1}
-                    active={currentStep === 1}
-                    indicator={
-                        <StepIndicator
-                            variant="soft"
-                            color={currentStep === 1 ? "primary" : "neutral"}
-                            onClick={() => handleStepClick(1)}
-                        >
-                            <GetAppRounded />
-                        </StepIndicator>
-                    }
-                >
-                    <Typography sx={{marginLeft: '10px'}} color={currentStep === 1 ? 'primary': ''}>Download Datasets</Typography>
-                </Step>
-                <Step
-                    completed={currentStep > 2}
-                    active={currentStep === 2}
-                    indicator={
-                        <StepIndicator
-                            variant="soft"
-                            color={currentStep === 2 ? "primary" : "neutral"}
-                            onClick={() => handleStepClick(2)}
-                        >
-                            <InfoRounded />
-                        </StepIndicator>
-                    }
-                >
-                    <Typography sx={{marginLeft: '10px'}} color={currentStep === 2 ? 'primary': ''}>Privatization Method</Typography>
-                </Step>
-                <Step
-                    completed={currentStep > 3}
-                    active={currentStep === 3}
-                    indicator={
-                        <StepIndicator
-                            variant="soft"
-                            color={currentStep === 3 ? "primary" : "neutral"}
-                            onClick={() => handleStepClick(3)}
-                        >
-                            <CloudUploadRounded />
-                        </StepIndicator>
-                    }
-                >
-                    <Typography sx={{marginLeft: '10px'}} color={currentStep === 3 ? 'primary': ''}>Upload Privatized Datasets</Typography>
-                </Step>
-                <Step
-                    completed={currentStep > 4}
-                    active={currentStep === 4}
-                    indicator={
-                        <StepIndicator variant="soft" color={currentStep === 4 ? "primary" : "neutral"}>
-                            <BarChart />
-                        </StepIndicator>
-                    }
-                >
-                    <Typography sx={{marginLeft: '10px'}} color={currentStep === 4 ? 'primary': ''}>Model Evaluation</Typography>
-                </Step>
+                            {step.label}
+                        </Typography>
+                    </Step>
+                ))}
             </Stepper>
         </Box>
     );

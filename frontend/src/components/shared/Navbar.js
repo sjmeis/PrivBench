@@ -88,14 +88,13 @@ const Navbar = () => {
     showSnackbar("Successfully logged out!", "success");
   };
 
-  const handleSubmissionClick = async () => {
-    // If the user is not logged in, redirect to /login
+ const handleSubmissionClick = async () => {
     if (!user) {
-      navigate("/login");
+        navigate("/login");
     } else {
-      navigate("/upload");
+        navigate("/upload", { state: { reset: true } });
     }
-  };
+};
 
   // Only return null if mode is falsy, after all hooks are called
   if (!mode) {

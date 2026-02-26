@@ -56,14 +56,39 @@ const Upload = () => {
 
   const [isLocked, setIsLocked] = useState(false);
 
+  useEffect(() => {    
+    const isFreshEntry = !state?.submissionId && !state?.currentStep;
+    const isNavbarReset = state?.reset;
+
+    if ((isFreshEntry || isNavbarReset) && !isLocked) {
+      setCurrentStep(0);
+      setSubmissionId(null);
+
+      localStorage.removeItem("tasks");
+      localStorage.removeItem("queueEntries");
+      localStorage.removeItem("submission_id");
+      
+      setMetadata({
+        modelName: "",
+        modelDescription: "",
+        license: "",
+        tags: [],
+        authors: "",
+        researchPaperUrl: "",
+        githubUrl: "",
+        bibtexCitation: "",
+      });
+    }
+  }, [location.pathname, state, isLocked]);
+
   const fetchUserSubmission = async () => {
     // If metadata is already loaded from a template, don't overwrite it.
-    if (state?.templateId) {
-      if (state?.currentStep !== undefined) {
-        setCurrentStep(state.currentStep);
-      }
-      return;
-    }
+    // if (state?.templateId) {
+    //   if (state?.currentStep !== undefined) {
+    //     setCurrentStep(state.currentStep);
+    //   }
+    //   return;
+    // }
     try {
       const data = await getUserSubmissions();
 
@@ -78,55 +103,76 @@ const Upload = () => {
           s.status === SubmissionStatus.PENDING || s.status === SubmissionStatus.IN_PROGRESS
       );
 
-      if (data.remaining <= 0 && !hasActiveSubmission) {
-          setIsOverLimit(true);
-      } else {
-          setIsOverLimit(false); // Reset if they deleted an old submission
-      }
-
-      const pendingSubmission = data.submissions.find(
-        (sub) => sub.status === SubmissionStatus.PENDING
-      );
-
-      const inProgressSubmission = data.submissions.find(
-        (sub) => sub.status === SubmissionStatus.IN_PROGRESS
-      );
-
-      const completedSubmission = data.submissions.find(
-        (sub) => sub.status === SubmissionStatus.COMPLETED
-      );
-
-      if (completedSubmission) {
+      if (hasActiveSubmission) {
         setIsLocked(true);
         setCurrentStep(4);
-      } else if (pendingSubmission) {
-        setCurrentStep(3);
-        setMetadata(pendingSubmission.metadata);
-        setInitialMetadata(pendingSubmission.metadata);
-        setSubmissionId(pendingSubmission.id);
-      } else if (inProgressSubmission) {
-        setCurrentStep(4);
-        setMetadata(inProgressSubmission.metadata);
-        setInitialMetadata(inProgressSubmission.metadata);
-        setSubmissionId(inProgressSubmission.id);
-      } else if (!state?.metadata) {
-        // Only reset if no metadata was passed in state
-        setMetadata({
-          modelName: "",
-          modelDescription: "",
-          license: "",
-          tags: [],
-          authors: "",
-          researchPaperUrl: "",
-          githubUrl: "",
-          bibtexCitation: "",
-        });
-        setInitialMetadata({});
+        setSubmissionId(hasActiveSubmission.id);
+        setMetadata(hasActiveSubmission.metadata);
+      } else {
+        setIsLocked(false);
+        
+        if (data.remaining <= 0) {
+          setIsOverLimit(true);
+        }
+
+        if (!state?.currentStep) {
+          setCurrentStep(0);
+        }
       }
     } catch (error) {
-      console.error("An error occurred while fetching user submission:", error);
+      console.error("Error fetching user submission:", error);
     }
   };
+
+  //     if (data.remaining <= 0 && !hasActiveSubmission) {
+  //         setIsOverLimit(true);
+  //     } else {
+  //         setIsOverLimit(false); // Reset if they deleted an old submission
+  //     }
+
+  //     const pendingSubmission = data.submissions.find(
+  //       (sub) => sub.status === SubmissionStatus.PENDING
+  //     );
+
+  //     const inProgressSubmission = data.submissions.find(
+  //       (sub) => sub.status === SubmissionStatus.IN_PROGRESS
+  //     );
+
+  //     const completedSubmission = data.submissions.find(
+  //       (sub) => sub.status === SubmissionStatus.COMPLETED
+  //     );
+
+  //     if (completedSubmission) {
+  //       setIsLocked(true);
+  //       setCurrentStep(4);
+  //     } else if (pendingSubmission) {
+  //       setCurrentStep(3);
+  //       setMetadata(pendingSubmission.metadata);
+  //       setInitialMetadata(pendingSubmission.metadata);
+  //       setSubmissionId(pendingSubmission.id);
+  //     } else if (inProgressSubmission) {
+  //       setCurrentStep(4);
+  //       setMetadata(inProgressSubmission.metadata);
+  //       setInitialMetadata(inProgressSubmission.metadata);
+  //       setSubmissionId(inProgressSubmission.id);
+  //     } else if (!state?.metadata) {
+  //       // Only reset if no metadata was passed in state
+  //       setMetadata({
+  //         modelName: "",
+  //         modelDescription: "",
+  //         license: "",
+  //         tags: [],
+  //         authors: "",
+  //         researchPaperUrl: "",
+  //         githubUrl: "",
+  //         bibtexCitation: "",
+  //       });
+  //       setInitialMetadata({});
+  //     }
+  //   } catch (error) {
+  //     console.error("An error occurred while fetching user submission:", error);
+  //   }
+  // };
 
   const fetchTemplates = async () => {
     try {
@@ -167,6 +213,10 @@ const Upload = () => {
   }, []);
 
   const handleStepClick = (step) => {
+    if (isLocked) {
+      showSnackbar("Evaluation is in progress. Please wait until it completes.", "warning");
+      return;
+    }
     setCurrentStep(step);
   };
 
