@@ -296,6 +296,8 @@ const FinalStep = ({ onComplete, onCancel }) => {
       }
     };
 
+    pollStatus();
+
     const intervalId = setInterval(pollStatus, 2000);
 
     return () => {
