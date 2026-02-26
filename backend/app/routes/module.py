@@ -1,7 +1,7 @@
 import os
 import logging
 import json
-from flask import Blueprint, jsonify, request, send_file
+from flask import Blueprint, jsonify, request, send_file, current_app
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from sqlalchemy import exists
 from ..models import (
@@ -28,8 +28,12 @@ logger = logging.getLogger(__name__)
 
 # Dataset and modules folder location
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
+def get_modules_folder():
+    path = os.path.join(current_app.root_path, "..", "modules")
+    return os.path.abspath(path)
 DATASET_FOLDER = os.path.join(PROJECT_ROOT, "data", "datasets")
-MODULES_FOLDER = os.path.join(PROJECT_ROOT, "modules")
+#MODULES_FOLDER = os.path.join(PROJECT_ROOT, "modules")
+MODULES_FOLDER = os.path.abspath(os.path.join(current_app.root_path, "..", "modules"))
 
 module_bp = Blueprint("benchmark_module", __name__)
 
@@ -377,7 +381,6 @@ def publish_module_updates():
 @jwt_required()
 def create_benchmark_module():
     try:
-
         user_id = get_jwt_identity()
         user = User.query.get(int(user_id))
         if not user:
@@ -387,6 +390,8 @@ def create_benchmark_module():
                 jsonify({"message": "User doesn't possess the necessary permissions."}),
                 403,
             )
+        
+        target_folder = get_modules_folder()
 
         name = request.form.get("name")
         description = request.form.get("description")
@@ -403,7 +408,7 @@ def create_benchmark_module():
         algorithm_file = request.files.get("algorithmFile")
         if algorithm_file:
             algo_filename = secure_filename(algorithm_file.filename)
-            algo_path = os.path.join(MODULES_FOLDER, algo_filename)
+            algo_path = os.path.join(target_folder, algo_filename)
             algorithm_file.save(algo_path)
         else:
             logger.error("Invalid or missing algorithm file")
@@ -416,7 +421,7 @@ def create_benchmark_module():
             req_filename = secure_filename(requirements_file.filename)
             if not req_filename.endswith(".txt"):
                 return jsonify({"error": "Requirements file must be a .txt file"}), 400
-            requirements_path = os.path.join(MODULES_FOLDER, req_filename)
+            requirements_path = os.path.join(target_folder, req_filename)
             requirements_file.save(requirements_path)
 
             try:
