@@ -3,6 +3,7 @@ import { Table, Button, Typography, Chip, IconButton, Box, Card, LinearProgress 
 import { DeleteForever, Refresh, PlayArrow, Stop, Replay } from '@mui/icons-material';
 import { useSnackbar } from '../../contexts/SnackbarProvider';
 import ModuleLogModal from './ModuleLogModal';
+import { API_BASE_URL } from '../../config';
 
 const ModuleOrchestration = () => {
   const [modules, setModules] = useState([]);
@@ -12,7 +13,9 @@ const ModuleOrchestration = () => {
 
   const fetchStatus = useCallback(async () => {
     try {
-      const res = await fetch('/modules/status'); // Verify your API prefix
+      const res = await fetch(`${API_BASE_URL}/modules/status`, {
+              credentials: "include",
+            });
       const data = await res.json();
       setModules(data);
     } catch (err) {
@@ -26,7 +29,7 @@ const ModuleOrchestration = () => {
   const handleAction = async (id, action) => {
     setLoadingRows(prev => ({ ...prev, [id]: true }));
     try {
-      const res = await fetch(`/api/modules/${action}/${id}`, { method: 'POST' });
+      const res = await fetch(`${API_BASE_URL}/modules/${action}/${id}`, { method: 'POST', credentials: "include"});
       if (res.ok) {
         showSnackbar(`Module ${action} successful`, "success");
       } else {
