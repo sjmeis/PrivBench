@@ -90,12 +90,9 @@ const ModuleManagement = () => {
   };
 
   const onModalClose = () => {
-    try {
-      fetchModules();
-      refreshPendingUpdates();
-    } finally {
-      setIsModalOpen(false);
-    }
+    fetchModules();
+    refreshPendingUpdates();
+    setIsModalOpen(false);
   };
 
   const handlePublished = () => {

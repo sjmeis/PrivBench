@@ -92,30 +92,48 @@ const AddModuleModal = ({ isOpen, onClose, onSubmit, onError }) => {
     setFormData({ ...formData, algorithmFile: e.target.files[0] });
   };
 
+  // const handleSubmit = async () => {
+  //   if (isSubmitting) return;
+  //   setIsSubmitting(true);
+  //   try {
+  //     const response = await ModuleService.createBenchmarkingModule(formData);
+      
+  //     showSnackbar("Module creation initiated. Building Docker image...", "success");
+      
+  //     setIsConfirmationOpen(false);
+
+  //     if (onSubmit) {
+  //       const taskId = response.data?.install_task_id || response.install_task_id;
+  //       onSubmit(taskId); 
+  //     }
+      
+  //     onClose(); 
+
+  //   } catch (err) {
+  //     console.error("Creation failed:", err);
+  //     if (onError) onError(err.message);
+  //     else showSnackbar(err.message || "Failed to initiate module creation", "danger");
+  //   } finally {
+  //     setIsSubmitting(false);
+  //   }
+  // };
+
   const handleSubmit = async () => {
-    if (isSubmitting) return;
-    setIsSubmitting(true);
     try {
-      const response = await ModuleService.createBenchmarkingModule(formData);
-      
-      showSnackbar("Module creation initiated. Building Docker image...", "success");
-      
-      setIsConfirmationOpen(false);
-
-      if (onSubmit) {
-        const taskId = response.data?.install_task_id || response.install_task_id;
-        onSubmit(taskId); 
-      }
-      
-      onClose(); 
-
+      await ModuleService.createBenchmarkingModule(formData);
+      onSubmit();
     } catch (err) {
-      console.error("Creation failed:", err);
-      if (onError) onError(err.message);
-      else showSnackbar(err.message || "Failed to initiate module creation", "danger");
+      onError(err.message);
     } finally {
-      setIsSubmitting(false);
+      onClose();
     }
+  };
+
+  const handleFormSubmit = (e) => {
+    setIsConfirmationOpen(false);
+    e.preventDefault();
+    handleSubmit();
+    console.log(formData);
   };
 
   return (
@@ -242,21 +260,19 @@ const AddModuleModal = ({ isOpen, onClose, onSubmit, onError }) => {
         </DialogContent>
         <DialogActions>
           <Button 
-            disabled={!isFormValid() || isSubmitting} 
+            disabled={!isFormValid()} 
             color="success" 
             onClick={() => setIsConfirmationOpen(true)}
-            loading={isSubmitting} 
             endDecorator={<Save />}
           >
             Create Module
           </Button>
         </DialogActions>
         <ModuleConfirmationDialog
-          handleSaveConfirmation={handleSubmit}
+          handleSaveConfirmation={() => { setIsConfirmationOpen(false); handleSubmit(); }}
           handleCloseConfirmation={() => setIsConfirmationOpen(false)}
           isConfirmationOpen={isConfirmationOpen}
           module={formData}
-          allDatasets={allDatasets}
         />
       </ModalDialog>
     </Modal>
