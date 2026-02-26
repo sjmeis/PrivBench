@@ -26,6 +26,7 @@ import ModuleConfirmationDialog from "./ModuleConfirmationDialog";
 import { ModuleService } from "../../services/ModuleService";
 import { DatasetService } from "../../services/DatasetService";
 import { Save } from "@mui/icons-material";
+import { useSnackbar } from "../../contexts/SnackbarProvider";
 
 // Device specification options
 const DEVICE_SPECIFICATIONS = [
@@ -44,6 +45,7 @@ const AddModuleModal = ({ isOpen, onClose, onSubmit, onError }) => {
     requirementsFile: null,
     selectedDatasetIds: []
   });
+  const { showSnackbar } = useSnackbar();
 
   useEffect(() => {
     if (isOpen) {
@@ -90,13 +92,22 @@ const AddModuleModal = ({ isOpen, onClose, onSubmit, onError }) => {
   };
 
   const handleSubmit = async () => {
+    // 1. Show an immediate "Starting..." state on the button if you like, 
+    // but the most important thing is the try/catch flow.
     try {
-      await ModuleService.createBenchmarkingModule(formData);
-      onSubmit();
+      const response = await ModuleService.createBenchmarkingModule(formData);
+      
+      // 2. Success Feedback
+      showSnackbar("Module creation initiated. Building Docker image...", "success");
+      
+      // 3. Trigger the parent's refresh/callback
+      if (onSubmit) onSubmit(response.data.install_task_id); 
+      
+      // 4. Close the modal immediately
+      onClose(); 
     } catch (err) {
-      onError(err.message);
-    } finally {
-      onClose();
+      console.error("Creation failed:", err);
+      onError(err.message || "Failed to initiate module creation");
     }
   };
 

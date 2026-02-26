@@ -1076,6 +1076,11 @@ def get_version_history():
     JWT required.
     """
     try:
+        user_id = get_jwt_identity()
+        user = User.query.get(int(user_id))
+        if not user or not user.admin:
+            return jsonify({"message": "Forbidden"}), 403
+
         versions = (
             db.session.query(AppVersion).order_by(AppVersion.created_at.desc()).all()
         )
@@ -1109,7 +1114,13 @@ def get_version_history():
         )
     
 @module_bp.route('/modules/<int:module_id>/datasets', methods=['POST'])
+@jwt_required()
 def toggle_dataset_association(module_id):
+    user_id = get_jwt_identity()
+    user = User.query.get(int(user_id))
+    if not user or not user.admin:
+        return jsonify({"message": "Forbidden"}), 403
+
     module = BenchmarkModule.query.get_or_404(module_id)
     data = request.json
     dataset_id = data.get('dataset_id')
