@@ -388,9 +388,7 @@ def get_all_filtered():
 
         # Base query
         query = (
-            # db.session.query(Submission)
-            # .join(User)
-            db.session.query(Submission)
+            db.session.query(Submission).join(User)
             .options(joinedload(Submission.user), joinedload(Submission.version_scores), joinedload(Submission.benchmark_scores).joinedload(BenchmarkScore.benchmark_module))
             .filter(
                 or_(
