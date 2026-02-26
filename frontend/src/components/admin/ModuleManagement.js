@@ -72,7 +72,10 @@ const ModuleManagement = () => {
 
   const handleAddModuleSubmit = () => {
     showSnackbar("Benchmarking Module Created Successfully", "success");
-    //todo: go to created module
+    setIsModalOpen(false);
+    
+    fetchModules();
+    refreshPendingUpdates();
   };
 
   const handleAddModuleError = (errorMsg) => {
