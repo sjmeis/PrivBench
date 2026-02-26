@@ -13,7 +13,7 @@ class Submission(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"), nullable=False)
     status = db.Column(db.Enum(SubmissionStatus), nullable=False)
     score = db.Column(db.Float, nullable=False)
-    is_public = db.Column(db.Boolean, nullable=False)
+    is_public = db.Column(db.Boolean, default=False, server_default='0', nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     outdated_at = db.Column(db.DateTime, nullable=True)
     version = db.Column(db.String(50), nullable=True)

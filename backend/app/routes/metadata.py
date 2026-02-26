@@ -69,7 +69,7 @@ def save_metadata():
             user_id=user.id,
             status="PENDING",
             score=0,
-            is_public=True,
+            is_public=False,
         )
         db.session.add(new_submission)
         db.session.flush()  # Flush to get the submission ID
