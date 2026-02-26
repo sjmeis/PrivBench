@@ -388,6 +388,12 @@ const FinalStep = ({ onComplete, onCancel }) => {
               averageScore={averageScore}
               moduleScores={moduleScores}
             />
+            <Box sx={{ mt: 2, p: 2, bgcolor: 'background.level1', borderRadius: 'sm', border: '1px border', borderColor: 'divider' }}>
+              <Typography level="body-sm" sx={{ fontStyle: 'italic' }}>
+                🔒 This submission is currently <strong>Private</strong>. 
+                You can make it public to appear on the Rankings leaderboard via your profile.
+              </Typography>
+            </Box>
             <Button
               fullWidth
               variant="solid"
