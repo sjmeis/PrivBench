@@ -234,18 +234,18 @@ const UserSubmissions = () => {
                     }}
                   >
                     <thead>
-                      <tr>
-                        <th style={{ width: 5 }} aria-label="empty" />
-                        <th style={{ width: 20 }}>Name</th>
-                        <th style={{ width: 20 }}>Timestamp</th>
-                        <th style={{ width: 20 }}>Status</th>
-                        <th style={{ width: 20 }}>Score</th>
-                        <th style={{ width: 10 }}>Version</th>
-                        <th style={{ width: 15 }} align="center">
-                          Public
-                        </th>
-                      </tr>
-                    </thead>
+                    <tr>
+                      <th style={{ width: "5%" }} aria-label="empty" />
+                      <th style={{ width: "25%" }}>Name</th>
+                      <th style={{ width: "20%" }}>Timestamp</th>
+                      <th style={{ width: "15%" }}>Status</th>
+                      <th style={{ width: "10%" }}>Score</th>
+                      <th style={{ width: "10%" }}>Version</th>
+                      <th style={{ width: "15%", textAlign: "center" }}>
+                        Public
+                      </th>
+                    </tr>
+                  </thead>
                     <tbody>
                       {submissions.map((submission) => (
                         <UserSubmissionsTableRow
