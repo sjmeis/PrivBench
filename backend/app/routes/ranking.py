@@ -252,6 +252,8 @@ def get_user_submissions():
                     "mailAddress": submission.user.mail_address,
                     "badges": submission.user.badges or [],
                     "researchInstitute": submission.user.research_institute,
+                    "profilePicturePath": submission.user.profile_picture_path,
+                    "bio": submission.user.bio
                 },
                 "benchmarkScores": [],
             }

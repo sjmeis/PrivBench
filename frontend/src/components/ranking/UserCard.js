@@ -16,8 +16,7 @@ const UserCard = ({user, cardStyle}) => {
                 <Stack spacing={1.5}>
                     <Box sx={{display: 'flex', alignItems: 'center'}}>
                         <Avatar
-                            src={getGravatarUrl(user.mailAddress)}
-                            sx={{borderRadius: '50%'}}
+                            src={user.profilePicturePath || getGravatarUrl(user.mailAddress)}
                         />
                         <Box sx={{ml: 1.5}}>
                             <Typography level="title-lg" color="primary">
