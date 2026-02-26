@@ -37,6 +37,7 @@ const DEVICE_SPECIFICATIONS = [
 const AddModuleModal = ({ isOpen, onClose, onSubmit, onError }) => {
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
   const [allDatasets, setAllDatasets] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -92,24 +93,19 @@ const AddModuleModal = ({ isOpen, onClose, onSubmit, onError }) => {
   };
 
   const handleSubmit = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     try {
       const response = await ModuleService.createBenchmarkingModule(formData);
       
       showSnackbar("Module creation initiated. Building Docker image...", "success");
       
+      setIsConfirmationOpen(false);
+
       if (onSubmit) {
         const taskId = response.data?.install_task_id || response.install_task_id;
         onSubmit(taskId); 
       }
-      
-      setFormData({
-        name: "",
-        description: "",
-        deviceSpecification: "cpu",
-        algorithmFile: null,
-        requirementsFile: null,
-        selectedDatasetIds: [],
-      });
       
       onClose(); 
 
@@ -117,12 +113,9 @@ const AddModuleModal = ({ isOpen, onClose, onSubmit, onError }) => {
       console.error("Creation failed:", err);
       if (onError) onError(err.message);
       else showSnackbar(err.message || "Failed to initiate module creation", "danger");
+    } finally {
+      setIsSubmitting(false);
     }
-  };
-
-  const handleSaveConfirmation = async () => {
-    setIsConfirmationOpen(false);
-    await handleSubmit();
   };
 
   return (
@@ -249,19 +242,21 @@ const AddModuleModal = ({ isOpen, onClose, onSubmit, onError }) => {
         </DialogContent>
         <DialogActions>
           <Button 
-            disabled={!isFormValid()} 
+            disabled={!isFormValid() || isSubmitting} 
             color="success" 
-            onClick={() => setIsConfirmationOpen(true)} 
+            onClick={() => setIsConfirmationOpen(true)}
+            loading={isSubmitting} 
             endDecorator={<Save />}
           >
             Create Module
           </Button>
         </DialogActions>
         <ModuleConfirmationDialog
-          handleSaveConfirmation={handleSaveConfirmation} // Use the new wrapper
+          handleSaveConfirmation={handleSubmit}
           handleCloseConfirmation={() => setIsConfirmationOpen(false)}
           isConfirmationOpen={isConfirmationOpen}
           module={formData}
+          allDatasets={allDatasets}
         />
       </ModalDialog>
     </Modal>
