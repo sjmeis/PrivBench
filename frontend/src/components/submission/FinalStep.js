@@ -291,9 +291,9 @@ const FinalStep = ({ onComplete, onCancel }) => {
       //       );
       //     }
       //   }
-      // } catch (error) {
-      //   console.error("Error in pollStatus:", error);
-      // }
+      } catch (error) {
+        console.error("Error in pollStatus:", error);
+      }
     };
 
     const intervalId = setInterval(pollStatus, 2000);
