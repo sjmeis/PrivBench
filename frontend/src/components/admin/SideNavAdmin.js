@@ -111,17 +111,6 @@ export function SideNavAdmin({ selectedItem, onSelect }) {
                             <ListItemDecorator><MonitorHeartIcon /></ListItemDecorator>
                             <ListItemContent>System Health</ListItemContent>
                         </ListItemButton>
-                        <ListItemButton
-                            selected={selectedItem === 'orchestration'}
-                            onClick={() => onSelect('orchestration')}
-                            color="primary"
-                            variant={selectedItem === 'orchestration' ? 'soft' : 'plain'}
-                        >
-                            <ListItemDecorator>
-                                <TerminalIcon fontSize="small" />
-                            </ListItemDecorator>
-                            <ListItemContent>Container Status</ListItemContent>
-                        </ListItemButton>
                     </List>
                 </ListItem>
             </List>
