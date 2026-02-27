@@ -75,7 +75,7 @@ const createBenchmarkingModule = async (formData, onProgress) => {
       while (!completed && attempts < maxAttempts) {
         try {
           const statusResult = await pollModuleStatus(
-            response.data.data.task_id,
+            taskId,
             onProgress
           );
           if (statusResult.status === "completed") {
