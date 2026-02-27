@@ -53,7 +53,7 @@ const ModuleOrchestration = () => {
   return (
     <Card variant="outlined" sx={{ overflow: 'auto' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography level="h3">Container Orchestration</Typography>
+        <Typography level="h2">Module Container Orchestration</Typography>
         <Button 
           startDecorator={<Refresh />} 
           variant="plain" 
