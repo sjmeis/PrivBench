@@ -18,7 +18,7 @@ import {
   Select,
   Option,
   Checkbox,
-  Sheet
+  Sheet,
 } from "@mui/joy";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import InsertDriveFileRoundedIcon from "@mui/icons-material/InsertDriveFileRounded";
@@ -44,7 +44,7 @@ const AddModuleModal = ({ isOpen, onClose, onSubmit, onError }) => {
     deviceSpecification: "cpu",
     algorithmFile: null,
     requirementsFile: null,
-    selectedDatasetIds: []
+    selectedDatasetIds: [],
   });
   const { showSnackbar } = useSnackbar();
 
@@ -54,14 +54,14 @@ const AddModuleModal = ({ isOpen, onClose, onSubmit, onError }) => {
         .then(setAllDatasets)
         .catch(() => console.error("Failed to load dataset options."));
 
-    setFormData({
-      name: "",
-      description: "",
-      deviceSpecification: "cpu",
-      algorithmFile: null,
-      requirementsFile: null,
-      selectedDatasetIds: [],
-    });
+      setFormData({
+        name: "",
+        description: "",
+        deviceSpecification: "cpu",
+        algorithmFile: null,
+        requirementsFile: null,
+        selectedDatasetIds: [],
+      });
     }
   }, [isOpen]);
 
@@ -80,11 +80,11 @@ const AddModuleModal = ({ isOpen, onClose, onSubmit, onError }) => {
   };
 
   const handleToggleDataset = (id) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       selectedDatasetIds: prev.selectedDatasetIds.includes(id)
-        ? prev.selectedDatasetIds.filter(i => i !== id)
-        : [...prev.selectedDatasetIds, id]
+        ? prev.selectedDatasetIds.filter((i) => i !== id)
+        : [...prev.selectedDatasetIds, id],
     }));
   };
 
@@ -97,17 +97,17 @@ const AddModuleModal = ({ isOpen, onClose, onSubmit, onError }) => {
   //   setIsSubmitting(true);
   //   try {
   //     const response = await ModuleService.createBenchmarkingModule(formData);
-      
+
   //     showSnackbar("Module creation initiated. Building Docker image...", "success");
-      
+
   //     setIsConfirmationOpen(false);
 
   //     if (onSubmit) {
   //       const taskId = response.data?.install_task_id || response.install_task_id;
-  //       onSubmit(taskId); 
+  //       onSubmit(taskId);
   //     }
-      
-  //     onClose(); 
+
+  //     onClose();
 
   //   } catch (err) {
   //     console.error("Creation failed:", err);
@@ -119,13 +119,15 @@ const AddModuleModal = ({ isOpen, onClose, onSubmit, onError }) => {
   // };
 
   const handleSubmit = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     try {
       await ModuleService.createBenchmarkingModule(formData);
       onSubmit();
     } catch (err) {
       onError(err.message);
     } finally {
-      onClose();
+      setIsSubmitting(false);
     }
   };
 
@@ -139,7 +141,7 @@ const AddModuleModal = ({ isOpen, onClose, onSubmit, onError }) => {
   return (
     <Modal
       open={isOpen}
-      onClose={onClose}
+      onClose={isSubmitting ? undefined : onClose}
       sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}
     >
       <ModalDialog sx={{ width: "90%", maxWidth: 1200 }}>
@@ -168,12 +170,16 @@ const AddModuleModal = ({ isOpen, onClose, onSubmit, onError }) => {
 
                 <FormControl>
                   <FormLabel>Device Specification</FormLabel>
-                  <Select 
-                    value={formData.deviceSpecification} 
-                    onChange={(_, val) => setFormData({...formData, deviceSpecification: val})}
+                  <Select
+                    value={formData.deviceSpecification}
+                    onChange={(_, val) =>
+                      setFormData({ ...formData, deviceSpecification: val })
+                    }
                   >
                     {DEVICE_SPECIFICATIONS.map((device) => (
-                      <Option key={device.value} value={device.value}>{device.label}</Option>
+                      <Option key={device.value} value={device.value}>
+                        {device.label}
+                      </Option>
                     ))}
                   </Select>
                 </FormControl>
@@ -234,23 +240,54 @@ const AddModuleModal = ({ isOpen, onClose, onSubmit, onError }) => {
 
             <Divider orientation="vertical" />
 
-            <Box sx={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
-              <Typography level="title-md" fontWeight="bold">Select Associated Datasets</Typography>
-              <Sheet variant="outlined" sx={{ p: 1, borderRadius: "sm", maxHeight: 400, overflow: 'auto' }}>
+            <Box
+              sx={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}
+            >
+              <Typography level="title-md" fontWeight="bold">
+                Select Associated Datasets
+              </Typography>
+              <Sheet
+                variant="outlined"
+                sx={{
+                  p: 1,
+                  borderRadius: "sm",
+                  maxHeight: 400,
+                  overflow: "auto",
+                }}
+              >
                 <Stack spacing={1}>
-                  {allDatasets.length > 0 ? allDatasets.map((ds) => (
-                    <Box key={ds.id} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 0.5 }}>
-                      <Typography level="body-sm" startDecorator={<InsertDriveFileRoundedIcon color="primary" />}>
-                        {ds.name}
-                      </Typography>
-                      <Checkbox 
-                        checked={formData.selectedDatasetIds.includes(ds.id)} 
-                        onChange={() => handleToggleDataset(ds.id)} 
-                      />
-                    </Box>
-                  )) : (
-                    <Typography level="body-xs" sx={{ p: 2, textAlign: 'center', fontStyle: 'italic' }}>
-                      No datasets found. Upload them first in Dataset Management.
+                  {allDatasets.length > 0 ? (
+                    allDatasets.map((ds) => (
+                      <Box
+                        key={ds.id}
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          p: 0.5,
+                        }}
+                      >
+                        <Typography
+                          level="body-sm"
+                          startDecorator={
+                            <InsertDriveFileRoundedIcon color="primary" />
+                          }
+                        >
+                          {ds.name}
+                        </Typography>
+                        <Checkbox
+                          checked={formData.selectedDatasetIds.includes(ds.id)}
+                          onChange={() => handleToggleDataset(ds.id)}
+                        />
+                      </Box>
+                    ))
+                  ) : (
+                    <Typography
+                      level="body-xs"
+                      sx={{ p: 2, textAlign: "center", fontStyle: "italic" }}
+                    >
+                      No datasets found. Upload them first in Dataset
+                      Management.
                     </Typography>
                   )}
                 </Stack>
@@ -259,17 +296,21 @@ const AddModuleModal = ({ isOpen, onClose, onSubmit, onError }) => {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button 
-            disabled={!isFormValid()} 
-            color="success" 
+          <Button
+            disabled={!isFormValid() || isSubmitting}
+            loading={isSubmitting}
+            color="success"
             onClick={() => setIsConfirmationOpen(true)}
-            endDecorator={<Save />}
+            endDecorator={!isSubmitting ? <Save /> : null}
           >
-            Create Module
+            {isSubmitting ? "Installing..." : "Create Module"}
           </Button>
         </DialogActions>
         <ModuleConfirmationDialog
-          handleSaveConfirmation={() => { setIsConfirmationOpen(false); handleSubmit(); }}
+          handleSaveConfirmation={() => {
+            setIsConfirmationOpen(false);
+            handleSubmit();
+          }}
           handleCloseConfirmation={() => setIsConfirmationOpen(false)}
           isConfirmationOpen={isConfirmationOpen}
           module={formData}

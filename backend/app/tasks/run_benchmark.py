@@ -37,15 +37,17 @@ def run_benchmark(
             )
             raise Exception(f"Container not available for module {module_name}")
 
+        module_stem = Path(module_path).stem
+
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
 
             # Copy required files
-            shutil.copy2(module_path, temp_path / f"{module_name}.py")
+            shutil.copy2(module_path, temp_path / f"{module_stem}.py")
             shutil.copy2(dataset_path, temp_path / "dataset.csv")
             shutil.copy2(priv_dataset_path, temp_path / "privatized_dataset.csv")
 
-            host_benchmarks = Path("/app/benchmarks") 
+            host_benchmarks = Path("/app/benchmarks")
             if host_benchmarks.exists():
                 shutil.copytree(host_benchmarks, temp_path / "benchmarks", dirs_exist_ok=True)
 
@@ -72,14 +74,22 @@ if not benchmarks_init.exists():
 def run():
     try:
         # Load module
-        module_path = Path('/app/{module_name}.py')
-        spec = importlib.util.spec_from_file_location('{module_name}', module_path)
+        module_path = Path('/app/{module_stem}.py')
+        spec = importlib.util.spec_from_file_location('{module_stem}', module_path)
         module = importlib.util.module_from_spec(spec)
-        sys.modules['{module_name}'] = module
+        sys.modules['{module_stem}'] = module
         spec.loader.exec_module(module)
-        
+
         # Create benchmark instance
-        benchmark_class = getattr(module, '{module_name}')
+        try:
+            benchmark_class = getattr(module, '{module_stem}')
+        except AttributeError:
+            available = [name for name, obj in vars(module).items() if isinstance(obj, type)]
+            raise AttributeError(
+                f"Class '{{module_stem}}' not found in module. "
+                f"The benchmark class must match the uploaded filename stem ('{{module_stem}}'). "
+                f"Classes found in file: {{available or ['none']}}"
+            )
         benchmark_instance = benchmark_class()
         
         # Load datasets

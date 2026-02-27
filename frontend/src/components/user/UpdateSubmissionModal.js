@@ -317,16 +317,19 @@ const UpdateSubmissionModal = ({ isOpen, onClose, submission, onUpdated }) => {
           .filter(
             (module) =>
               module.requires_dataset_upload &&
-              module.dataset_id &&
-              module.dataset_name
+              (module.dataset_id || module.dataset_ids?.length > 0)
           )
-          .map((module) => ({
-            id: module.dataset_id,
-            name: module.dataset_name,
-            module_id: module.module_id,
-            module_name: module.module_name,
-            reasons: getModuleReasons(module),
-          }));
+          .flatMap((module) => {
+            const ids = module.dataset_ids ?? (module.dataset_id ? [module.dataset_id] : []);
+            const names = module.dataset_names ?? (module.dataset_name ? [module.dataset_name] : []);
+            return ids.map((id, idx) => ({
+              id,
+              name: names[idx] ?? module.dataset_name ?? String(id),
+              module_id: module.module_id,
+              module_name: module.module_name,
+              reasons: getModuleReasons(module),
+            }));
+          });
         setDatasets(datasetModules);
 
         const reruns = modules

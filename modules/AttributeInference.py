@@ -103,8 +103,11 @@ class AttributeInference(BaseBenchmark):
             if len(orig_labels) != len(priv_labels):
                 raise RuntimeError("Attacker returned mismatched number of predictions.")
 
-            og_f1 = f1_score(orig_labels, self.labels, average="micro")
-            priv_f1 = f1_score(priv_labels, self.labels, average="micro")
+            og_f1 = f1_score(orig_labels, self.labels[:num_samples], average="micro")
+            priv_f1 = f1_score(priv_labels, self.labels[:num_samples], average="micro")
+
+            if og_f1 <= 0.0:
+                return 100.0
 
             privacy_score = min(100.0, (1.0 - (priv_f1/og_f1)) * 100.0)
             return round(privacy_score, 3)

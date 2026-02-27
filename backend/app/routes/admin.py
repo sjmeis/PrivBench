@@ -14,6 +14,7 @@ from sqlalchemy import or_, text
 from werkzeug.utils import secure_filename
 import docker
 from ..utils.module_manager import ModuleManager
+from ..utils.container_manager import module_image_tag, module_container_name
 
 import psutil
 try:
@@ -263,8 +264,8 @@ def get_modules_status():
     containers = {c.name: c.status for c in client.containers.list(all=True)}
     
     for m in modules:
-        tag = f"module-{m.name.lower()}"
-        container_name = f"module-container-{m.name.lower()}"
+        tag = module_image_tag(m.name)
+        container_name = module_container_name(m.name)
         
         # Check if image exists
         image_exists = False
@@ -292,8 +293,8 @@ def start_container(module_id):
         return jsonify({"message": "Forbidden"}), 403
 
     module = BenchmarkModule.query.get_or_404(module_id)
-    image_tag = f"module-{module.name.lower()}:latest"
-    container_name = f"module-container-{module.name.lower()}"
+    image_tag = f"{module_image_tag(module.name)}:latest"
+    container_name = module_container_name(module.name)
     
     try:
         # If an old container exists but is stopped, remove it first
@@ -327,7 +328,7 @@ def stop_container(module_id):
         return jsonify({"message": "Forbidden"}), 403
 
     module = BenchmarkModule.query.get_or_404(module_id)
-    container_name = f"module-container-{module.name.lower()}"
+    container_name = module_container_name(module.name)
     try:
         container = client.containers.get(container_name)
         container.stop()
@@ -345,7 +346,7 @@ def rebuild_module(module_id):
     module = BenchmarkModule.query.get_or_404(module_id)
     try:
         # 1. Stop and remove existing container
-        container_name = f"module-container-{module.name.lower()}"
+        container_name = module_container_name(module.name)
         try:
             container = client.containers.get(container_name)
             container.remove(force=True)
@@ -374,7 +375,7 @@ def purge_module(module_id):
     module = BenchmarkModule.query.get_or_404(module_id)
     try:
         # 1. Kill Container
-        container_name = f"module-container-{module.name.lower()}"
+        container_name = module_container_name(module.name)
         try:
             container = client.containers.get(container_name)
             container.remove(force=True)
@@ -382,7 +383,7 @@ def purge_module(module_id):
             pass
 
         # 2. Delete Image
-        image_tag = f"module-{module.name.lower()}:latest"
+        image_tag = f"{module_image_tag(module.name)}:latest"
         try:
             client.images.remove(image=image_tag, force=True)
         except:
@@ -405,7 +406,7 @@ def get_module_logs(module_id):
         return jsonify({"message": "Forbidden"}), 403
 
     module = BenchmarkModule.query.get_or_404(module_id)
-    container_name = f"module-container-{module.name.lower()}"
+    container_name = module_container_name(module.name)
     try:
         container = client.containers.get(container_name)
         logs = container.logs(tail=100, stdout=True, stderr=True).decode('utf-8')

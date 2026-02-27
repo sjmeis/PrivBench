@@ -3,6 +3,7 @@ import shutil
 from celery import shared_task
 import logging
 from app.utils.module_manager import ModuleManager
+from app.utils.container_manager import module_container_name
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +24,7 @@ def install_and_load_module(
     use_gpu=False
 ):
     """Celery task to install and load a module."""
-    container_name = f"module-container-{module_name.lower()}"
+    container_name = module_container_name(module_name)
     try:
         from app.utils.container_manager import container_manager
 
@@ -63,7 +64,7 @@ def install_and_load_module(
         )
 
         test_result = manager.test_module(
-            image_tag, module_name, use_gpu=use_gpu
+            image_tag, module_name, module_path=module_path, use_gpu=use_gpu
         )
 
         if test_result["success"]:
