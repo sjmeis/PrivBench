@@ -8,8 +8,6 @@ from ..models import (
     BenchmarkModule,
     Submission,
     User,
-    Dataset,
-    PrivatizedDataset,
     BenchmarkScore,
     SubmissionVersionScore,
 )
@@ -130,11 +128,11 @@ class BenchmarkService:
             )
 
             # Create a progress callback for the benchmark
-            def progress_callback(processed_rows, score=None):
+            def progress_callback(processed_rows, score=None, status_msg=None):
                 current_meta = {
                     "current": 30 + int((processed_rows / total_rows) * 70),
                     "total": total_steps,
-                    "status": f"Processing {processed_rows}/{total_rows} rows...",
+                    "status": status_msg or f"Processing {processed_rows}/{total_rows} rows...",
                     "processedRows": processed_rows,
                     "totalRows": total_rows,
                     "score": score,

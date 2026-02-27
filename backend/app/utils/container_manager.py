@@ -42,7 +42,7 @@ class ContainerManager:
 
     def is_container_installing(self, module_name):
         """Check if a container is currently being installed"""
-        container_name = f"module-container-{module_name.lower()}"
+        container_name = f"module-container-{module_name.lower().replace(' ', '-')}"
         with self._installation_lock:
             return container_name in self.installing_containers
 
@@ -74,8 +74,8 @@ class ContainerManager:
     def start_module_container(self, module):
         """Start a container for a specific module"""
         try:
-            image_tag = f"module-{module.name.lower()}"
-            container_name = f"module-container-{module.name.lower()}"
+            image_tag = f"module-{module.name.lower().replace(' ', '-')}"
+            container_name = f"module-container-{module.name.lower().replace(' ', '-')}"
 
             # Check if already installing
             if self.is_container_installing(module.name):
@@ -178,7 +178,7 @@ class ContainerManager:
 
     def get_container(self, module_name):
         """Get running container for a module"""
-        container_name = f"module-container-{module_name.lower()}"
+        container_name = f"module-container-{module_name.lower().replace(' ', '-')}"
 
         # First check our local tracking
         container = self.running_containers.get(container_name)

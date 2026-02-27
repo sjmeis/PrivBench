@@ -23,7 +23,7 @@ def install_and_load_module(
     use_gpu=False
 ):
     """Celery task to install and load a module."""
-    container_name = f"module-container-{module_name.lower()}"
+    container_name = f"module-container-{module_name.lower().replace(' ', '-')}"
     try:
         from app.utils.container_manager import container_manager
 
@@ -63,7 +63,7 @@ def install_and_load_module(
         )
 
         test_result = manager.test_module(
-            image_tag, module_name, use_gpu=use_gpu
+            image_tag, module_name, module_path=module_path, use_gpu=use_gpu
         )
 
         if test_result["success"]:
