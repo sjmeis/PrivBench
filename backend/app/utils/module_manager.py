@@ -22,7 +22,7 @@ class ModuleManager:
     def create_dockerfile(self, requirements_filename, use_gpu=False):
         """Create a Dockerfile for the module container"""
         base = self.base_image_gpu if use_gpu else self.base_image_cpu
-        
+
         return f"""
         FROM {base}
         WORKDIR /app
@@ -41,7 +41,7 @@ class ModuleManager:
         """Build a Docker container for the module"""
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
-            module_dest = temp_path / f"{module_name}.py"
+            module_dest = temp_path / Path(module_path).name
             requirements_dest = temp_path / "requirements.txt"
 
             # Copy and log module file
@@ -100,7 +100,7 @@ class ModuleManager:
 
             logger.debug(f"Temp directory contents: {list(temp_path.glob('*'))}")
 
-            tag = f"module-{module_name.lower()}"
+            tag = f"module-{module_name.lower().replace(' ', '-')}"
             _, build_logs = self.docker_client.images.build(
                 path=str(temp_path), tag=tag, rm=True, pull=False, nocache=True
             )
@@ -114,8 +114,11 @@ class ModuleManager:
 
             return tag
 
-    def test_module(self, image_tag, module_name, use_gpu=False):
+    def test_module(self, image_tag, module_name, module_path=None, use_gpu=False):
         """Test if the module can be loaded and instantiated"""
+
+        module_filename = Path(module_path).name if module_path else f"{module_name}.py"
+        module_stem = Path(module_filename).stem
 
         # Update: We force the PYTHONPATH inside the test script too
         test_script = f"""
@@ -128,17 +131,25 @@ sys.path.insert(0, '/app')
 def test_module():
     try:
         import importlib.util
-        module_path = Path('/app/{module_name}.py')
-        
+        module_path = Path('/app/{module_filename}')
+
         if not module_path.exists():
             return f"Module file not found at {{module_path}}"
-        
+
         spec = importlib.util.spec_from_file_location(module_path.stem, module_path)
         module = importlib.util.module_from_spec(spec)
         sys.modules[module_path.stem] = module
         spec.loader.exec_module(module)
-        
-        cls = getattr(module, '{module_name}')
+
+        try:
+            cls = getattr(module, '{module_stem}')
+        except AttributeError:
+            available = [name for name, obj in vars(module).items() if isinstance(obj, type)]
+            return (
+                f"Class '{{module_stem}}' not found in module. "
+                f"The benchmark class must match the uploaded filename stem ('{{module_stem}}'). "
+                f"Classes found in file: {{available or ['none']}}"
+            )
         instance = cls()
         
         # Optional: Verify GPU if expected
