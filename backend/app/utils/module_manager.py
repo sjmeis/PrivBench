@@ -16,13 +16,13 @@ class ModuleManager:
         # self.base_image_cpu = "python:3.9-slim"
         # CUDA runtime; requires host NVIDIA driver + toolkit
         # self.base_image_gpu = "nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04"
-        self.base_image_cpu = "python:3.9-slim"
-        self.base_image_gpu = "nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04"
+        self.base_image_cpu = "privbench-base-cpu:latest"
+        self.base_image_gpu = "privbench-base-gpu:latest"
 
     def create_dockerfile(self, requirements_filename, use_gpu=False):
         """Create a Dockerfile for the module container"""
         base = self.base_image_gpu if use_gpu else self.base_image_cpu
-        
+
         return f"""
         FROM {base}
         WORKDIR /app

@@ -7,6 +7,14 @@ from ..models import BenchmarkModule
 logger = logging.getLogger(__name__)
 
 
+def module_image_tag(name: str) -> str:
+    return f"module-{name.lower().replace(' ', '-')}"
+
+
+def module_container_name(name: str) -> str:
+    return f"module-container-{name.lower().replace(' ', '-')}"
+
+
 class ContainerManager:
     def __init__(self):
         self.docker_client = docker.from_env()
@@ -42,7 +50,7 @@ class ContainerManager:
 
     def is_container_installing(self, module_name):
         """Check if a container is currently being installed"""
-        container_name = f"module-container-{module_name.lower().replace(' ', '-')}"
+        container_name = module_container_name(module_name)
         with self._installation_lock:
             return container_name in self.installing_containers
 
@@ -74,8 +82,8 @@ class ContainerManager:
     def start_module_container(self, module):
         """Start a container for a specific module"""
         try:
-            image_tag = f"module-{module.name.lower().replace(' ', '-')}"
-            container_name = f"module-container-{module.name.lower().replace(' ', '-')}"
+            image_tag = module_image_tag(module.name)
+            container_name = module_container_name(module.name)
 
             # Check if already installing
             if self.is_container_installing(module.name):
@@ -178,7 +186,7 @@ class ContainerManager:
 
     def get_container(self, module_name):
         """Get running container for a module"""
-        container_name = f"module-container-{module_name.lower().replace(' ', '-')}"
+        container_name = module_container_name(module_name)
 
         # First check our local tracking
         container = self.running_containers.get(container_name)

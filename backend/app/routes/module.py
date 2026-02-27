@@ -21,7 +21,7 @@ from datetime import datetime
 from ..enums import SubmissionStatus
 from ..tasks.submission_outdated import mark_submissions_outdated_and_notify
 from ..tasks.add_module import install_and_load_module
-from ..utils.container_manager import container_manager
+from ..utils.container_manager import container_manager, module_container_name
 from ..utils.version_utils import is_version_greater, recommend_next_version
 
 logger = logging.getLogger(__name__)
@@ -625,7 +625,7 @@ def delete_benchmark_module(module_id):
                 container.stop()
                 container.remove(force=True)
                 container_manager.running_containers.pop(
-                    f"module-container-{module.name.lower()}",
+                    module_container_name(module.name),
                     None,
                 )
                 logger.info(f"Stopped and removed container for module {module.name}")
@@ -838,7 +838,7 @@ def update_module_logic(module_id):
                 container.stop()
                 container.remove(force=True)
                 container_manager.running_containers.pop(
-                    f"module-container-{module.name.lower()}",
+                    module_container_name(module.name),
                     None,
                 )
         except Exception as e:
@@ -1017,7 +1017,7 @@ def update_module_requirements(module_id):
                 container.stop()
                 container.remove(force=True)
                 container_manager.running_containers.pop(
-                    f"module-container-{module.name.lower()}",
+                    module_container_name(module.name),
                     None,
                 )
         except Exception as e:
