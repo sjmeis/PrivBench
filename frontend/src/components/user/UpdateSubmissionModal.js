@@ -324,7 +324,7 @@ const UpdateSubmissionModal = ({ isOpen, onClose, submission, onUpdated }) => {
             const names = module.dataset_names ?? (module.dataset_name ? [module.dataset_name] : []);
             return ids.map((id, idx) => ({
               id,
-              name: names[idx],
+              name: names[idx] ?? module.dataset_name ?? String(id),
               module_id: module.module_id,
               module_name: module.module_name,
               reasons: getModuleReasons(module),
