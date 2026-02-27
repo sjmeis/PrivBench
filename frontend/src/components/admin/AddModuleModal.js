@@ -124,7 +124,6 @@ const AddModuleModal = ({ isOpen, onClose, onSubmit, onError }) => {
     try {
       await ModuleService.createBenchmarkingModule(formData);
       onSubmit();
-      onClose();
     } catch (err) {
       onError(err.message);
     } finally {

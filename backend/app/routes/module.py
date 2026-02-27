@@ -28,12 +28,18 @@ logger = logging.getLogger(__name__)
 
 # Dataset and modules folder location
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
+
+
 def get_modules_folder():
     path = os.path.join(current_app.root_path, "..", "modules")
     return os.path.abspath(path)
+
+
 DATASET_FOLDER = os.path.join(PROJECT_ROOT, "data", "datasets")
-#MODULES_FOLDER = os.path.join(PROJECT_ROOT, "modules")
-MODULES_FOLDER = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../modules"))
+# MODULES_FOLDER = os.path.join(PROJECT_ROOT, "modules")
+MODULES_FOLDER = os.path.abspath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../modules")
+)
 
 module_bp = Blueprint("benchmark_module", __name__)
 
@@ -108,7 +114,9 @@ def _find_existing_requirements_path(module: BenchmarkModule):
                 if os.path.isfile(fallback_path):
                     return fallback_path
     except Exception as e:
-        logger.error(f"Error finding requirements path for module '{getattr(module, 'name', None)}': {e}")
+        logger.error(
+            f"Error finding requirements path for module '{getattr(module, 'name', None)}': {e}"
+        )
 
     return None
 
@@ -156,7 +164,9 @@ def get_all_benchmark_modules():
                     if dataset
                     else None
                 ),
-                "compatibleDatasets": [{"id": d.id, "name": d.name} for d in module.compatible_datasets]
+                "compatibleDatasets": [
+                    {"id": d.id, "name": d.name} for d in module.compatible_datasets
+                ],
             }
 
             module_list.append(module_info)
@@ -177,25 +187,29 @@ def get_modules_with_compatible_datasets():
 
         result = []
         for module in modules:
-            result.append({
-                "id": module.id,
-                "name": module.name,
-                "title": module.title,
-                "description": module.description,
-                "sampleCount": module.sample_count,
-                "compatibleDatasets": [
-                    {
-                        "id": ds.id,
-                        "name": ds.name,
-                    }
-                    for ds in module.compatible_datasets
-                ],
-            })
+            result.append(
+                {
+                    "id": module.id,
+                    "name": module.name,
+                    "title": module.title,
+                    "description": module.description,
+                    "sampleCount": module.sample_count,
+                    "compatibleDatasets": [
+                        {
+                            "id": ds.id,
+                            "name": ds.name,
+                        }
+                        for ds in module.compatible_datasets
+                    ],
+                }
+            )
 
         return jsonify(result), 200
     except Exception as e:
         return (
-            jsonify({"error": "Failed to fetch modules with datasets", "details": str(e)}),
+            jsonify(
+                {"error": "Failed to fetch modules with datasets", "details": str(e)}
+            ),
             500,
         )
 
@@ -390,7 +404,7 @@ def create_benchmark_module():
                 jsonify({"message": "User doesn't possess the necessary permissions."}),
                 403,
             )
-        
+
         target_folder = get_modules_folder()
 
         name = request.form.get("name")
@@ -458,7 +472,7 @@ def create_benchmark_module():
             for x in datasets:
                 if len(x.compatible_modules) == 0:
                     check_new_dataset = True
-        
+
         # Record a pending update entry
         if check_new_dataset:
             db.session.add(
@@ -822,9 +836,14 @@ def update_module_logic(module_id):
         if not filename.lower().endswith(".py"):
             return jsonify({"message": "Only .py files are accepted"}), 400
 
-        # Use a stable filename and overwrite if it exists
+        # Use a stable filename and overwrite if it exists.
+        # Preserve the original filename stem (which must match the benchmark class name)
+        # rather than deriving from the display name, which can differ from the class name.
         os.makedirs(MODULES_FOLDER, exist_ok=True)
-        stable_name = f"{secure_filename(module.name)}.py"
+        if module.path and os.path.basename(module.path).endswith(".py"):
+            stable_name = os.path.basename(module.path)
+        else:
+            stable_name = filename
         save_path = os.path.join(MODULES_FOLDER, stable_name)
         file.save(save_path)
 
@@ -1128,8 +1147,9 @@ def get_version_history():
             jsonify({"message": "Failed to fetch version history", "error": str(e)}),
             500,
         )
-    
-@module_bp.route('/modules/<int:module_id>/datasets', methods=['POST'])
+
+
+@module_bp.route("/modules/<int:module_id>/datasets", methods=["POST"])
 @jwt_required()
 def toggle_dataset_association(module_id):
     user_id = get_jwt_identity()
@@ -1139,8 +1159,8 @@ def toggle_dataset_association(module_id):
 
     module = BenchmarkModule.query.get_or_404(module_id)
     data = request.json
-    dataset_id = data.get('dataset_id')
-    should_link = data.get('should_link')
+    dataset_id = data.get("dataset_id")
+    should_link = data.get("should_link")
 
     dataset = Dataset.query.get_or_404(dataset_id)
 
