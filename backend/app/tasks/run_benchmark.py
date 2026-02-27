@@ -81,7 +81,15 @@ def run():
         spec.loader.exec_module(module)
 
         # Create benchmark instance
-        benchmark_class = getattr(module, '{module_stem}')
+        try:
+            benchmark_class = getattr(module, '{module_stem}')
+        except AttributeError:
+            available = [name for name, obj in vars(module).items() if isinstance(obj, type)]
+            raise AttributeError(
+                f"Class '{{module_stem}}' not found in module. "
+                f"The benchmark class must match the uploaded filename stem ('{{module_stem}}'). "
+                f"Classes found in file: {{available or ['none']}}"
+            )
         benchmark_instance = benchmark_class()
         
         # Load datasets

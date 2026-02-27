@@ -141,7 +141,15 @@ def test_module():
         sys.modules[module_path.stem] = module
         spec.loader.exec_module(module)
 
-        cls = getattr(module, '{module_stem}')
+        try:
+            cls = getattr(module, '{module_stem}')
+        except AttributeError:
+            available = [name for name, obj in vars(module).items() if isinstance(obj, type)]
+            return (
+                f"Class '{{module_stem}}' not found in module. "
+                f"The benchmark class must match the uploaded filename stem ('{{module_stem}}'). "
+                f"Classes found in file: {{available or ['none']}}"
+            )
         instance = cls()
         
         # Optional: Verify GPU if expected
