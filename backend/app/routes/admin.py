@@ -442,11 +442,24 @@ def rollback_version():
         if not bad_version_ids:
             return jsonify({"message": "Already at the latest or target version"}), 400
         
-        BenchmarkQueue.query.filter(
-            BenchmarkQueue.submission_id.in_(
-                db.session.query(Submission.id).filter(Submission.version.in_(bad_version_strs))
-            )
-        ).delete(synchronize_session=False)
+        modules_to_delete = BenchmarkModule.query.filter(
+            BenchmarkModule.created_at > target_version.created_at
+        ).all()
+        module_ids_to_delete = [m.id for m in modules_to_delete]
+
+        if module_ids_to_delete:
+            BenchmarkQueue.query.filter(
+                BenchmarkQueue.module_id.in_(module_ids_to_delete)
+            ).delete(synchronize_session=False)
+
+        if module_ids_to_delete:
+            BenchmarkScore.query.filter(
+                BenchmarkScore.module_id.in_(module_ids_to_delete)
+            ).delete(synchronize_session=False)
+
+        if modules_to_delete:
+            for m in modules_to_delete:
+                db.session.delete(m)
 
         bad_version_scores = SubmissionVersionScore.query.filter(
             SubmissionVersionScore.version.in_(bad_version_strs)
@@ -459,27 +472,34 @@ def rollback_version():
         SubmissionVersionScore.query.filter(SubmissionVersionScore.version.in_(bad_version_strs)).delete(synchronize_session=False)
         ModuleUpdate.query.filter(ModuleUpdate.version_id.in_(bad_version_ids)).delete(synchronize_session=False)
 
-        affected_submissions = Submission.query.filter(Submission.version.in_(bad_version_strs)).all()
+        #affected_submissions = Submission.query.filter(Submission.version.in_(bad_version_strs)).all()
+        all_submissions = Submission.query.all()
 
-        for sub in affected_submissions:
+        for sub in all_submissions:
             if sub.version in bad_version_strs:
-                sub.version = target_version_str
-                sub.status = SubmissionStatus.COMPLETED
 
-                if sub.submission_metadata:
-                    sub.submission_metadata.version = target_version_str
-            
-            target_snapshot = SubmissionVersionScore.query.filter_by(
-                submission_id=sub.id, 
-                version=target_version_str
-            ).first()
-            
-            if target_snapshot:
-                sub.score = target_snapshot.score
+                target_snapshot = SubmissionVersionScore.query.filter_by(
+                    submission_id=sub.id, 
+                    version=target_version_str
+                ).first()
+
+                if not target_snapshot:
+                    # delete if no record of previous version
+                    db.session.delete(sub)
+                else:
+                    # if record, revert back
+                    sub.version = target_version_str
+                    sub.status = SubmissionStatus.COMPLETED
+                    sub.score = target_snapshot.score
+                    
+                    if sub.submission_metadata:
+                        sub.submission_metadata.version = target_version_str
+            elif sub.version == target_version_str:
+                if sub.status == SubmissionStatus.OUTDATED:
+                    sub.status = SubmissionStatus.COMPLETED
             else:
-                sub.score = None
+                pass
 
-        BenchmarkModule.query.filter(BenchmarkModule.created_at > target_version.created_at).delete()
         AppVersion.query.filter(AppVersion.id.in_(bad_version_ids)).delete(synchronize_session=False)
         
         db.session.commit()
