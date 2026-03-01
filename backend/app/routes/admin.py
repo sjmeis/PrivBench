@@ -448,6 +448,14 @@ def rollback_version():
             )
         ).delete(synchronize_session=False)
 
+        bad_version_scores = SubmissionVersionScore.query.filter(
+            SubmissionVersionScore.version.in_(bad_version_strs)
+        ).all()
+
+        for vs in bad_version_scores:
+            vs.modules = []
+        db.session.flush()
+
         SubmissionVersionScore.query.filter(SubmissionVersionScore.version.in_(bad_version_strs)).delete(synchronize_session=False)
         ModuleUpdate.query.filter(ModuleUpdate.version_id.in_(bad_version_ids)).delete(synchronize_session=False)
 
