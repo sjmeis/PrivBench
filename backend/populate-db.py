@@ -130,7 +130,7 @@ with app.app_context():
             for _ in range(2):  # Each user has 2 submissions
                 submission = Submission(
                     name = random.choice(privatization_models),
-                    submission_date = datetime.utcnow() - timedelta(days=random.randint(0, 14)),
+                    submission_date = datetime.utcnow() - timedelta(days=2) - timedelta(days=random.randint(0, 14)),
                     user_id=user.id,
                     status=SubmissionStatus.COMPLETED,
                     score=0.0,
