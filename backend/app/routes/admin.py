@@ -448,11 +448,15 @@ def rollback_version():
         module_ids_to_delete = [m.id for m in modules_to_delete]
 
         if module_ids_to_delete:
+            ModuleUpdate.query.filter(
+                ModuleUpdate.module_id.in_(module_ids_to_delete)
+            ).delete(synchronize_session=False)
+
+        if module_ids_to_delete:
             BenchmarkQueue.query.filter(
                 BenchmarkQueue.module_id.in_(module_ids_to_delete)
             ).delete(synchronize_session=False)
 
-        if module_ids_to_delete:
             BenchmarkScore.query.filter(
                 BenchmarkScore.module_id.in_(module_ids_to_delete)
             ).delete(synchronize_session=False)
@@ -460,6 +464,7 @@ def rollback_version():
         if modules_to_delete:
             for m in modules_to_delete:
                 db.session.delete(m)
+        db.session.flush()
 
         bad_version_scores = SubmissionVersionScore.query.filter(
             SubmissionVersionScore.version.in_(bad_version_strs)
@@ -470,8 +475,7 @@ def rollback_version():
         db.session.flush()
 
         SubmissionVersionScore.query.filter(SubmissionVersionScore.version.in_(bad_version_strs)).delete(synchronize_session=False)
-        ModuleUpdate.query.filter(ModuleUpdate.version_id.in_(bad_version_ids)).delete(synchronize_session=False)
-
+        
         #affected_submissions = Submission.query.filter(Submission.version.in_(bad_version_strs)).all()
         all_submissions = Submission.query.all()
 
