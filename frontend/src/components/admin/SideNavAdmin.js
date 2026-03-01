@@ -10,6 +10,7 @@ import ViewModuleIcon from '@mui/icons-material/ViewModule';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import GroupIcon from '@mui/icons-material/Group';
 import HistoryIcon from '@mui/icons-material/History';
+import PublishIcon from '@mui/icons-material/Publish';
 import TerminalIcon from '@mui/icons-material/Terminal';
 import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
 
@@ -89,9 +90,18 @@ export function SideNavAdmin({ selectedItem, onSelect }) {
                             onClick={() => onSelect('submissions')}
                         >
                             <ListItemDecorator>
-                                <HistoryIcon fontSize="small" />
+                                <PublishIcon fontSize="small" />
                             </ListItemDecorator>
                             <ListItemContent>Submissions</ListItemContent>
+                        </ListItemButton>
+                        <ListItemButton
+                            selected={selectedItem === 'versions'}
+                            onClick={() => onSelect('versions')}
+                        >
+                            <ListItemDecorator>
+                                <HistoryIcon fontSize="small" />
+                            </ListItemDecorator>
+                            <ListItemContent>Versions</ListItemContent>
                         </ListItemButton>
                         <ListItemButton
                             selected={selectedItem === 'orchestration'}

@@ -7,6 +7,7 @@ import DatasetManagement from "../components/admin/DatasetManagement";
 import ModuleManagement from "../components/admin/ModuleManagement";
 import UserManagement from "../components/admin/UserManagement";
 import SubmissionManagement from "../components/admin/SubmissionManagement";
+import VersionManagement from "../components/admin/VersionManagement";
 import ModuleOrchestration from "../components/admin/ModuleOrchestration";
 import SystemHealth from "../components/admin/SystemHealth";
 import MainLayout from "../components/layout/MainLayout";
@@ -31,6 +32,8 @@ const AdminView = () => {
         return <UserManagement />;
       case 'submissions':
         return <SubmissionManagement />;
+      case 'versions':
+        return <VersionManagement />;
       case 'orchestration':
         return <ModuleOrchestration />;
       case 'health':
