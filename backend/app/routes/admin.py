@@ -7,6 +7,9 @@ from ..models.dataset import Dataset
 from ..models.benchmark_module import BenchmarkModule
 from ..models.benchmark_score import BenchmarkScore
 from ..models.benchmark_queue import BenchmarkQueue
+from ..models.app_version import AppVersion
+from ..models.module_update import ModuleUpdate
+from ..enums import SubmissionStatus
 from .. import db
 from datetime import datetime, timedelta
 import os
@@ -415,3 +418,49 @@ def get_module_logs(module_id):
         return jsonify({"logs": "Container not found. Start the container to see logs."}), 404
     except Exception as e:
         return jsonify({"logs": f"Error fetching logs: {str(e)}"}), 500
+
+@admin_bp.route('/admin/version/rollback', methods=['POST'])
+@jwt_required()
+def rollback_version():
+    claims = get_jwt()
+    if not claims.get("is_admin"):
+        return jsonify({"message": "Forbidden"}), 403
+
+    data = request.get_json()
+    target_version_str = data.get("targetVersion")
+    
+    try:
+        target_version = AppVersion.query.filter_by(version=target_version_str).first()
+        if not target_version:
+            return jsonify({"message": "Target version not found"}), 404
+
+        bad_versions = AppVersion.query.filter(AppVersion.created_at > target_version.created_at).all()
+        bad_version_ids = [v.id for v in bad_versions]
+        bad_version_strs = [v.version for v in bad_versions]
+
+        if not bad_version_ids:
+            return jsonify({"message": "Already at the latest or target version"}), 400
+
+        BenchmarkScore.query.filter(BenchmarkScore.version.in_(bad_version_strs)).delete(synchronize_session=False)
+        ModuleUpdate.query.filter(ModuleUpdate.version_id.in_(bad_version_ids)).delete(synchronize_session=False)
+        AppVersion.query.filter(AppVersion.id.in_(bad_version_ids)).delete(synchronize_session=False)
+
+        # re-calc Submission scores
+        submissions = Submission.query.all()
+        for sub in submissions:
+            remaining_scores = [s.score for s in sub.benchmark_scores]
+            if remaining_scores:
+                sub.score = sum(remaining_scores) / len(remaining_scores)
+            else:
+                sub.score = 0
+            
+            # if the submission was "Outdated" solely because of the version we just deleted, move it back to "Completed"
+            if sub.status == SubmissionStatus.OUTDATED and sub.version == target_version_str:
+                sub.status = SubmissionStatus.COMPLETED
+        
+        db.session.commit()
+        return jsonify({"message": f"Successfully rolled back to {target_version_str}"}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": str(e)}), 500
