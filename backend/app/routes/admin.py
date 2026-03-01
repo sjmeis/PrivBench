@@ -9,6 +9,7 @@ from ..models.benchmark_score import BenchmarkScore
 from ..models.benchmark_queue import BenchmarkQueue
 from ..models.app_version import AppVersion
 from ..models.module_update import ModuleUpdate
+from ..models.submission_version_score import SubmissionVersionScore
 from ..enums import SubmissionStatus
 from .. import db
 from datetime import datetime, timedelta
@@ -440,23 +441,38 @@ def rollback_version():
 
         if not bad_version_ids:
             return jsonify({"message": "Already at the latest or target version"}), 400
+        
+        BenchmarkQueue.query.filter(
+            BenchmarkQueue.submission_id.in_(
+                db.session.query(Submission.id).filter(Submission.version.in_(bad_version_strs))
+            )
+        ).delete(synchronize_session=False)
 
-        BenchmarkScore.query.filter(BenchmarkScore.version.in_(bad_version_strs)).delete(synchronize_session=False)
+        SubmissionVersionScore.query.filter(SubmissionVersionScore.version.in_(bad_version_strs)).delete(synchronize_session=False)
         ModuleUpdate.query.filter(ModuleUpdate.version_id.in_(bad_version_ids)).delete(synchronize_session=False)
-        AppVersion.query.filter(AppVersion.id.in_(bad_version_ids)).delete(synchronize_session=False)
 
-        # re-calc Submission scores
-        submissions = Submission.query.all()
-        for sub in submissions:
-            remaining_scores = [s.score for s in sub.benchmark_scores]
-            if remaining_scores:
-                sub.score = sum(remaining_scores) / len(remaining_scores)
-            else:
-                sub.score = 0
-            
-            # if the submission was "Outdated" solely because of the version we just deleted, move it back to "Completed"
-            if sub.status == SubmissionStatus.OUTDATED and sub.version == target_version_str:
+        affected_submissions = Submission.query.filter(Submission.version.in_(bad_version_strs)).all()
+
+        for sub in affected_submissions:
+            if sub.version in bad_version_strs:
+                sub.version = target_version_str
                 sub.status = SubmissionStatus.COMPLETED
+
+                if sub.submission_metadata:
+                    sub.submission_metadata.version = target_version_str
+            
+            target_snapshot = SubmissionVersionScore.query.filter_by(
+                submission_id=sub.id, 
+                version=target_version_str
+            ).first()
+            
+            if target_snapshot:
+                sub.score = target_snapshot.score
+            else:
+                sub.score = None
+
+        BenchmarkModule.query.filter(BenchmarkModule.created_at > target_version.created_at).delete()
+        AppVersion.query.filter(AppVersion.id.in_(bad_version_ids)).delete(synchronize_session=False)
         
         db.session.commit()
         return jsonify({"message": f"Successfully rolled back to {target_version_str}"}), 200

@@ -90,8 +90,8 @@ const VersionManagement = () => {
         <ModalDialog variant="outlined" role="alertdialog">
           <DialogTitle sx={{ color: 'danger.main' }}><Warning /> Permanent Rollback</DialogTitle>
           <DialogContent>
-            You are about to revert the entire system to version <b>{rollbackTarget?.version}</b>. 
-            All scores and updates published <b>after</b> this version will be PERMANENTLY DELETED.
+            You are about to revert the entire system to version {rollbackTarget?.version}. 
+            All scores and updates published after this version will be PERMANENTLY DELETED.
           </DialogContent>
           <DialogActions>
             <Button 
