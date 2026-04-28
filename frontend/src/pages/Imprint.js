@@ -6,27 +6,26 @@ const Imprint = () => {
     <DocumentPage title="Imprint">
       <Typography level="h4">Information according to § 5 TMG</Typography>
       <p>
-        Technical University of Munich<br />
-        School of Computation, Information and Technology<br />
-        Boltzmannstraße 3<br />
-        85748 Garching, Germany
+        GTG Development Corporation<br />
+        PO Box 86<br />
+        Martinsville, NJ 08836<br />
+        USA
       </p>
 
       <Typography level="h4">Represented by</Typography>
-      <p>Prof. Dr. Florian Matthes</p>
+      <p>Stephen Meisenbacher</p>
 
       <Typography level="h4">Contact</Typography>
       <p>
-        Phone: +49 (0) 89 17137<br />
         Email: stephen.meisenbacher@tum.de<br />
-        Website: www.cs.cit.tum.de/sebis/
       </p>
 
       <Typography level="h4">Responsible for content according to § 55 Abs. 2 RStV</Typography>
       <p>
-        Stephen Meisenbacher, M.Sc.<br />
-        Boltzmannstraße 3<br />
-        85748 Garching
+        Stephen Meisenbacher<br />
+        PO Box 86<br />
+        Martinsville, NJ 08836<br />
+        USA
       </p>
     </DocumentPage>
   );
