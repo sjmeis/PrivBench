@@ -81,8 +81,8 @@ const Footer = () => {
           sebis Homepage
         </Link>
         <Typography level="body2" textColor="text.primary">
-          {"·"} */}
-        </Typography>
+          {"·"} 
+        </Typography>*/}
         <Typography level="body2" textColor="text.primary">
           © {new Date().getFullYear()} PrivBench
         </Typography>
