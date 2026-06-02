@@ -64,7 +64,7 @@ const Footer = () => {
         <Typography level="body2" textColor="text.primary">
           {"·"}
         </Typography>
-        <Link
+        {/* <Link
           href="https://www.cs.cit.tum.de/sebis/"
           target="_blank"
           rel="noopener noreferrer"
@@ -81,7 +81,7 @@ const Footer = () => {
           sebis Homepage
         </Link>
         <Typography level="body2" textColor="text.primary">
-          {"·"}
+          {"·"} */}
         </Typography>
         <Typography level="body2" textColor="text.primary">
           © {new Date().getFullYear()} PrivBench
