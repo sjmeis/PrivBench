@@ -2,6 +2,16 @@
 # Custom data directory
 # ---------------------
 data/privatized_datasets/
+data/raw/
+data/from_server
+data/interim/pubmedqa_train.csv
+
+# ---------------------
+# Claude Code local settings (machine-specific permissions/hooks)
+# ---------------------
+.claude
+.claude/settings.local.json
+Claude.md
 
 # ---------------------
 # Python-related ignores

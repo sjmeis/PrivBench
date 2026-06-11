@@ -23,7 +23,6 @@ nltk.download("punkt_tab", quiet=True)
 
 import pandas as pd
 import requests
-from datasets import load_dataset
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
@@ -85,6 +84,16 @@ SOURCES = {
         "text_col":    "context",
         "context_key": "contexts",  # df["context"] is a dict; join its "contexts" list with " "
         "has_sentiment": False,
+        "hidden_cols":  ["question", "final_decision"],  # kept for utility eval, not shown to users
+        "save_train":   True,
+        "train_source": {  # pqa_labeled has only 1000 rows (all used as test); use pqa_artificial for training
+            "hf_dataset": "qiaojin/PubMedQA",
+            "hf_config":  "pqa_artificial",
+            "split":      "train",
+            "text_col":   "context",
+            "context_key": "contexts",
+            "train_cols":  ["question", "final_decision"],
+        },
     },
     "reddit": {
         "source_type":   "local_csv",  # already in data/raw/reddit_raw.csv
@@ -93,6 +102,8 @@ SOURCES = {
         "drop_authors":  ["AutoModerator"],
         "deduplicate":   True,
         "extra_cols":    [],
+        "hidden_cols":  ["author"],  # kept for authorship inference eval
+        "save_train":   True,
     },
 }
 
@@ -104,6 +115,29 @@ def normalize(text: str) -> str:
     text = unicodedata.normalize("NFKC", text)
     text = re.sub(r"\s+", " ", text).strip()
     return text
+
+
+def _load_train_source(name: str, src: dict) -> pd.DataFrame:
+    """Load training data from a separate HuggingFace split/config."""
+    from datasets import load_dataset
+    logger.info(f"  {name}: downloading train source ({src['hf_config']})...")
+    ds = load_dataset(src["hf_dataset"], src["hf_config"], split=src["split"])
+    df = pd.DataFrame(ds)
+
+    # Extract text from nested dict field if needed
+    context_key = src.get("context_key")
+    if context_key:
+        df["text"] = df[src["text_col"]].apply(lambda x: " ".join(x[context_key]))
+    else:
+        if src["text_col"] != "text":
+            df = df.rename(columns={src["text_col"]: "text"})
+
+    df["text"] = df["text"].apply(normalize)
+    df = df[df["text"].str.len() > 0].reset_index(drop=True)
+    df["id"] = [f"{name}_train_{i}" for i in range(len(df))]
+
+    keep = ["id", "text"] + src.get("train_cols", [])
+    return df[[c for c in keep if c in df.columns]]
 
 
 # ── Stages ────────────────────────────────────────────────────────────────────
@@ -142,6 +176,7 @@ def download_raw(name: str, cfg: dict) -> pd.DataFrame:
         logger.info(f"  {name}: loading cached {out}")
         return pd.read_csv(out)
 
+    from datasets import load_dataset
     logger.info(f"  {name}: downloading from HuggingFace ({cfg['hf_dataset']})...")
     if cfg["hf_config"]:
         ds = load_dataset(cfg["hf_dataset"], cfg["hf_config"], split=cfg["split"])
@@ -219,9 +254,35 @@ def build_interim(name: str, cfg: dict) -> None:
 
     # Sample (cap at available rows for small datasets)
     n = min(SAMPLE_SIZE, len(df))
-    sampled = df[keep_cols].sample(n=n, random_state=RANDOM_SEED).reset_index(drop=True)
+    sampled_idx = df.sample(n=n, random_state=RANDOM_SEED).index
+    sampled = df.loc[sampled_idx, keep_cols].reset_index(drop=True)
     sampled.to_csv(out, index=False)
     logger.info(f"  {name}: saved {len(sampled)} samples → {out}")
+
+    # Save hidden labels for the test set (same rows as main CSV, extra columns)
+    hidden_cols = cfg.get("hidden_cols", [])
+    hidden_cols = [c for c in hidden_cols if c in df.columns]
+    if hidden_cols:
+        hidden = df.loc[sampled_idx, ["id"] + hidden_cols].reset_index(drop=True)
+        hidden_path = INTERIM_DIR / f"{name}_hidden.csv"
+        hidden.to_csv(hidden_path, index=False)
+        logger.info(f"  {name}: saved {len(hidden)} hidden labels → {hidden_path}")
+
+    # Save train set (rows NOT in the test sample, or from a separate source)
+    if cfg.get("save_train"):
+        train_path = INTERIM_DIR / f"{name}_train.csv"
+        train_src = cfg.get("train_source")
+        if train_src:
+            # Load training data from a different HF split/config
+            train_df = _load_train_source(name, train_src)
+            train_df.to_csv(train_path, index=False)
+            logger.info(f"  {name}: saved {len(train_df)} train rows → {train_path}")
+        else:
+            train_idx = df.index.difference(sampled_idx)
+            train_cols = ["id", "text"] + hidden_cols
+            train = df.loc[train_idx, train_cols].reset_index(drop=True)
+            train.to_csv(train_path, index=False)
+            logger.info(f"  {name}: saved {len(train)} train rows → {train_path}")
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
@@ -231,7 +292,11 @@ def main():
     parser.add_argument("--raw-only",     action="store_true", help="Download raw files only")
     parser.add_argument("--interim-only", action="store_true", help="Rebuild interim from existing raw")
     parser.add_argument("--force",        action="store_true", help="Re-download even if raw files exist")
+    parser.add_argument("--dataset",      nargs="+", choices=list(SOURCES.keys()),
+                        help="Process only these datasets (default: all)")
     args = parser.parse_args()
+
+    selected = {name: SOURCES[name] for name in (args.dataset or SOURCES.keys())}
 
     RAW_DIR.mkdir(parents=True, exist_ok=True)
     INTERIM_DIR.mkdir(parents=True, exist_ok=True)
@@ -240,17 +305,17 @@ def main():
     if not args.interim_only:
         logger.info("── Downloading raw datasets ──────────────────────────")
         if args.force:
-            for name in SOURCES:
+            for name in selected:
                 raw = RAW_DIR / f"{name}_raw.csv"
                 if raw.exists():
                     raw.unlink()
-        for name, cfg in SOURCES.items():
+        for name, cfg in selected.items():
             download_raw(name, cfg)
 
     # Stage 2: Build interim
     if not args.raw_only:
         logger.info("\n── Building interim datasets ─────────────────────────")
-        for name, cfg in SOURCES.items():
+        for name, cfg in selected.items():
             raw_path = RAW_DIR / f"{name}_raw.csv"
             if not raw_path.exists():
                 logger.error(f"  {name}: raw file not found, run without --interim-only first")
