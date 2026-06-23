@@ -72,6 +72,7 @@ DATASETS = [
     "wikitext.csv",
     "yelp.csv",
     "pubmedqa.csv",
+    "reddit.csv",
 ]
 
 # Number of nearest neighbours that form the output set for each word.
@@ -326,7 +327,21 @@ def main():
         help=f"Output-set size per word (default: {TOP_K})",
     )
     parser.add_argument("--seed", type=int, default=SEED, help="Random seed")
+    parser.add_argument("--input-dir", type=str, default=None,
+                        help="Override input directory (default: ~/)")
+    parser.add_argument("--output-dir", type=str, default=None,
+                        help="Override output directory (default: ~/custext_output/)")
+    parser.add_argument("--glove-path", type=str, default=None,
+                        help="Override GloVe file path")
     args = parser.parse_args()
+
+    global INPUT_DIR, OUTPUT_DIR, GLOVE_PATH
+    if args.input_dir:
+        INPUT_DIR = Path(args.input_dir)
+    if args.output_dir:
+        OUTPUT_DIR = Path(args.output_dir)
+    if args.glove_path:
+        GLOVE_PATH = Path(args.glove_path)
 
     np.random.seed(args.seed)
 
