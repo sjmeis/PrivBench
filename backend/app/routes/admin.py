@@ -463,7 +463,8 @@ def rollback_version():
 
         if modules_to_delete:
             for m in modules_to_delete:
-                db.session.delete(m)
+                if m.created_at > target_version.created_at:
+                    m.is_active = False
         db.session.flush()
 
         bad_version_scores = SubmissionVersionScore.query.filter(
@@ -475,7 +476,7 @@ def rollback_version():
         db.session.flush()
 
         SubmissionVersionScore.query.filter(SubmissionVersionScore.version.in_(bad_version_strs)).delete(synchronize_session=False)
-        
+
         #affected_submissions = Submission.query.filter(Submission.version.in_(bad_version_strs)).all()
         all_submissions = Submission.query.all()
 
