@@ -276,36 +276,23 @@ def publish_module_updates():
             return jsonify({"message": "Forbidden"}), 403
 
         data = request.get_json() or {}
-        version_str = data.get("version")  # required on publish
+        version_str = data.get("version")  
         description = data.get("description")
         send_email = data.get("sendEmail", True)
 
-        if (
-            not version_str
-            or not isinstance(version_str, str)
-            or not version_str.strip()
-        ):
+        if not version_str or not isinstance(version_str, str) or not version_str.strip():
             return jsonify({"message": "Version is required to publish"}), 400
 
         current_version = AppVersion.get_current_version()
         if not is_version_greater(version_str, current_version):
-            return (
-                jsonify(
-                    {
-                        "message": f"Version must be greater than current ({current_version})"
-                    }
-                ),
-                400,
-            )
+            return jsonify({"message": f"Version must be greater than current ({current_version})"}), 400
 
-        # ensure version uniqueness
         exists_version = db.session.query(
             exists().where(AppVersion.version == version_str)
         ).scalar()
         if exists_version:
             return jsonify({"message": f"Version {version_str} already exists"}), 409
 
-        # get pending updates
         pending = (
             db.session.query(ModuleUpdate)
             .filter(ModuleUpdate.is_updated == True, ModuleUpdate.version_id == None)
@@ -314,12 +301,33 @@ def publish_module_updates():
         if not pending:
             return jsonify({"message": "No pending module updates to publish"}), 400
 
-        # create new AppVersion
-        new_version = AppVersion(version=version_str)
+        # ----------------------------------------------------
+        # GIT-STYLE SNAPSHOT LOGIC:
+        # Collect all active modules as they exist right now
+        # ----------------------------------------------------
+        active_modules = db.session.query(BenchmarkModule).filter_by(is_active=True).all()
+        blueprint_snapshot = []
+        for m in active_modules:
+            blueprint_snapshot.append({
+                "module_id": m.id,
+                "name": m.name,
+                "title": m.title,
+                "path": m.path,
+                "sample_count": getattr(m, 'sample_count', 100),
+                "device_specification": m.device_specification,
+                "compatible_datasets": [d.name for d in m.compatible_datasets]
+            })
+
+        # Create new AppVersion with its static blueprint log
+        new_version = AppVersion(
+            version=version_str,
+            description=description,
+            blueprint=blueprint_snapshot  # Written directly to JSON Column
+        )
         db.session.add(new_version)
         db.session.flush()
 
-        # apply version to updated/added modules and finalize ModuleUpdate rows
+        # Update module versions and finalize ModuleUpdate rows
         affected_module_ids = {u.module_id for u in pending}
         modules = (
             db.session.query(BenchmarkModule)
@@ -332,21 +340,16 @@ def publish_module_updates():
         for pending_update in pending:
             pending_update.is_updated = False
             pending_update.version_id = new_version.id
-            if (
-                description
-                and pending_update.update_type == "modified"
-                and not pending_update.description
-            ):
+            if description and pending_update.update_type == "modified" and not pending_update.description:
                 pending_update.description = description
 
         db.session.commit()
 
-        # Build change summary for the email/task
+        # Build change summary for notification tasks
         module_by_id = {m.id: m for m in modules}
         new_modules = [
             {"id": u.module_id, "name": module_by_id[u.module_id].name}
-            for u in pending
-            if u.update_type == "new_module" and u.module_id in module_by_id
+            for u in pending if u.module_id in module_by_id and u.update_type == "new_module"
         ]
         modified_modules = [
             {
@@ -354,8 +357,7 @@ def publish_module_updates():
                 "name": module_by_id[u.module_id].name,
                 "description": (u.description or "").strip(),
             }
-            for u in pending
-            if u.update_type == "modified" and u.module_id in module_by_id
+            for u in pending if u.module_id in module_by_id and u.update_type == "modified"
         ]
 
         try:
@@ -365,31 +367,20 @@ def publish_module_updates():
                     {"new_modules": new_modules, "modified_modules": modified_modules},
                 )
                 logger.info(f"Outdated-mark notify task queued: {notify_task.id}")
-            else:
-                logger.info(
-                    "Publish completed without sending emails (admin unchecked notification)."
-                )
         except Exception as e:
             logger.warning(f"Failed to enqueue notify task: {e}")
 
-        return (
-            jsonify(
-                {
-                    "message": "Published successfully",
-                    "version": version_str,
-                    "affectedModules": [m.id for m in modules],
-                    "pendingUpdatesClosed": len(pending),
-                    "requiresSubmissionUpdate": send_email,
-                }
-            ),
-            200,
-        )
+        return jsonify({
+            "message": "Published successfully with snapshot blueprinting",
+            "version": version_str,
+            "affectedModules": [m.id for m in modules],
+            "pendingUpdatesClosed": len(pending)
+        }), 200
 
     except Exception as e:
         logger.error(f"Error publishing updates: {e}")
         db.session.rollback()
         return jsonify({"message": str(e)}), 500
-
 
 @module_bp.route("/modules/create", methods=["POST"])
 @jwt_required()

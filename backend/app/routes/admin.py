@@ -428,88 +428,82 @@ def rollback_version():
         return jsonify({"message": "Forbidden"}), 403
 
     data = request.get_json()
-    target_version_str = data.get("targetVersion")
+    target_version_str = data.get("targetVersion") or data.get("version")
     
     try:
-        target_version = AppVersion.query.filter_by(version=target_version_str).first()
-        if not target_version:
-            return jsonify({"message": "Target version not found"}), 404
+        target_release = AppVersion.query.filter_by(version=target_version_str).first()
+        if not target_release:
+            return jsonify({"message": "Target version snapshot not found"}), 404
 
-        bad_versions = AppVersion.query.filter(AppVersion.created_at > target_version.created_at).all()
-        bad_version_ids = [v.id for v in bad_versions]
+        bad_versions = AppVersion.query.filter(AppVersion.created_at > target_release.created_at).all()
         bad_version_strs = [v.version for v in bad_versions]
+        bad_version_ids = [v.id for v in bad_versions]
 
         if not bad_version_ids:
-            return jsonify({"message": "Already at the latest or target version"}), 400
+            return jsonify({"message": "Already at or below target checkpoint version"}), 400
+
+        # ----------------------------------------------------
+        # GIT-STYLE RESTORE WORKFLOW:
+        # Read the blueprint array and map parameters back
+        # ----------------------------------------------------
+        blueprint = target_release.blueprint
+        if not blueprint:
+            return jsonify({"message": "Target version is missing a state blueprint"}), 400
+            
+        target_module_ids = [item["module_id"] for item in blueprint]
+
+        # Deactivate modules created after this version (soft-delete)
+        db.session.query(BenchmarkModule).filter(
+            BenchmarkModule.id.not_in(target_module_ids)
+        ).update({"is_active": False}, synchronize_session=False)
+
+        # Realign module configurations to match the snapshot blueprint
+        for item in blueprint:
+            m = db.session.query(BenchmarkModule).get(item["module_id"])
+            if m:
+                m.is_active = True
+                m.name = item["name"]
+                m.title = item["title"]
+                m.path = item["path"]
+                m.device_specification = item["device_specification"]
+                if "sample_count" in item:
+                    m.sample_count = item["sample_count"]
+                
+                if "compatible_datasets" in item:
+                    datasets = Dataset.query.filter(Dataset.name.in_(item["compatible_datasets"])).all()
+                    m.compatible_datasets = datasets
         
-        modules_to_delete = BenchmarkModule.query.filter(
-            BenchmarkModule.created_at > target_version.created_at
-        ).all()
-        module_ids_to_delete = [m.id for m in modules_to_delete]
-
-        if module_ids_to_delete:
-            ModuleUpdate.query.filter(
-                ModuleUpdate.module_id.in_(module_ids_to_delete)
-            ).delete(synchronize_session=False)
-
-        if module_ids_to_delete:
-            BenchmarkQueue.query.filter(
-                BenchmarkQueue.module_id.in_(module_ids_to_delete)
-            ).delete(synchronize_session=False)
-
-            BenchmarkScore.query.filter(
-                BenchmarkScore.module_id.in_(module_ids_to_delete)
-            ).delete(synchronize_session=False)
-
-        if modules_to_delete:
-            for m in modules_to_delete:
-                if m.created_at > target_version.created_at:
-                    m.is_active = False
         db.session.flush()
 
-        bad_version_scores = SubmissionVersionScore.query.filter(
-            SubmissionVersionScore.version.in_(bad_version_strs)
-        ).all()
-
-        for vs in bad_version_scores:
-            vs.modules = []
-        db.session.flush()
-
-        SubmissionVersionScore.query.filter(SubmissionVersionScore.version.in_(bad_version_strs)).delete(synchronize_session=False)
-
-        #affected_submissions = Submission.query.filter(Submission.version.in_(bad_version_strs)).all()
         all_submissions = Submission.query.all()
-
         for sub in all_submissions:
             if sub.version in bad_version_strs:
-
                 target_snapshot = SubmissionVersionScore.query.filter_by(
                     submission_id=sub.id, 
                     version=target_version_str
                 ).first()
 
                 if not target_snapshot:
-                    # delete if no record of previous version
-                    db.session.delete(sub)
+                    sub.status = SubmissionStatus.OUTDATED
+                    sub.score = None
                 else:
-                    # if record, revert back
                     sub.version = target_version_str
                     sub.status = SubmissionStatus.COMPLETED
                     sub.score = target_snapshot.score
                     
                     if sub.submission_metadata:
                         sub.submission_metadata.version = target_version_str
-            elif sub.version == target_version_str:
-                if sub.status == SubmissionStatus.OUTDATED:
-                    sub.status = SubmissionStatus.COMPLETED
-            else:
-                pass
+                        
+            elif sub.version == target_version_str and sub.status == SubmissionStatus.OUTDATED:
+                sub.status = SubmissionStatus.COMPLETED
 
+        SubmissionVersionScore.query.filter(SubmissionVersionScore.version.in_(bad_version_strs)).delete(synchronize_session=False)
+        ModuleUpdate.query.filter(ModuleUpdate.version_id.in_(bad_version_ids)).delete(synchronize_session=False)
         AppVersion.query.filter(AppVersion.id.in_(bad_version_ids)).delete(synchronize_session=False)
         
         db.session.commit()
-        return jsonify({"message": f"Successfully rolled back to {target_version_str}"}), 200
+        return jsonify({"message": f"Successfully checked out platform state at v{target_version_str}"}), 200
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({"message": str(e)}), 500
+        return jsonify({"message": f"Checkpoint restoration failed: {str(e)}"}), 500
