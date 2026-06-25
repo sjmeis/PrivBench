@@ -13,8 +13,10 @@ import HistoryIcon from '@mui/icons-material/History';
 import PublishIcon from '@mui/icons-material/Publish';
 import TerminalIcon from '@mui/icons-material/Terminal';
 import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
+import SlideshowIcon from '@mui/icons-material/Slideshow';
+import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
 
-export function SideNavAdmin({ selectedItem, onSelect }) {
+export function SideNavAdmin({ selectedItem, onSelect, isSuperAdmin }) {
 
     return (
         <Box
@@ -115,12 +117,33 @@ export function SideNavAdmin({ selectedItem, onSelect }) {
                             <ListItemContent>Module Orchestration</ListItemContent>
                         </ListItemButton>
                         <ListItemButton 
+                            selected={selectedItem === 'demo'} 
+                            onClick={() => onSelect('demo')}
+                            >
+                            <ListItemDecorator><SlideshowIcon /></ListItemDecorator>
+                            <ListItemContent>Demo Data</ListItemContent>
+                        </ListItemButton>
+                        <ListItemButton 
                             selected={selectedItem === 'health'} 
                             onClick={() => onSelect('health')}
                             >
                             <ListItemDecorator><MonitorHeartIcon /></ListItemDecorator>
                             <ListItemContent>System Health</ListItemContent>
                         </ListItemButton>
+                        {isSuperAdmin && (
+                            <ListItem>
+                                <ListItemButton 
+                                    selected={selectedItem === 'team'} 
+                                    onClick={() => onSelect('team')}
+                                    color="danger"
+                                    variant={selectedItem === 'team' ? 'soft' : 'plain'}
+                                    sx={{ fontWeight: 'bold' }}
+                                >
+                                    <ListItemDecorator><ManageAccountsIcon /></ListItemDecorator>
+                                    <ListItemContent>Admin Team</ListItemContent>
+                                </ListItemButton>
+                            </ListItem>
+                        )}
                     </List>
                 </ListItem>
             </List>
