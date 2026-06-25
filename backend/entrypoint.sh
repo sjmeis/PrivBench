@@ -42,21 +42,6 @@ wait_for_flask() {
 
 # Function to handle database migrations
 setup_database() {
-    # ── FORCE COMPILE REQUISITE BASELINE IMAGES IF MISSING ────────────────
-    echo "Verifying baseline runtime images..."
-    chmod 666 /var/run/docker.sock || echo "Warning: Socket permissions bypass failed..."
-    
-    if ! docker image inspect privbench-base-cpu:latest >/dev/null 2>&1; then
-        echo "privbench-base-cpu:latest not found. Compiling base CPU container..."
-        docker build -t privbench-base-cpu:latest -f /app/base_images/Dockerfile.base_cpu /app/base_images
-    fi
-
-    if ! docker image inspect privbench-base-gpu:latest >/dev/null 2>&1; then
-        echo "privbench-base-gpu:latest not found. Compiling base GPU container (this may take a while)..."
-        docker build -t privbench-base-gpu:latest -f /app/base_images/Dockerfile.base_gpu /app/base_images
-    fi
-    # ─────────────────────────────────────────────────────────────────────
-
     if [ "$FLASK_ENV" = "development" ] && [ "$CLEAN_DB" = "true" ]; then
         echo "CLEAN_DB is true: Dropping and recreating public database schema..."
         PGPASSWORD=$POSTGRES_PASSWORD psql -h db -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
