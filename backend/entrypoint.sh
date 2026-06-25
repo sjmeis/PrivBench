@@ -51,7 +51,7 @@ setup_database() {
     python3 -m flask db upgrade || echo "Migration upgrade bypassed..."
 
     echo "Checking database initialization state..."
-    TABLE_COUNT=$(PGPASSWORD=$POSTGRES_PASSWORD psql -h db -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -A -c "SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_name='benchmark_modules';")
+    TABLE_COUNT=$(PGPASSWORD=$POSTGRES_PASSWORD psql -h db -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -A -c "SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_name='benchmark_module';")
 
     if [ "$TABLE_COUNT" = "0" ] || [ "$CLEAN_DB" = "true" ]; then
         echo "Database baseline tracking table is missing or empty. Running initial system configuration..."
