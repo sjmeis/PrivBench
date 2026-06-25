@@ -11,6 +11,7 @@ class User(db.Model):
     badges = db.Column(db.PickleType, nullable=True)
     research_institute = db.Column(db.String(120), nullable=True)
     admin = db.Column(db.Boolean, default=False, nullable=False)
+    is_superadmin = db.Column(db.Boolean, default=False)
     bio = db.Column(db.String(400), nullable=True)
     profile_picture_path = db.Column(db.String(255), nullable=True)
     is_verified = db.Column(db.Boolean, default=False)
