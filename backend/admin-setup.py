@@ -30,9 +30,9 @@ def seed_superadmin():
         password=password,
         research_institute='Technical University of Munich',
         admin=True,
-        is_superadmin=True,
         is_verified=True
     )
+    superadmin.is_superadmin = True
     superadmin.daily_submission_limit = 100 
     superadmin.profile_picture_path = None
 
