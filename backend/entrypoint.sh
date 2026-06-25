@@ -64,19 +64,32 @@ run_db_scripts() {
 
 # Function to handle database migrations
 setup_database() {
-    # 1. Handle Clean Reset (development only)
     if [ "$FLASK_ENV" = "development" ] && [ "$CLEAN_DB" = "true" ]; then
-        echo "Resetting DB and migrations..."
+        echo "CLEAN_DB is true: Dropping and recreating public database schema..."
         PGPASSWORD=$POSTGRES_PASSWORD psql -h db -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
     fi
 
-    # 2. Apply committed migrations
-    echo "Applying migrations..."
-    python3 -m flask db upgrade || echo "Migration upgrade failed, but starting anyway..."
+    echo "Applying database migrations..."
+    python3 -m flask db upgrade || echo "Migration upgrade bypassed..."
 
-    # 3. Run population scripts on clean DB
-    if [ "$CLEAN_DB" = "true" ]; then
-        run_db_scripts
+    echo "Checking database initialization state..."
+    TABLE_COUNT=$(PGPASSWORD=$POSTGRES_PASSWORD psql -h db -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -A -c "SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_name='benchmark_modules';")
+
+    if [ "$TABLE_COUNT" = "0" ] || [ "$CLEAN_DB" = "true" ]; then
+        echo "Database baseline tracking table is missing or empty. Running initial system configuration..."
+        
+        echo "Waiting for database service verification hook..."
+        until pg_isready -h db -p 5432 -U "$POSTGRES_USER"; do
+          sleep 1
+        done
+
+        echo "Executing setup-db.py script..."
+        python3 /app/setup-db.py
+
+        echo "Executing setup-admin.py script..."
+        python3 /app/setup-admin.py
+    else
+        echo "Database already initialized with baseline parameters. Skipping setup-db.py execution to protect existing records."
     fi
 }
 
