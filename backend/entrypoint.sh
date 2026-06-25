@@ -86,8 +86,8 @@ setup_database() {
         echo "Executing setup-db.py script..."
         python3 /app/setup-db.py
 
-        echo "Executing setup-admin.py script..."
-        python3 /app/setup-admin.py
+        echo "Executing admin-setup.py script..."
+        python3 /app/admin-setup.py
     else
         echo "Database already initialized with baseline parameters. Skipping setup-db.py execution to protect existing records."
     fi
