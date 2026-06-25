@@ -39,6 +39,9 @@ services:
       - POSTGRES_DB=${POSTGRES_DB}
       - PYTHONDONTWRITEBYTECODE=1
       - PROCFS_PATH=/host/proc
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@privbench.com}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
     depends_on:
       db:
         condition: service_healthy
