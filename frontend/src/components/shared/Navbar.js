@@ -32,6 +32,7 @@ import HistoryIcon from '@mui/icons-material/History';
 import PublishIcon from '@mui/icons-material/Publish';
 import TerminalIcon from '@mui/icons-material/Terminal';
 import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
+import SlideshowIcon from '@mui/icons-material/Slideshow';
 import { useSnackbar } from "../../contexts/SnackbarProvider";
 import { ModuleService } from "../../services/ModuleService";
 
@@ -77,7 +78,6 @@ const Navbar = () => {
         return user.profilePicturePath || getGravatarUrl(user.mailAddress);
     };
 
-  // Avoid returning early before hooks are called
   const isLightMode = mode === "light";
 
   const handleChange = () => {
@@ -98,7 +98,6 @@ const Navbar = () => {
     }
 };
 
-  // Only return null if mode is falsy, after all hooks are called
   if (!mode) {
     return null;
   }
@@ -299,6 +298,14 @@ const Navbar = () => {
                       >
                         <TerminalIcon />
                         Module Orchestration
+                      </MenuItem>
+                      <MenuItem
+                        onClick={() =>
+                          navigate("/admin", { state: "demo" })
+                        }
+                      >
+                        <SlideshowIcon />
+                        Demo Data
                       </MenuItem>
                       <MenuItem
                         onClick={() =>

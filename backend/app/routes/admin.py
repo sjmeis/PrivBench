@@ -20,6 +20,10 @@ import docker
 from ..utils.module_manager import ModuleManager
 from ..utils.container_manager import module_image_tag, module_container_name
 
+import sys
+sys.path.append("/app")
+from populate_db import install_demo_data, purge_demo_data
+
 import psutil
 try:
     import pynvml
@@ -507,3 +511,93 @@ def rollback_version():
     except Exception as e:
         db.session.rollback()
         return jsonify({"message": f"Checkpoint restoration failed: {str(e)}"}), 500
+    
+@admin_bp.route('/admin/demo-data/toggle', methods=['POST'])
+@jwt_required()
+def toggle_demo_data():
+    claims = get_jwt()
+    if not claims.get("is_admin", False):
+        return jsonify({"message": "Forbidden"}), 403
+
+    data = request.get_json() or {}
+    enable_demo = data.get("enable", False)
+
+    try:
+        if enable_demo:
+            has_demo = User.query.filter(User.username.ilike("demo_%")).first() is not None
+            if has_demo:
+                return jsonify({"message": "Demo data is already initialized on this system context."}), 400
+
+            success = install_demo_data()
+            if not success:
+                return jsonify({"message": "Failed to install demo data. Verify modules/datasets exist."}), 400
+                
+            return jsonify({"message": "Database populated with mock data successfully.", "demoActive": True}), 201
+        else:
+            success = purge_demo_data()
+            return jsonify({"message": "Database cleared of mock data safely.", "demoActive": False}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": f"Demo toggle process encountered an issue: {str(e)}"}), 500
+
+@admin_bp.route('/admin/demo-data/status', methods=['GET'])
+@jwt_required()
+def get_demo_data_status():
+    """Simple check to update the frontend toggle switch state upon loading."""
+    claims = get_jwt()
+    if not claims.get("is_admin", False):
+        return jsonify({"message": "Forbidden"}), 403
+        
+    has_demo = User.query.filter(User.username.ilike("demo_%")).first() is not None
+    return jsonify({"demoActive": has_demo}), 200
+
+@admin_bp.route('/admin/management/list', methods=['GET'])
+@jwt_required()
+def get_admin_management_list():
+    """Returns an overview of users possessing administrative privileges."""
+    claims = get_jwt()
+    if not claims.get("is_superadmin", False):
+        return jsonify({"message": "Superadmin privileges required to manage team permissions."}), 403
+
+    admins = User.query.filter(User.admin == True, User.is_superadmin == False).all()
+    
+    non_admins = User.query.filter(User.admin == False).limit(100).all()
+
+    return jsonify({
+        "currentAdmins": [{
+            "id": u.id,
+            "username": u.username,
+            "mailAddress": u.mail_address,
+            "researchInstitute": u.research_institute
+        } for u in admins],
+        "candidates": [{
+            "id": u.id,
+            "username": u.username,
+            "mailAddress": u.mail_address,
+            "researchInstitute": u.research_institute
+        } for u in non_admins]
+    }), 200
+
+
+@admin_bp.route('/admin/management/toggle/<int:user_id>', methods=['POST'])
+@jwt_required()
+def toggle_user_admin_status(user_id):
+    """Promotes or demotes an account between User and Administrator roles."""
+    claims = get_jwt()
+    if not claims.get("is_superadmin", False):
+        return jsonify({"message": "Forbidden. Requires Superadmin role."}), 403
+
+    user = User.query.get_or_404(user_id)
+    
+    if user.is_superadmin:
+        return jsonify({"message": "Root superadmin cannot be demoted."}), 400
+
+    data = request.get_json() or {}
+    make_admin = data.get("admin", False)
+
+    user.admin = make_admin
+    db.session.commit()
+
+    status_txt = "promoted to Admin" if make_admin else "demoted to standard User status"
+    return jsonify({"message": f"Successfully {status_txt} for {user.username}.", "admin": user.admin}), 200
