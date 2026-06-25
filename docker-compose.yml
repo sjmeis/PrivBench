@@ -47,8 +47,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    #entrypoint: ["/app/entrypoint.sh"]
-    entrypoint: ["python3", "-m", "gunicorn", "-w", "2", "-b", "0.0.0.0:5000", "app:app"]
+    entrypoint: ["/app/entrypoint.sh"]
+    command: ["python3", "-m", "gunicorn", "-w", "2", "-b", "0.0.0.0:5000", "app:app"]
 
   celery_worker:
     build:
