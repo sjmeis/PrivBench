@@ -10,7 +10,7 @@ import SubmissionManagement from "../components/admin/SubmissionManagement";
 import VersionManagement from "../components/admin/VersionManagement";
 import ModuleOrchestration from "../components/admin/ModuleOrchestration";
 import SystemHealth from "../components/admin/SystemHealth";
-import DemoDataManagement from "../components/DemoDataManagement";
+import DemoDataManagement from "../components/admin/DemoDataManagement";
 import AdminManagementPanel from "../components/admin/AdminManagementPanel";
 import MainLayout from "../components/layout/MainLayout";
 
