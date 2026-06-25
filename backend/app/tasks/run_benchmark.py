@@ -18,23 +18,14 @@ def run_benchmark(
     module_name,
     dataset_path,
     priv_dataset_path,
+    dataset_identifier,
     progress_callback=None,
 ):
-    """
-    Run a benchmark module in a Docker container.
-    The function maintains the same interface but executes the module in a container.
-    """
-    logger.info(f"Starting benchmark execution for module {module_name}")
+    logger.info(f"Starting benchmark container step targeting dataset: {dataset_identifier}")
 
     try:
-        # Check if container is installing and wait for it to become ready
-        container = wait_for_container_with_installation_check(
-            module_name, progress_callback
-        )
+        container = wait_for_container_with_installation_check(module_name, progress_callback)
         if not container:
-            logger.error(
-                f"Container for module {module_name} failed to start within timeout"
-            )
             raise Exception(f"Container not available for module {module_name}")
 
         module_stem = Path(module_path).stem
@@ -42,7 +33,6 @@ def run_benchmark(
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
 
-            # Copy required files
             shutil.copy2(module_path, temp_path / f"{module_stem}.py")
             shutil.copy2(dataset_path, temp_path / "dataset.csv")
             shutil.copy2(priv_dataset_path, temp_path / "privatized_dataset.csv")
@@ -51,16 +41,20 @@ def run_benchmark(
             if host_benchmarks.exists():
                 shutil.copytree(host_benchmarks, temp_path / "benchmarks", dirs_exist_ok=True)
 
-            # Create runner script with simple progress output
+            hf_token = os.getenv("HF_TOKEN", "")
+
             runner_script = f"""
 import pandas as pd
 import sys
 import json
 import importlib.util
 import types
+import os
 from pathlib import Path
 
 sys.path.insert(0, '/app')
+
+os.environ["HF_TOKEN"] = "{hf_token}"
 
 if 'modules' not in sys.modules:
     m = types.ModuleType('modules')
@@ -73,48 +67,34 @@ if not benchmarks_init.exists():
 
 def run():
     try:
-        # Load module
         module_path = Path('/app/{module_stem}.py')
         spec = importlib.util.spec_from_file_location('{module_stem}', module_path)
         module = importlib.util.module_from_spec(spec)
         sys.modules['{module_stem}'] = module
         spec.loader.exec_module(module)
 
-        # Create benchmark instance
-        try:
-            benchmark_class = getattr(module, '{module_stem}')
-        except AttributeError:
-            available = [name for name, obj in vars(module).items() if isinstance(obj, type)]
-            raise AttributeError(
-                f"Class '{{module_stem}}' not found in module. "
-                f"The benchmark class must match the uploaded filename stem ('{{module_stem}}'). "
-                f"Classes found in file: {{available or ['none']}}"
-            )
-        benchmark_instance = benchmark_class()
+        benchmark_class = getattr(module, '{module_stem}')
         
-        # Load datasets
+        benchmark_instance = benchmark_class(dataset_name="{dataset_identifier}")
+        
         dataset = pd.read_csv('/app/dataset.csv')
         privatized_dataset = pd.read_csv('/app/privatized_dataset.csv')
         
         if dataset.shape != privatized_dataset.shape:
             raise ValueError(f"Dataset shapes don't match: {{dataset.shape}} vs {{privatized_dataset.shape}}")
         
-        # Ensure the "text" column exists in both datasets
         if 'text' not in dataset.columns or 'text' not in privatized_dataset.columns:
             raise ValueError("'text' column is missing in one of the datasets")
         
         dataset_text = dataset['text'].to_list()
         privatized_dataset_text = privatized_dataset['text'].to_list()
             
-        # Simple progress callback that just outputs the number of processed rows
         def progress_wrapper(processed_rows):
             if processed_rows is not None:
                 print(f"PROGRESS:{{processed_rows}}")
                 sys.stdout.flush()
         
-        # Run the benchmark
         score = benchmark_instance.score(dataset_text, privatized_dataset_text, progress_wrapper)
-        
         if score is None:
             raise ValueError("Benchmark returned None score")
             
@@ -127,93 +107,53 @@ def run():
 if __name__ == '__main__':
     run()
 """
-
+            logger.info(f"Using existing container for module {module_name}")
             (temp_path / "runner.py").write_text(runner_script)
 
-            try:
-                logger.info(f"Using existing container for module {module_name}")
+            for file_name in os.listdir(temp_path):
+                file_path = temp_path / file_name
+                logger.info(f"Copying {file_name} into container...")
 
-                # Copy files to container
-                for file_name in os.listdir(temp_path):
-                    file_path = temp_path / file_name
-                    logger.info(f"Copying {file_name} into container...")
+                tar_stream = BytesIO()
+                with tarfile.open(fileobj=tar_stream, mode="w") as tar:
+                    tar.add(str(file_path), arcname=file_name)
+                tar_stream.seek(0)
 
-                    tar_stream = BytesIO()
-                    with tarfile.open(fileobj=tar_stream, mode="w") as tar:
-                        tar.add(str(file_path), arcname=file_name)
-                    tar_stream.seek(0)
-
-                    container.put_archive("/app", tar_stream)
-
-                # Verify files
-                result = container.exec_run(["ls", "-la", "/app"])
-                logger.info(f"Container directory after copy: {result.output.decode()}")
-                # Run benchmark
-                result = container.exec_run(["python3", "/app/runner.py"], stream=True)
-
-                # Process output
-                score = None
-                processed_rows = 0
-                logger.info("Starting to process container output...")
-                for chunk in result.output:
-                    raw = chunk.decode("utf-8")
-                    logger.debug(f"Raw output chunk: {repr(raw)}")
-
-                    # Split chunk into individual lines
-                    for line in raw.splitlines():
-                        line = line.strip()
-                        if not line:
+                container.put_archive("/app", tar_stream)
+            
+            result = container.exec_run(["python3", "/app/runner.py"], stream=True)
+            score = None
+            processed_rows = 0           
+            for chunk in result.output:
+                raw = chunk.decode("utf-8")
+                for line in raw.splitlines():
+                    line = line.strip()
+                    if not line or "\r" in line or "%" in line or "it/s" in line:
+                        continue
+                    if line.startswith("PROGRESS:"):
+                        try:
+                            rows = int(line.replace("PROGRESS:", "").strip())
+                            processed_rows = rows
+                            if progress_callback:
+                                progress_callback(rows)
+                        except ValueError:
+                            pass
+                    if "SCORE:" in line:
+                        try:
+                            score_part = line[line.find("SCORE:") + 6 :]
+                            score = float(score_part.strip())
+                        except ValueError:
                             continue
+                    elif line.startswith("ERROR:"):
+                        raise Exception(line.replace("ERROR:", "").strip())
 
-                        # Skip tqdm progress bar lines
-                        if "\r" in line or "%" in line or "it/s" in line:
-                            continue
-
-                        if line.startswith("PROGRESS:"):
-                            try:
-                                rows = int(line.replace("PROGRESS:", "").strip())
-                                processed_rows = rows
-                                if progress_callback:
-                                    progress_callback(rows)
-                                logger.debug(f"Progress update: {rows} rows processed")
-                            except ValueError as e:
-                                logger.warning(f"Failed to parse progress value: {e}")
-
-                        if "SCORE:" in line:
-                            logger.info(f"Found score line: {repr(line)}")
-                            try:
-                                score_part = line[line.find("SCORE:") + 6 :]
-                                score = float(score_part.strip())
-                                logger.info(f"Successfully parsed score: {score}")
-                                if progress_callback:
-                                    progress_callback(processed_rows, score)
-                            except ValueError as e:
-                                logger.error(
-                                    f"Failed to parse score: {e} from line: {repr(line)}"
-                                )
-                                continue
-
-                        elif line.startswith("ERROR:"):
-                            error_msg = line.replace("ERROR:", "").strip()
-                            raise Exception(error_msg)
-
-                exit_code = result.exit_code
-                if exit_code is not None and exit_code != 0:
-                    raise Exception(f"Benchmark failed with exit code {exit_code}")
-
-                if score is None:
-                    raise ValueError("Benchmark did not produce a score")
-
-                logger.info(f"Successfully computed score: {score}")
-                return score
-
-            except Exception as e:
-                logger.error(f"Benchmark execution failed: {e}")
-                raise
-
+            if result.exit_code != 0:
+                raise Exception(f"Benchmark run exited with code {result.exit_code}")
+                
+            return score
     except Exception as e:
-        logger.error(f"Benchmark execution failed: {e}")
-        raise RuntimeError(f"Benchmark execution failed: {e}")
+        logger.error(f"Execution handling step failed: {e}")
+        raise
 
 
 def wait_for_container_with_installation_check(

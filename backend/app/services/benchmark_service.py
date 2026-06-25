@@ -1,6 +1,7 @@
 from celery.utils.log import get_task_logger
 from datetime import datetime
 import shutil
+import os
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy import select, func, cast, Numeric
 from ..extensions import db, celery
@@ -50,150 +51,103 @@ class BenchmarkService:
         user_id,
         queue_entry_id=None,
     ):
-        """Run a benchmark module as a Celery task with queue support."""
+        """Run sequential dataset evaluation steps and aggregate averages."""
         module = db.session.query(BenchmarkModule).get(module_id)
         module_name = module.name
         module_path = module.path
 
-        logger.info(
-            f"Starting benchmark task for module {module_name}, queue_entry: {queue_entry_id}"
-        )
-
-        combined_dir = None
+        logger.info(f"Starting sequential evaluation task for module {module_name}")
+        staged_sequences = []
+        
         try:
             total_steps = 100
 
-            # Stage 1: Initialization (10%)
-            logger.info(f"Module {module_name}: Initialization stage")
+            self.update_state(
+                state="PROGRESS",
+                meta={"current": 10, "total": total_steps, "status": "Initializing environment..."},
+            )
+
+            from ..utils.dataset_sequencer import get_dataset_sequencer_paths
+            staged_sequences = get_dataset_sequencer_paths(module, submission_id)
+            
+            total_rows_all_sets = sum(item["total_rows"] for item in staged_sequences)
+            accumulated_scores = []
+            global_rows_processed = 0
+
+            for sequence_idx, step_meta in enumerate(staged_sequences):
+                dataset_name = step_meta["dataset_name"]
+                orig_path = step_meta["original_path"]
+                priv_path = step_meta["privatized_path"]
+                step_rows = step_meta["total_rows"]
+
+                logger.info(f"Running sub-sequence track [{sequence_idx + 1}/{len(staged_sequences)}]: {dataset_name}")
+
+                def individual_progress_callback(processed_rows, current_score=None):
+                    nonlocal global_rows_processed
+                    temp_total = global_rows_processed + processed_rows
+                    
+                    current_meta = {
+                        "current": 20 + int((temp_total / total_rows_all_sets) * 70),
+                        "total": total_steps,
+                        "status": f"Evaluating dataset '{dataset_name}' ({processed_rows}/{step_rows} rows)...",
+                        "processedRows": temp_total,
+                        "totalRows": total_rows_all_sets,
+                    }
+                    self.update_state(state="PROGRESS", meta=current_meta)
+
+                step_score = run_benchmark(
+                    module_path,
+                    module_id,
+                    module_name,
+                    orig_path,
+                    priv_path,
+                    dataset_identifier=dataset_name,
+                    progress_callback=individual_progress_callback
+                )
+
+                if step_score is not None:
+                    accumulated_scores.append(step_score)
+                else:
+                    raise ValueError(f"Step track validation for {dataset_name} returned an invalid score signature.")
+
+                global_rows_processed += step_rows
+
+            if not accumulated_scores:
+                raise ValueError("Evaluation sequence finished without output values.")
+                
+            final_averaged_score = sum(accumulated_scores) / len(accumulated_scores)
+            logger.info(f"All sequential tracks processed. Computed sub-scores: {accumulated_scores} -> Final Average: {final_averaged_score}")
+
             self.update_state(
                 state="PROGRESS",
                 meta={
-                    "current": 10,
+                    "current": 95,
                     "total": total_steps,
-                    "status": "Initializing benchmark environment...",
-                    "processedRows": 0,
-                    "totalRows": 0,
-                },
-            )
-
-            # Stage 2: Build combined datasets (15%)
-            logger.info(f"Building combined datasets for module {module_name}")
-            self.update_state(
-                state="PROGRESS",
-                meta={
-                    "current": 15,
-                    "total": total_steps,
-                    "status": "Combining datasets...",
-                    "processedRows": 0,
-                    "totalRows": 0,
-                },
-            )
-
-            dataset_path, priv_dataset_path = build_combined_datasets(
-                module, submission_id
-            )
-            # Track the temp directory for cleanup
-            import os
-
-            combined_dir = os.path.dirname(dataset_path)
-
-            # Load datasets to get total row count
-            dataset = load_dataset(dataset_path)
-            total_rows = len(dataset)
-
-            # Stage 3: Loading Datasets (20%)
-            logger.info(f"Loading datasets from {dataset_path} and {priv_dataset_path}")
-            self.update_state(
-                state="PROGRESS",
-                meta={
-                    "current": 20,
-                    "total": total_steps,
-                    "status": f"Loading datasets (0/{total_rows} rows)...",
-                    "processedRows": 0,
-                    "totalRows": total_rows,
-                },
-            )
-
-            # Stage 4: Running Benchmark (30%)
-            logger.info(f"Starting benchmark execution")
-            self.update_state(
-                state="PROGRESS",
-                meta={
-                    "current": 30,
-                    "total": total_steps,
-                    "status": f"Processing 0/{total_rows} rows...",
-                    "processedRows": 0,
-                    "totalRows": total_rows,
-                },
-            )
-
-            # Create a progress callback for the benchmark
-            def progress_callback(processed_rows, score=None, status_msg=None):
-                current_meta = {
-                    "current": 30 + int((processed_rows / total_rows) * 70),
-                    "total": total_steps,
-                    "status": status_msg or f"Processing {processed_rows}/{total_rows} rows...",
-                    "processedRows": processed_rows,
-                    "totalRows": total_rows,
-                    "score": score,
+                    "status": "Saving averaged scores...",
+                    "score": float(final_averaged_score)
                 }
-                self.update_state(state="PROGRESS", meta=current_meta)
-
-            # Run benchmark and get score
-            score = run_benchmark(
-                module_path,
-                module_id,
-                module_name,
-                dataset_path,
-                priv_dataset_path,
-                progress_callback,
             )
 
-            # Immediately update the task state with the score
-            self.update_state(
-                state="PROGRESS",
-                meta={
-                    "current": 90,
-                    "total": total_steps,
-                    "status": "Processing complete, saving results...",
-                    "processedRows": total_rows,
-                    "totalRows": total_rows,
-                    "score": float(score),
-                },
-            )
-
-            logger.info(f"Benchmark completed with score: {score}")
-
-            if score is None:
-                raise ValueError("Benchmark returned None score")
-
-            # Insert or update benchmark score in the database
             stmt = (
                 insert(BenchmarkScore)
                 .values(
                     submission_id=submission_id,
                     module_id=module_id,
-                    # NOTE: privatized_dataset_id is intentionally set to None.
-                    # Modules can now use multiple datasets, and dataset lineage
-                    # is tracked via the new multi-dataset mechanism instead of
-                    # this deprecated column on BenchmarkScore.
                     privatized_dataset_id=None,
-                    score=float(score),
+                    score=float(final_averaged_score),
                     created_at=datetime.utcnow(),
                 )
                 .on_conflict_do_update(
                     index_elements=["submission_id", "module_id"],
-                    set_={"score": float(score), "created_at": datetime.utcnow()},
+                    set_={"score": float(final_averaged_score), "created_at": datetime.utcnow()},
                 )
             )
-
             db.session.execute(stmt)
             db.session.commit()
             logger.info(
                 f"Benchmark score upserted to the database for submission {submission_id}, module {module_id}"
             )
 
-            # Mark queue entry as completed and process next in queue
             if queue_entry_id:
                 QueueService.complete_processing(queue_entry_id, success=True)
                 logger.info(f"Queue entry {queue_entry_id} marked as completed")
@@ -205,7 +159,6 @@ class BenchmarkService:
                 else:
                     logger.info(f"No more entries in queue for module {module_id}")
 
-            # Check if all modules for the submission have completed
             total_modules = (
                 db.session.query(BenchmarkModule).filter_by(is_active=True).count()
             )
@@ -235,7 +188,6 @@ class BenchmarkService:
                         )
                     ).where(BenchmarkScore.submission_id == submission_id)
 
-                    # Execute the query and fetch the overall score
                     overall_score = db.session.execute(query).scalar()
 
                     submission.score = overall_score
@@ -243,10 +195,8 @@ class BenchmarkService:
 
                     submission.is_public = False
 
-                    # Ensure submission version is significant (x.y.0)
                     submission.version = get_significant_version(submission.version)
 
-                    # Check if version entry already exists before creating
                     existing_version = (
                         db.session.query(SubmissionVersionScore)
                         .filter_by(
@@ -256,14 +206,12 @@ class BenchmarkService:
                     )
 
                     if not existing_version:
-                        # Get all modules that were part of this run
                         modules_in_run = (
                             db.session.query(BenchmarkModule)
                             .join(BenchmarkScore)
                             .filter(BenchmarkScore.submission_id == submission_id)
                             .all()
                         )
-                        # Create the first version score entry only if it doesn't exist
                         version_score = SubmissionVersionScore(
                             submission_id=submission.id,
                             version=submission.version,
@@ -312,48 +260,29 @@ The PrivBench Team
                                 f"Failed to send email to {user_email}: {str(e)}"
                             )
 
-            # Stage 5: Completion (100%)
             result = {
                 "current": total_steps,
                 "total": total_steps,
                 "status": "Benchmark completed successfully!",
-                "score": float(score),
-                "processedRows": total_rows,
-                "totalRows": total_rows,
-                "state": "SUCCESS",
+                "score": float(final_averaged_score),
+                "state": "SUCCESS"
             }
 
             logger.info(f"Task completed successfully with result: {result}")
             return result
 
         except Exception as e:
-            logger.error(
-                f"Benchmark task failed for module {module_name}: {str(e)}",
-                exc_info=True,
-            )
-
-            # Mark queue entry as failed and still process next in queue
+            logger.error(f"Sequential processing failure encountered: {e}", exc_info=True)
             if queue_entry_id:
                 QueueService.complete_processing(queue_entry_id, success=False)
-                logger.info(f"Queue entry {queue_entry_id} marked as failed")
-
-                # Still process next in queue even if this one failed
-                next_result = BenchmarkService.process_next_in_queue(module_id)
-                if next_result:
-                    logger.info(
-                        f"Started next task in queue after failure: {next_result['task_id']}"
-                    )
-
+                BenchmarkService.process_next_in_queue(module_id)
             raise Exception(str(e))
 
         finally:
-            # Clean up temporary combined dataset files
-            if combined_dir:
-                try:
-                    shutil.rmtree(combined_dir, ignore_errors=True)
-                    logger.info(f"Cleaned up temp directory: {combined_dir}")
-                except Exception as cleanup_err:
-                    logger.warning(f"Failed to clean up temp dir: {cleanup_err}")
+            for step_meta in staged_sequences:
+                t_dir = step_meta.get("temp_dir")
+                if t_dir and os.path.exists(t_dir):
+                    shutil.rmtree(t_dir, ignore_errors=True)
 
     @staticmethod
     def process_module_queue_entry(queue_entry, module):
