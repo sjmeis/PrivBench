@@ -1,5 +1,5 @@
 from app import create_app, db
-from app.models import Dataset, BenchmarkModule, AppVersion
+from app.models import Dataset, BenchmarkModule, AppVersion, ModuleUpdate
 from app.models.benchmark_module import module_dataset_compatibility
 from app.tasks.add_module import install_and_load_module
 from app.utils.container_manager import module_image_tag
@@ -30,19 +30,15 @@ with app.app_context():
     # db.drop_all()
     # db.create_all()
 
-    # Initialize app version
-    if not AppVersion.query.filter_by(version="1.0.0").first():
-        initial_version = AppVersion(version="1.0.0")
-        db.session.add(initial_version)
-        db.session.commit()
-        logger.info("Initialized app version to 1.0.0")
-
     # ── Datasets ──────────────────────────────────────────────────────────
     dataset_defs = [
         "yelp.csv",
         "imdb.csv",
         "wikitext.csv",
-        "glue.csv",
+        #"glue.csv",
+        "reddit.csv",
+        "pubmedqa.csv",
+        "tab.csv"
     ]
 
     datasets = {}
@@ -95,14 +91,6 @@ with app.app_context():
             "This module evaluates whether a privatization method can prevent attribute inference attacks. An attacker uses a text classifier to predict implicit attributes (e.g., authorship) from privatized text. Effective privatization should obfuscate these attributes.",
             True,
         ),
-        # ( REMOVED FOR v1.0
-        #     "CarliniExposure",
-        #     "CarliniExposure.py",
-        #     "carlini-exposure-reqs.txt",
-        #     "Exposure Defense",
-        #     "This module measures a privatization method's resilience against exposure attacks, where an adversary attempts to determine whether specific text was part of the training data.",
-        #     False
-        # ),
         (
             "Coherence",
             "Coherence.py",
@@ -156,24 +144,23 @@ with app.app_context():
             "UtilityPreservation.py",
             "utility-preservation-reqs.txt",
             "Downstream Utility Preservation",
-            "While privacy is very important, privatized texts should also maintain usability in downstream tasks, e.g., with sentiment analysis. This module evaluates the degree to which downstream task performance is preserved.",
+            "While privacy is very important, privatized texts should also maintain usability in downstream tasks, e.g., with sentiment analysis or question answering. This module evaluates the degree to which downstream task performance is preserved.",
             True,
         ),
     ]
 
     # ── Dataset-Module Compatibility Mapping ──────────────────────────────
     compatibility_map = {
-        "Similarity": ["yelp.csv", "glue.csv"],
-        "MaskedTokenInference": ["wikitext.csv"],
-        "AttributeInference": ["yelp.csv"],
-        # "CarliniExposure":     ["wikitext.csv"],
+        "Similarity": ["yelp.csv", "pubmedqa.csv"],
+        "MaskedTokenInference": ["wikitext.csv", "tab.csv"],
+        "AttributeInference": ["yelp.csv", "reddit.csv"],
         "Coherence": ["imdb.csv", "wikitext.csv"],
         "LengthRobustness": ["yelp.csv"],
         "LengthVariation": ["yelp.csv", "wikitext.csv"],
         "Mauve": ["yelp.csv", "wikitext.csv"],
         "NearestNeighbor": ["yelp.csv", "wikitext.csv"],
-        "NERpriv": ["wikitext.csv"],
-        "UtilityPreservation": ["imdb.csv"],
+        "NERpriv": ["wikitext.csv", "tab.csv"],
+        "UtilityPreservation": ["imdb.csv", "pubmedqa.csv"],
     }
 
     modules = {}
@@ -287,9 +274,54 @@ with app.app_context():
                     f"Dataset {ds_name} not found for compatibility with {module_name}"
                 )
 
+    logger.info("Checking for system version history record...")
+    
+    v1_record = AppVersion.query.filter_by(version="1.0.0").first()
+    
+    if not v1_record:
+        logger.info("No system version history found. Compiling v1.0.0 initial snapshot blueprint...")
+        
+        all_active_modules = BenchmarkModule.query.filter_by(is_active=True).all()
+        
+        blueprint_snapshot = []
+        for m in all_active_modules:
+            blueprint_snapshot.append({
+                "module_id": m.id,
+                "name": m.name,
+                "title": m.title,
+                "path": m.path,
+                "sample_count": getattr(m, 'sample_count', 100),
+                "device_specification": getattr(m, 'device_specification', 'cpu'),
+                "compatible_datasets": [d.name for d in m.compatible_datasets]
+            })
+            
+        v1_record = AppVersion(
+            version="1.0.0",
+            description="PrivBench Genesis: Initial platform deployment containing baseline evaluation modules.",
+            blueprint=blueprint_snapshot,
+            created_at=datetime.utcnow()
+        )
+        db.session.add(v1_record)
+        db.session.flush()
+        
+        for m in all_active_modules:
+            db.session.add(
+                ModuleUpdate(
+                    module_id=m.id,
+                    update_type="new_module",
+                    change_level="major",
+                    description=f"Initial integration of baseline evaluation module: {m.title}",
+                    is_updated=False,
+                    version_id=v1_record.id,
+                    created_at=datetime.utcnow()
+                )
+            )
+        
+        logger.info("Successfully saved system checkpoint state at v1.0.0.")
+    else:
+        logger.info("AppVersion v1.0.0 already exists. Skipping seeding.")
+
     db.session.commit()
 
     logger.info("All datasets and modules have been added to the database.")
-    logger.info(
-        "All modules have been installed successfully. Docker images are ready."
-    )
+    logger.info("All modules have been installed successfully. Docker images are ready.")
