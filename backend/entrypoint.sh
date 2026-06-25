@@ -38,29 +38,7 @@ wait_for_flask() {
         sleep 1
     done
     echo "Warning: Flask wait timed out, continuing anyway..."
-}
-
-# Function to run database setup and population scripts
-run_db_scripts() {
-    # Ensure the database is ready before running the scripts
-    echo "Waiting for the database to be ready..."
-    until pg_isready -h db -p 5432 -U "$POSTGRES_USER"; do
-      sleep 1
-    done
-
-    echo "Database is ready."
-
-    # Run the database setup script to add modules
-    echo "Running setup-db.py..."
-    python3 /app/setup-db.py
-
-    # Populate the database  //FIXME: remove this in production, only needed for demo data
-    if [ "$FLASK_ENV" = "development" ]; then
-        echo "Running populate-db.py..."
-        python3 /app/populate-db.py
-    fi
-    
-}
+} 
 
 # Function to handle database migrations
 setup_database() {
