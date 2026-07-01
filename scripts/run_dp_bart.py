@@ -177,23 +177,19 @@ def process_dataset(filename: str, dp, start_row=0, end_row=None,
 
         for i, row in enumerate(rows):
             text = clean_text(row.get("text", ""))
-            tokens = nltk.word_tokenize(text)
-            token_count = max(1, min(len(tokens), MAX_NLTK_TOKENS))
-            eps_per_token = dataset_epsilon / token_count
-            doc_epsilon = eps_per_token * token_count  # = dataset_epsilon
 
             if _has_torch:
                 torch.cuda.empty_cache()
 
             privatized = ""
             try:
-                privatized = chunk_and_privatize(dp, text, doc_epsilon)
+                privatized = chunk_and_privatize(dp, text, dataset_epsilon)
             except Exception as e:
                 global_row = start_row + i
                 print(f"  [WARN] Row {global_row} failed: {str(e)[:120]}", file=sys.stderr, flush=True)
                 errors += 1
 
-            writer.writerow({"id": row["id"], "text": privatized})
+            writer.writerow({"id": row["id"], "text": privatized)
 
             if (i + 1) % 100 == 0:
                 print(f"  {i + 1}/{total} done", flush=True)
@@ -213,7 +209,7 @@ if __name__ == "__main__":
                         help="Pre-computed dataset epsilon (skips recomputation)")
     parser.add_argument("--suffix", type=str, default="",
                         help="Output filename suffix (e.g. _chunk0)")
-    parser.add_argument("--input-dir", type=Path, default=Path.home(),
+    parser.add_argument("--input-dir", type=Path, default=Path("."),
                         help="Directory containing input CSV files (default: home dir)")
     args = parser.parse_args()
 
@@ -244,7 +240,7 @@ if __name__ == "__main__":
                         suffix=args.suffix)
     else:
         for dataset in DATASETS:
-            process_dataset(dataset, dp)
+            process_dataset(dataset, dp, dataset_epsilon=args.epsilon)
 
     elapsed = time.time() - start
     print(f"\nDone in {elapsed / 60:.1f} min. Output in ~/dp_bart_output/")
