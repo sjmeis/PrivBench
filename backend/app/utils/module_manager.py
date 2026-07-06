@@ -13,9 +13,6 @@ logger = logging.getLogger(__name__)
 class ModuleManager:
     def __init__(self):
         self.docker_client = docker.from_env()
-        # self.base_image_cpu = "python:3.9-slim"
-        # CUDA runtime; requires host NVIDIA driver + toolkit
-        # self.base_image_gpu = "nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04"
         self.base_image_cpu = "privbench-base-cpu:latest"
         self.base_image_gpu = "privbench-base-gpu:latest"
 
@@ -30,7 +27,7 @@ class ModuleManager:
         ENV PYTHONPATH=/app
         RUN pip install --no-cache-dir pandas
         COPY {requirements_filename} /app/requirements.txt
-        RUN pip install --no-cache-dir -r requirements.txt || true
+        RUN pip install --no-cache-dir -r /app/requirements.txt
         COPY . /app
         RUN ln -s /app /app/modules || true && touch /app/__init__.py
         """
