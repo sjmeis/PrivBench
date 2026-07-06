@@ -120,6 +120,35 @@ def create_app():
             logger.error(error_msg)
             raise Exception(error_msg) from e
 
+    @app.cli.command("rebuild-modules")
+    def rebuild_modules():
+        """Force rebuild all benchmark module images from host files without data loss."""
+        logger = logging.getLogger(__name__)
+        try:
+            from .models import BenchmarkModule
+            from .utils.module_manager import ModuleManager
+
+            logger.info("Initializing mass evaluation image compilation sequence...")
+            
+            manager = ModuleManager()
+            modules = db.session.query(BenchmarkModule).all()
+            
+            logger.info(f"Discovered {len(modules)} module blueprints in database.")
+            
+            for m in modules:
+                logger.info(f"Compiling fresh modules container for: {m.name}...")
+                manager.build_module_container(
+                    module_path=m.path,
+                    module_name=m.name,
+                    requirements_path=getattr(m, "requirements_path", None),
+                    use_gpu=getattr(m, "use_gpu", False)
+                )
+            logger.info("All target benchmark module containers updated successfully!")
+        except Exception as e:
+            error_msg = f"Rebuild transaction aborted: {e}"
+            logger.error(error_msg)
+            raise Exception(error_msg) from e
+
     # Add health check endpoint
     @app.route("/health")
     def health_check():
