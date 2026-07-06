@@ -52,13 +52,13 @@ const VersionHistory = () => {
           Version History
         </Typography>
         <Typography level="body-md" sx={{ mb: 4, color: "text.secondary" }}>
-          Track all global parameter overrides, module insertions, and benchmark system updates.
+          Track all PrivBench updates, including details of what has been changed!
         </Typography>
 
         {versions.length === 0 ? (
           <Card variant="outlined" sx={{ p: 4, textAlign: "center" }}>
             <Typography level="body-lg" textColor="text.secondary">
-              No deployment logs found on this environment instance.
+              No logs yet!
             </Typography>
           </Card>
         ) : (
@@ -102,7 +102,7 @@ const VersionHistory = () => {
 
                   {updatesList.length === 0 ? (
                     <Typography level="body-sm" sx={{ color: "text.tertiary", italic: true }}>
-                      No separate component changes documented for this release marker.
+                      No changes documented for this release.
                     </Typography>
                   ) : (
                     <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5, mt: 1 }}>
@@ -132,10 +132,10 @@ const VersionHistory = () => {
                               </Chip>
                               <Box>
                                 <Typography level="body-sm" fontWeight="bold">
-                                  {update.module_name || update.moduleName || "Global Core System"}
+                                  {update.module_name || update.moduleName || "Module"}
                                 </Typography>
                                 <Typography level="body-xs" textColor="text.secondary">
-                                  {update.description || "No modification logs detailed."}
+                                  {update.description || "No modification logs."}
                                 </Typography>
                               </Box>
                             </Box>
