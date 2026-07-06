@@ -108,12 +108,22 @@ services:
       - /etc/letsencrypt:/etc/letsencrypt:ro
       - /var/lib/letsencrypt:/var/lib/letsencrypt:ro
       - ./backend/static/uploads:/app/static/uploads:ro
-    ports:
-      - "80:80"
-      - "443:443"
+    # ports:
+    #   - "80:80"
+    #   - "443:443"
     depends_on:
       - backend
       - frontend
+    networks:
+      - default
+      - web-traffic
+    labels:
+      - "traefik.enable=true"
+      - "traver.docker.network=web-traffic"
+      - "traefik.http.routers.privbench.rule=Host(`privbench.com`) || Host(`www.privbench.com`)"
+      - "traefik.http.routers.privbench.entrypoints=websecure"
+      - "traefik.http.routers.privbench.tls=true"
+      - "traefik.http.services.privbench.loadbalancer.server.port=80"
 
   db:
     image: postgres:13
@@ -147,3 +157,7 @@ services:
 
 volumes:
   redis_data:
+
+networks:
+  web-traffic:
+    external: true
