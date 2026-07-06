@@ -16,7 +16,7 @@ services:
               capabilities: [gpu]
     volumes:
       - ./data/datasets:/data/datasets
-      - privatized_datasets:/data/privatized_datasets
+      - ./privbench_data/privatized_datasets:/data/privatized_datasets
       - ./modules:/app/modules
       - ./benchmarks:/app/benchmarks
       - /var/run/docker.sock:/var/run/docker.sock
@@ -57,7 +57,7 @@ services:
     hostname: worker1
     volumes:
       - ./data/datasets:/data/datasets
-      - privatized_datasets:/data/privatized_datasets
+      - ./privbench_data/privatized_datasets:/data/privatized_datasets
       - ./modules:/app/modules
       - ./benchmarks:/app/benchmarks
       - /var/run/docker.sock:/var/run/docker.sock
@@ -122,7 +122,7 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ./privbench_data/postgres_data:/var/lib/postgresql/data
     ports:
       - "5433:5432"
     healthcheck:
@@ -146,6 +146,4 @@ services:
     command: redis-server --save 60 1 --loglevel notice
 
 volumes:
-  postgres_data:
   redis_data:
-  privatized_datasets:

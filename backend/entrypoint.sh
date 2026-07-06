@@ -89,9 +89,9 @@ FLASK_PID=$!
 wait_for_flask
 
 # Start module containers
-echo "Starting module containers..."
-chmod 666 /var/run/docker.sock || echo "Warning: Could not set socket permissions"
-python3 -m flask start-containers
+# echo "Starting module containers..."
+# chmod 666 /var/run/docker.sock || echo "Warning: Could not set socket permissions"
+# python3 -m flask start-containers
 
 # Bring Flask process back to foreground
 wait $FLASK_PID
