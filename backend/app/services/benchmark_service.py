@@ -1,5 +1,6 @@
 from celery.utils.log import get_task_logger
 from datetime import datetime
+import pandas as pd
 import shutil
 import os
 from sqlalchemy.dialects.postgresql import insert
@@ -70,7 +71,28 @@ class BenchmarkService:
             from ..utils.dataset_sequencer import get_dataset_sequencer_paths
             staged_sequences = get_dataset_sequencer_paths(module, submission_id)
             
-            total_rows_all_sets = sum(item["total_rows"] for item in staged_sequences)
+            total_rows_all_sets = 0
+            for item in staged_sequences:
+                if "total_rows" not in item:
+                    try:
+                        csv_path = item.get("original_path") or item.get("privatized_path")
+                        if csv_path and os.path.exists(csv_path):
+                            # Read only the header row to count lines quickly without eating memory
+                            df_chunk = pd.read_csv(csv_path, usecols=[0])
+                            item["total_rows"] = len(df_chunk)
+                            logger.info(f"Dynamically calculated row fallback for {item.get('dataset_name')}: {item['total_rows']} rows")
+                        else:
+                            item["total_rows"] = 0
+                    except Exception as calc_err:
+                        logger.warning(f"Failed to calculate line index fallback for dataset file: {calc_err}")
+                        item["total_rows"] = 0
+                
+                total_rows_all_sets += item["total_rows"]
+
+            if total_rows_all_sets <= 0:
+                logger.warning("Total evaluation rows evaluated to 0. Overriding boundary ceiling to 1 for calculation runtime stability.")
+                total_rows_all_sets = 1
+
             accumulated_scores = []
             global_rows_processed = 0
 
