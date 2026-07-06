@@ -102,7 +102,7 @@ class UtilityPreservation(BaseBenchmark):
             
         return [int(p["label"].split("_")[-1]) if "_" in p["label"] else p["label"] for p in preds]
 
-def score(self, original, private, progress_callback=None):
+    def score(self, original, private, progress_callback=None):
         try:
             if len(original) != len(private):
                 raise ValueError("`original` and `private` must have the same length.")

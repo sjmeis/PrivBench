@@ -1,6 +1,9 @@
 from abc import ABC, abstractmethod
 
 class BaseBenchmark(ABC):
+    def __init__(self, **kwargs):
+        pass
+
     @abstractmethod
     def score(self, original, private, progress_callback=None):
         """
