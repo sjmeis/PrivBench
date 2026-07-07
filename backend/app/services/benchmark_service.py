@@ -104,9 +104,11 @@ class BenchmarkService:
 
                 logger.info(f"Running sub-sequence track [{sequence_idx + 1}/{len(staged_sequences)}]: {dataset_name}")
 
-                def individual_progress_callback(processed_rows, current_score=None):
+                def individual_progress_callback(processed_rows, current_score=None, *args, **kwargs):
                     nonlocal global_rows_processed
                     temp_total = global_rows_processed + processed_rows
+
+                    status_text = args[0] if args else f"Evaluating dataset '{dataset_name}' ({processed_rows}/{step_rows} rows)..."
                     
                     current_meta = {
                         "current": 20 + int((temp_total / total_rows_all_sets) * 70),
