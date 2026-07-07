@@ -258,7 +258,7 @@ class BenchmarkService:
                     user = User.query.get(user_id)
                     if user and user.mail_address:
                         user_email = user.mail_address
-                        subject = "Benchmark Completed"
+                        subject = "Benchmark Run Completed"
                         frontend_url = Config.FRONTEND_URL
                         body = f"""
 Dear {user.username},<br><br>
