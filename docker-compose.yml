@@ -55,6 +55,7 @@ services:
       context: .
       dockerfile: backend/Dockerfile
     hostname: worker1
+    command: ["celery", "-A", "celery_app.celery", "worker", "--loglevel=info", "--concurrency=4"]
     volumes:
       - ./data/datasets:/data/datasets
       - /home/ubuntu/privbench_data/privatized_datasets:/data/privatized_datasets
@@ -74,6 +75,7 @@ services:
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility
       - C_FORCE_ROOT=true
       - HAS_GPU=true
+      - PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:64
       - PYTHONDONTWRITEBYTECODE
     deploy:
       resources:
@@ -87,7 +89,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    entrypoint: ["/app/celery_entrypoint.sh"]
+    #entrypoint: ["/app/celery_entrypoint.sh"]
     tty: true
 
   frontend:
