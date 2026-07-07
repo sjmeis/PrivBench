@@ -76,7 +76,6 @@ def run():
 
         benchmark_class = getattr(module, '{module_stem}')
         
-        # FIX: Hand down empty properties instead of strict names so your legacy models don't crash 
         benchmark_instance = benchmark_class()
         
         dataset = pd.read_csv('/app/dataset.csv')
