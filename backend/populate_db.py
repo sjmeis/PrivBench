@@ -124,7 +124,7 @@ def install_demo_data():
                     model_name=fake.word(),
                     model_description=fake.text(max_nb_chars=150),
                     license=random.choice(list(License)),
-                    tags=random.sample(sample_tags, 2),
+                    tags=",".join(random.sample(sample_tags, 2)),
                     authors=fake.name(),
                     research_paper_url="https://arxiv.org/",
                     github_url="https://github.com/",
