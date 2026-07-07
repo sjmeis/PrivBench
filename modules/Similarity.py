@@ -54,8 +54,9 @@ class CS:
 
 @with_progress_tracking
 class Similarity(BaseBenchmark):
-    def __init__(self, normalize=True, model_checkpoint="sentence-transformers/all-MiniLM-L6-v2", progress_bar=False):
+    def __init__(self, normalize=True, model_checkpoint="sentence-transformers/all-MiniLM-L6-v2", progress_bar=False, **kwargs):
         """Initialize Similarity calculator using BLEU and CS"""
+        super().__init__(**kwargs)
         self.bleu = BLEU(normalize=normalize)
         self.cs = CS(model_checkpoint=model_checkpoint, progress_bar=progress_bar)
     

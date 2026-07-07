@@ -50,10 +50,12 @@ class AttributeInference(BaseBenchmark):
         self,
         dataset_name: str = "yelp",
         batch_size: int = 16,
+        **kwargs
     ):
         """
         :param model_checkpoint: Hugging Face model to use as the attacker.
         """
+        super().__init__(**kwargs)
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.batch_size = batch_size
 

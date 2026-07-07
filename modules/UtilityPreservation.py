@@ -33,10 +33,12 @@ class UtilityPreservation(BaseBenchmark):
         self,
         dataset_name: str = "imdb",
         batch_size: int = 16,
+        **kwargs
     ):
         """
         :param model_checkpoint: Hugging Face model to use as baseline.
         """
+        super().__init__(**kwargs)
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.batch_size = batch_size
 

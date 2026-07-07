@@ -7,8 +7,9 @@ from benchmarks.benchmark_utils import with_progress_tracking
 
 @with_progress_tracking
 class NearestNeighbor(BaseBenchmark):
-    def __init__(self, top_k=1000, model_checkpoint="sentence-transformers/all-MiniLM-L6-v2"):
+    def __init__(self, top_k=1000, model_checkpoint="sentence-transformers/all-MiniLM-L6-v2", **kwargs):
         """Initialize NearestNeighbor calculator"""
+        super().__init__(**kwargs)
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model = SentenceTransformer(model_checkpoint, device=self.device)
         self.top_k = top_k
