@@ -264,7 +264,7 @@ Dear {user.username},<br><br>
 
 Your latest submission has been evaluated successfully.<br><br>
 
-For reference, the name of the completed submission is: <i>{submission_details.name}<\i> <br><br>
+For reference, the name of the completed submission is: <i>{submission_details.name}</i> <br><br>
 
 You can now visit the platform and see how your text privatization method performed.<br><br>
 
