@@ -24,7 +24,6 @@ from .queue_service import QueueService
 
 logger = get_task_logger(__name__)
 
-
 @celery.task(bind=True)
 def run_benchmark_task(
     self,
@@ -41,7 +40,6 @@ def run_benchmark_task(
         user_id,
         queue_entry_id,
     )
-
 
 class BenchmarkService:
     @staticmethod
