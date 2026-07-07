@@ -68,7 +68,7 @@ def send_support_email(sender_email, sender_username, subject, body):
     msg = Message(
         subject=f"[PrivBench Support] {subject}",
         sender=config['MAIL_USERNAME'],
-        recipients=[config['ADMIN_EMAIL']],
+        recipients=[config['ADMIN_EMAIL_WEB']],
         reply_to=sender_email
     )
     
