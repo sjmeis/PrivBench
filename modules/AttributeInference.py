@@ -134,7 +134,7 @@ class AttributeInference(BaseBenchmark):
             if og_f1 <= 0.0:
                 return 100.0
 
-            privacy_score = min(100.0, (1.0 - (priv_f1/og_f1)) * 100.0)
+            privacy_score = max(0, min(100.0, (1.0 - (priv_f1/og_f1)) * 100.0))
             return round(privacy_score, 3)
         finally:
             del self.clf
