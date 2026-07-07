@@ -362,7 +362,6 @@ def rebuild_module(module_id):
             pass
 
         # 2. Trigger ModuleManager build logic
-        # This uses the logic we fixed earlier to copy JSON files!
         module_manager.build_module_container(
             module_path=module.path,
             module_name=module.name,
