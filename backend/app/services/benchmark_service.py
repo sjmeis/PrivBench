@@ -254,6 +254,7 @@ class BenchmarkService:
 
                     # Send completion email
                     user = User.query.get(user_id)
+                    submssion_details = Submission.get(submission_id)
                     if user and user.mail_address:
                         user_email = user.mail_address
                         subject = "[PrivBench] Benchmark Run Completed"
@@ -261,9 +262,11 @@ class BenchmarkService:
                         body = f"""
 Dear {user.username},<br><br>
 
-Your latest submission has been evaluated successfully.<br>
+Your latest submission has been evaluated successfully.<br><br>
 
-You can now visit the platform and see how your model performed.<br><br>
+For reference, the name of the completed submission is: <i>{submssion_details.name}<\i> <br><br>
+
+You can now visit the platform and see how your text privatization method performed.<br><br>
 
 Best regards,<br>
 The PrivBench Team
