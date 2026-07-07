@@ -44,12 +44,13 @@ def run_benchmark(
             hf_token = os.getenv("HF_TOKEN", "")
 
             runner_script = f"""
+import os
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:128"
 import pandas as pd
 import sys
 import json
 import importlib.util
 import types
-import os
 from pathlib import Path
 
 sys.path.insert(0, '/app')
