@@ -31,4 +31,4 @@ echo "PATH: $PATH"
 echo "Python version: $(python --version)"
 echo "Celery version: $(python -m celery --version)"
 
-exec python3 -m celery -A celery_app.celery worker --loglevel=debug -c 4
+exec python3 -m celery -A celery_app.celery worker --loglevel=debug -c 2
