@@ -135,13 +135,29 @@ def create_app():
             
             logger.info(f"Discovered {len(modules)} module blueprints in database.")
             
+            req_map = {
+                'Similarity': 'similarity-reqs.txt',
+                'MaskedTokenInference': 'masked-token-reqs.txt',
+                'AttributeInference': 'attribute-inference-reqs.txt',
+                'Coherence': 'coh-reqs.txt',
+                'LengthRobustness': 'length-robustness-reqs.txt',
+                'LengthVariation': 'length-variation-reqs.txt',
+                'Mauve': 'mauve-reqs.txt',
+                'NearestNeighbor': 'nearest-neighbor-reqs.txt',
+                'NERpriv': 'nerpriv-reqs.txt',
+                'UtilityPreservation': 'utility-preservation-reqs.txt'
+            }
+
             for m in modules:
-                logger.info(f"Compiling fresh modules container for: {m.name}...")
+                req_file = req_map.get(m.name, "requirements.txt")
+                computed_req_path = os.path.join('/app/modules', req_file)
+
+                logger.info(f"Compiling fresh runtime environment layers for: {m.name}...")
                 manager.build_module_container(
                     module_path=m.path,
                     module_name=m.name,
-                    requirements_path=getattr(m, "requirements_path", None),
-                    use_gpu=getattr(m, "use_gpu", False)
+                    requirements_path=computed_req_path if os.path.exists(computed_req_path) else None,
+                    use_gpu=m.use_gpu
                 )
             logger.info("All target benchmark module containers updated successfully!")
         except Exception as e:
