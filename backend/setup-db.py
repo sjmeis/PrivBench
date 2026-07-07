@@ -186,7 +186,6 @@ with app.app_context():
                 version="1.0.0",
                 is_active=True,
                 path=module_path,
-                requirements_path=requirements_path,
                 dataset_id=None,
                 use_gpu=use_gpu,
             )
