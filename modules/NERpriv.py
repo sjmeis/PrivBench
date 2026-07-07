@@ -8,7 +8,8 @@ from benchmarks.benchmark_utils import with_progress_tracking
 
 @with_progress_tracking
 class NERpriv(BaseBenchmark):
-    def __init__(self):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.nlp = spacy.load("en_core_web_sm")
     
     def score(self, original, private, progress_callback=None):

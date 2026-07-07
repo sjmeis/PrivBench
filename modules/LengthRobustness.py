@@ -7,7 +7,8 @@ from benchmarks.base_benchmark import BaseBenchmark
 from benchmarks.benchmark_utils import with_progress_tracking
 
 class NERpriv(BaseBenchmark):
-    def __init__(self):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.nlp = spacy.load("en_core_web_sm")
     
     def score(self, original, private, progress_callback=None):
@@ -70,6 +71,7 @@ class LengthRobustness(BaseBenchmark):
         base_benchmark_cls=NERpriv,
         length_bins=(0, 20, 100, np.inf), # [0,20) -> "short", [20,100) -> "medium", [100,∞) -> "long"
         min_examples_per_bin: int = 2,
+        **kwargs
     ):
         """
         :param base_benchmark_cls: benchmark class used to compute scores per bin.
@@ -80,6 +82,7 @@ class LengthRobustness(BaseBenchmark):
         :param min_examples_per_bin: minimum number of examples required in a bin
                                      to compute a score for that bin.
         """
+        super().__init__(**kwargs)
         self.base_benchmark = base_benchmark_cls()
         self.length_bins = length_bins
         self.min_examples_per_bin = min_examples_per_bin

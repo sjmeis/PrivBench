@@ -18,7 +18,8 @@ class LengthVariation(BaseBenchmark):
         * a moderate amount of variance in that ratio across examples.
     """
 
-    def __init__(self, eps: float = 1e-6):
+    def __init__(self, eps: float = 1e-6, **kwargs):
+        super().__init__(**kwargs)
         self.eps = eps
 
     def _length(self, text) -> int:

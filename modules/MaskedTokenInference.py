@@ -24,7 +24,8 @@ class ListDataset(Dataset):
 
 @with_progress_tracking
 class MaskedTokenInference(BaseBenchmark):
-    def __init__(self, batch_size=16, top_k=5, model_checkpoint='google-bert/bert-base-uncased'):
+    def __init__(self, batch_size=16, top_k=5, model_checkpoint='google-bert/bert-base-uncased', **kwargs):
+        super().__init__(**kwargs)
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.top_k = top_k
         self.tokenizer = AutoTokenizer.from_pretrained(model_checkpoint)

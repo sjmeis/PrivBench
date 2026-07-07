@@ -115,7 +115,8 @@ class PPL:
 
 @with_progress_tracking
 class Coherence(BaseBenchmark):
-    def __init__(self):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.ppl = PPL()
     
     def score(self, original, private, progress_callback=None):
