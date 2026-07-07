@@ -57,7 +57,7 @@ def get_dataset_sequencer_paths(module, submission_id, seed=42):
         sampled_priv.to_csv(priv_path, index=False)
 
         sequence_manifest.append({
-            "dataset_name": dataset.name,
+            "dataset_name": dataset.name.replace(".csv", "").strip(),
             "original_path": orig_path,
             "privatized_path": priv_path,
             "temp_dir": temp_dir
