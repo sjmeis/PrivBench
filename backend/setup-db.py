@@ -186,10 +186,14 @@ with app.app_context():
                 version="1.0.0",
                 is_active=True,
                 path=module_path,
+                requirements_path=requirements_path,
                 dataset_id=None,
                 use_gpu=use_gpu,
             )
             db.session.add(module_record)
+            db.session.commit()
+        else:
+            module_record.requirements_path = requirements_path
             db.session.commit()
 
         modules[name] = module_record
