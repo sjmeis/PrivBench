@@ -39,7 +39,7 @@ class Mauve(BaseBenchmark):
         self.device_id = device_id
         self.mauve_kwargs = mauve_kwargs
 
-    def score(self, original, private, progress_callback=None):
+    def score(self, original, private, progress_callback=None, **kwargs):
         original = [str(x) if pd.notna(x) else " " for x in original]
         private = [str(x) if pd.notna(x) else " " for x in private]
 
