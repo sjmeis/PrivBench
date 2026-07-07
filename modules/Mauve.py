@@ -27,7 +27,7 @@ class Mauve(BaseBenchmark):
     def __init__(
         self,
         featurize_model_name: str = "gpt2",
-        max_text_length: int = 64,
+        max_text_length: int = 128,
         device_id: int | None = None,
         **mauve_kwargs,
     ):
