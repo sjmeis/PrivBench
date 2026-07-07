@@ -55,7 +55,6 @@ services:
       context: .
       dockerfile: backend/Dockerfile
     hostname: worker1
-    command: ["celery", "-A", "celery_app.celery", "worker", "--loglevel=info", "--concurrency=4"]
     volumes:
       - ./data/datasets:/data/datasets
       - /home/ubuntu/privbench_data/privatized_datasets:/data/privatized_datasets
@@ -89,7 +88,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    #entrypoint: ["/app/celery_entrypoint.sh"]
+    entrypoint: ["/app/celery_entrypoint.sh"]
     tty: true
 
   frontend:
