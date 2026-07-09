@@ -8,6 +8,11 @@ from ..models import PrivatizedDataset
 
 logger = get_task_logger(__name__)
 
+def clean_text(df, text_column='text'):
+    if text_column in df.columns:
+        df[text_column] = df[text_column].astype(str).str.replace(r'[\r\n]+', ' ', regex=True).str.strip()
+    return df
+
 def get_dataset_sequencer_paths(module, submission_id, seed=42):
     """
     Returns a list of dictionaries containing individual sampled temporary file sets
@@ -46,8 +51,8 @@ def get_dataset_sequencer_paths(module, submission_id, seed=42):
         priv_df = pd.read_csv(priv_dataset.file_path)
         total_rows = len(orig_df)
 
-        sampled_orig = orig_df.copy()
-        sampled_priv = priv_df.copy()
+        sampled_orig = clean_text(orig_df.copy(), text_column='text')
+        sampled_priv = clean_text(priv_df.copy(), text_column='text')
 
         temp_dir = tempfile.mkdtemp(prefix=f"privbench_seq_{dataset.name}_")
         orig_path = os.path.join(temp_dir, "original.csv")

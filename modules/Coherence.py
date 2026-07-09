@@ -7,7 +7,7 @@ from benchmarks.base_benchmark import BaseBenchmark
 from benchmarks.benchmark_utils import with_progress_tracking
 
 class PPL:
-    def __init__(self, model_checkpoint="gpt2", max_len=512):
+    def __init__(self, model_checkpoint="gpt2", max_len=256):
         #self.ppl = evaluate.load("perplexity", module_type="metric")
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model_checkpoint = model_checkpoint
@@ -18,7 +18,7 @@ class PPL:
         if self.ppl_tokenizer.pad_token is None:
             self.ppl_tokenizer.pad_token = self.ppl_tokenizer.eos_token
 
-    def compute_ppl(self, predictions, batch_size: int = 8, add_start_token: bool = True, max_length=512):
+    def compute_ppl(self, predictions, batch_size: int = 8, add_start_token: bool = True, max_length=256):
         # if batch_size > 1 (which generally leads to padding being required), and
         # if there is not an already assigned pad_token, assign an existing
         # special token to also be the padding token
