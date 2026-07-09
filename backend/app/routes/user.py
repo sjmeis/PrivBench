@@ -126,6 +126,9 @@ def update_user():
         if research_institute:
             user.research_institute = research_institute
 
+        if 'isEmailPublic' in data:
+            user.is_email_public = bool(data['isEmailPublic'])
+
         db.session.commit()
 
         return jsonify({
