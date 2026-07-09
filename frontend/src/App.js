@@ -25,6 +25,7 @@ import { SnackbarProvider } from "./contexts/SnackbarProvider";
 import VersionHistory from "./pages/VersionHistory";
 import Imprint from "./pages/Imprint";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import VerifyEmail from './pages/VerifyEmail';
@@ -57,6 +58,7 @@ function App() {
                 <Route path="/verify-email/:token" element={<VerifyEmail />} />
                 <Route path="/imprint" element={<Imprint />} />
                 <Route path="/privacy" element={<PrivacyPolicy />} />
+                <Route path="/tos" element={<TermsOfService />} />
 
                 <Route element={<ProtectedRoutesAdmin />}>
                   <Route path="/admin" element={<AdminView />} />

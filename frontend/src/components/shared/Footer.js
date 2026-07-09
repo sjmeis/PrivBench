@@ -32,6 +32,22 @@ const Footer = () => {
       >
         <Link
           component="button"
+          onClick={() => navigate("/tos")}
+          level="body1"
+          sx={{
+            textDecoration: "none",
+            fontWeight: "md",
+            fontSize: "1rem",
+            "&:hover": {
+              textDecoration: "underline",
+            },
+          }}
+        >
+          Terms of Service
+        </Link>
+        <Typography level="body2" textColor="text.primary">{"·"}</Typography>
+        <Link
+          component="button"
           onClick={() => navigate("/privacy")}
           level="body1"
           sx={{
