@@ -52,7 +52,6 @@ def upload_profile_picture():
             file.save(file_path)
 
             # Save the relative path in the DB
-            # This path is what the frontend will use to fetch the image
             user.profile_picture_path = f"/static/uploads/profile_pics/{filename}"
             db.session.commit()
 
@@ -77,12 +76,10 @@ def delete_profile_picture():
         if not user or not user.profile_picture_path:
             return jsonify({"message": "No profile picture to delete"}), 200
 
-        # Optional: Remove physical file from disk
         file_path = os.path.join(current_app.root_path, user.profile_picture_path.lstrip('/'))
         if os.path.exists(file_path):
             os.remove(file_path)
 
-        # Clear DB field
         user.profile_picture_path = None
         db.session.commit()
 
@@ -138,7 +135,8 @@ def update_user():
                 "username": user.username,
                 "mailAddress": user.mail_address,
                 "bio": user.bio,
-                "researchInstitute": user.research_institute
+                "researchInstitute": user.research_institute,
+                "isEmailPublic": user.is_email_public
             }
         }), 200
 

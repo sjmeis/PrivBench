@@ -124,7 +124,6 @@ const AccountSettings = ({user}) => {
         const file = e.target.files[0];
         if (file) {
             setSelectedFile(file);
-            // Create a local URL for the preview
             const reader = new FileReader();
             reader.onloadend = () => setPreviewUrl(reader.result);
             reader.readAsDataURL(file);
@@ -135,8 +134,8 @@ const AccountSettings = ({user}) => {
         try {
             await deleteProfilePicture();
             showSnackbar("Profile picture removed", "success");
-            setPreviewUrl(null); // Clear any local preview
-            checkAuth(); // Refresh global user state
+            setPreviewUrl(null);
+            checkAuth();
         } catch (error) {
             showSnackbar(error.message, "error");
         }
@@ -316,7 +315,7 @@ const AccountSettings = ({user}) => {
                                         <FormLabel>Display publicly?</FormLabel>
                                         <Box
                                             sx={{
-                                                height: "38px",
+                                                height: "30px",
                                                 display: "flex",
                                                 alignItems: "center",
                                                 justifyContent: "space-between",
