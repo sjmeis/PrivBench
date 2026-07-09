@@ -312,7 +312,6 @@ const AccountSettings = ({user}) => {
                                             onChange={handleChange}
                                         />
                                     </FormControl>
-                                    </Stack>
                                     <FormControl sx={{ flexGrow: 1 }}>
                                         <FormLabel>Display publicly?</FormLabel>
                                         <ToggleButton
