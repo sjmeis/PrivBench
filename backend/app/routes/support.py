@@ -2,7 +2,7 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from ..models.user import User
-from ..utils.email_sender import send_support_email # You'll create this
+from ..utils.email_sender import send_support_email
 
 support_bp = Blueprint("support", __name__)
 

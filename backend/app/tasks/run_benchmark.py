@@ -6,11 +6,11 @@ import tarfile
 from io import BytesIO
 import os
 import time
+import docker
 
 from ..utils.container_manager import container_manager
 
 logger = get_task_logger(__name__)
-
 
 def run_benchmark(
     module_path,
@@ -44,12 +44,13 @@ def run_benchmark(
             hf_token = os.getenv("HF_TOKEN", "")
 
             runner_script = f"""
+import os
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:128"
 import pandas as pd
 import sys
 import json
 import importlib.util
 import types
-import os
 from pathlib import Path
 
 sys.path.insert(0, '/app')
@@ -75,7 +76,7 @@ def run():
 
         benchmark_class = getattr(module, '{module_stem}')
         
-        benchmark_instance = benchmark_class(dataset_name="{dataset_identifier}")
+        benchmark_instance = benchmark_class()
         
         dataset = pd.read_csv('/app/dataset.csv')
         privatized_dataset = pd.read_csv('/app/privatized_dataset.csv')
@@ -121,10 +122,13 @@ if __name__ == '__main__':
 
                 container.put_archive("/app", tar_stream)
             
-            result = container.exec_run(["python3", "/app/runner.py"], stream=True)
+            client = docker.from_env()
+            exec_instance = client.api.exec_create(container.id, ["python3", "/app/runner.py"])
+            output_stream = client.api.exec_start(exec_instance['Id'], stream=True)
+            
             score = None
             processed_rows = 0           
-            for chunk in result.output:
+            for chunk in output_stream:
                 raw = chunk.decode("utf-8")
                 for line in raw.splitlines():
                     line = line.strip()
@@ -144,11 +148,12 @@ if __name__ == '__main__':
                             score = float(score_part.strip())
                         except ValueError:
                             continue
-                    elif line.startswith("ERROR:"):
+                    elif "ERROR:" in line or line.startswith("Traceback"):
                         raise Exception(line.replace("ERROR:", "").strip())
 
-            if result.exit_code != 0:
-                raise Exception(f"Benchmark run exited with code {result.exit_code}")
+            exit_status = client.api.exec_inspect(exec_instance['Id'])['ExitCode']
+            if exit_status != 0:
+                raise Exception(f"Benchmark run exited with code {exit_status}")
                 
             return score
     except Exception as e:
@@ -159,31 +164,16 @@ if __name__ == '__main__':
 def wait_for_container_with_installation_check(
     module_name, progress_callback=None, max_wait_time=300, check_interval=3
 ):
-    """
-    Wait for a container to become available, checking if installation is in progress.
-    This allows starting evaluation tasks even while the container is still being installed.
-
-    Args:
-        module_name: Name of the module
-        progress_callback: Callback function to update progress
-        max_wait_time: Maximum time to wait in seconds (default: 300 seconds = 5 minutes)
-        check_interval: How often to check in seconds (default: 3 seconds)
-
-    Returns:
-        Container object if available, None if timeout
-    """
     logger.info(f"Waiting for container for module {module_name}")
     start_time = time.time()
     installation_detected = False
 
     while time.time() - start_time < max_wait_time:
-        # Try to get existing container
         container = container_manager.get_container(module_name)
         if container:
             logger.info(f"Container for module {module_name} is ready")
             return container
 
-        # Check if installation is in progress
         if container_manager.is_container_installing(module_name):
             installation_detected = True
             elapsed = int(time.time() - start_time)
@@ -198,7 +188,6 @@ def wait_for_container_with_installation_check(
                 f"Container installation detected for {module_name}, continuing to wait..."
             )
         else:
-            # Try to start container if it doesn't exist and installation not detected
             try:
                 from ..models import BenchmarkModule
 
@@ -216,12 +205,10 @@ def wait_for_container_with_installation_check(
                         )
                         return container
                     else:
-                        # Container start was initiated, mark as installing
                         installation_detected = True
             except Exception as e:
                 logger.warning(f"Failed to start container for {module_name}: {e}")
 
-        # Update progress with appropriate message
         elapsed = int(time.time() - start_time)
         remaining = max_wait_time - elapsed
 

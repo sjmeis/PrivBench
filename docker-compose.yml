@@ -42,6 +42,12 @@ services:
       - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
       - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@privbench.com}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - MAIL_SERVER=smtp.web.de
+      - MAIL_PORT=587
+      - MAIL_USE_TLS=1
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - MAIL_DEFAULT_SENDER=${ADMIN_EMAIL_WEB}
     depends_on:
       db:
         condition: service_healthy
@@ -74,7 +80,14 @@ services:
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility
       - C_FORCE_ROOT=true
       - HAS_GPU=true
+      - PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:64
       - PYTHONDONTWRITEBYTECODE
+      - MAIL_SERVER=smtp.web.de
+      - MAIL_PORT=587
+      - MAIL_USE_TLS=1
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - MAIL_DEFAULT_SENDER=${ADMIN_EMAIL_WEB}
     deploy:
       resources:
         reservations:

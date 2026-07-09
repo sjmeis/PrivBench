@@ -24,7 +24,6 @@ from .queue_service import QueueService
 
 logger = get_task_logger(__name__)
 
-
 @celery.task(bind=True)
 def run_benchmark_task(
     self,
@@ -41,7 +40,6 @@ def run_benchmark_task(
         user_id,
         queue_entry_id,
     )
-
 
 class BenchmarkService:
     @staticmethod
@@ -256,16 +254,19 @@ class BenchmarkService:
 
                     # Send completion email
                     user = User.query.get(user_id)
+                    submission_details = Submission.query.get(submission_id)
                     if user and user.mail_address:
                         user_email = user.mail_address
-                        subject = "Benchmark Completed"
+                        subject = "[PrivBench] Benchmark Run Completed"
                         frontend_url = Config.FRONTEND_URL
                         body = f"""
 Dear {user.username},<br><br>
 
-Your latest submission has been evaluated successfully.<br>
+Your latest submission has been evaluated successfully.<br><br>
 
-You can now visit the platform and see how your model performed.<br><br>
+For reference, the name of the completed submission is: <i>{submission_details.name}</i> <br><br>
+
+You can now visit the platform and see how your text privatization method performed.<br><br>
 
 Best regards,<br>
 The PrivBench Team
