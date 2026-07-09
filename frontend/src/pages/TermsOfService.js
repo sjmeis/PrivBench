@@ -4,6 +4,8 @@ import DocumentPage from "../components/shared/DocumentPage";
 const TermsOfService = () => {
   return (
     <DocumentPage title="Terms of Service">
+      Last Updated: July 2026
+
       <Typography level="h4" sx={{ mt: 3, mb: 1 }}>1. Acceptance of Terms</Typography>
       <p>
         By creating an account, authenticating, or accessing the benchmarking datasets on PrivBench, 
@@ -37,6 +39,12 @@ const TermsOfService = () => {
         If you choose to participate in our optional public leaderboard, you grant us permission to 
         display your benchmark scores alongside your chosen username, research institution, and/or opted-in email address.
       </p>
+      <p>
+        You retain all intellectual property rights over all datasets you submit 
+        to PrivBench. By making a submission, you warrant that you possess the necessary rights and 
+        licenses to run evaluations on the provided datasets and that your submission does not infringe 
+        upon the intellectual property or copyright of any third party.
+      </p>
 
       <Typography level="h4" sx={{ mt: 3, mb: 1 }}>5. Prohibited Conduct</Typography>
       <p>
@@ -69,6 +77,14 @@ const TermsOfService = () => {
         by the laws of Germany, without regard to its conflict of law principles. Any legal actions or proceedings 
         related to PrivBench shall be brought exclusively in the courts located in Germany. For any questions, 
         disputes, or support requests regarding these terms, please contact us at <strong>privbench@web.de</strong>.
+      </p>
+
+      <Typography level="h4" sx={{ mt: 3, mb: 1 }}>9. Modifications to the Terms of Service</Typography>
+      <p>
+        We reserve the right to modify these Terms of Service at any time. Material changes will be 
+        communicated via email prior to the changes taking effect. 
+        Your continued use of PrivBench following the posting of varied terms constitutes your acceptance 
+        of those changes.
       </p>
     </DocumentPage>
   );
