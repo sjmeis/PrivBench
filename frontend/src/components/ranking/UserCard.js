@@ -22,9 +22,11 @@ const UserCard = ({user, cardStyle}) => {
                             <Typography level="title-lg" color="primary">
                                 {user.username}
                             </Typography>
-                            <Typography level="body-md" color="neutral">
-                                {user.mailAddress}
-                            </Typography>
+                            {user.display_email &&
+                                <Typography level="body-md" color="neutral">
+                                    {user.mailAddress}
+                                </Typography>
+                            }
                             <Typography level="body-md" color="neutral">
                                 {user.researchInstitute}
                             </Typography>

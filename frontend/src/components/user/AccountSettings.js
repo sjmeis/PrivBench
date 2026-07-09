@@ -23,6 +23,7 @@ import { DeleteForever } from "@mui/icons-material";
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import InfoOutlined from '@mui/icons-material/InfoOutlined';
+import ToggleButton from '@mui/material/ToggleButton';
 import { FormHelperText } from '@mui/joy';
 import axios from 'axios';
 import { API_BASE_URL } from '../../config';
@@ -36,6 +37,7 @@ const AccountSettings = ({user}) => {
     const [formData, setFormData] = useState({
         researchInstitute: user.researchInstitute,
         mailAddress: user.mailAddress,
+        isEmailPublic: user.isEmailPublic ?? false
     });
 
     const [previewUrl, setPreviewUrl] = useState(null);
@@ -156,7 +158,7 @@ const AccountSettings = ({user}) => {
     };
 
     const isFormUntouched = () => {
-        return formData.mailAddress === user.mailAddress && formData.researchInstitute === user.researchInstitute;
+        return formData.mailAddress === user.mailAddress && formData.researchInstitute === user.researchInstitute && formData.isEmailPublic === (user.isEmailPublic ?? false);
     }
 
     const isFormValid = () => {
@@ -167,6 +169,7 @@ const AccountSettings = ({user}) => {
         setFormData({
             researchInstitute: user.researchInstitute,
             mailAddress: user.mailAddress,
+            isEmailPublic: user.isEmailPublic ?? false
         })
         setPreviewUrl(null);
         setSelectedFile(null);
@@ -286,7 +289,7 @@ const AccountSettings = ({user}) => {
                                         />
                                     </FormControl>
                                 </Stack>
-                                <Stack direction="row" spacing={2}>
+                                <Stack spacing={1}>
                                     <FormControl sx={{flexGrow: 1}}>
                                         <FormLabel>Research Institute</FormLabel>
                                         <Input
@@ -296,6 +299,8 @@ const AccountSettings = ({user}) => {
                                             onChange={handleChange}
                                         />
                                     </FormControl>
+                                </Stack>
+                                <Stack direction="row" spacing={2}>
                                     <FormControl sx={{flexGrow: 1}}>
                                         <FormLabel>Email</FormLabel>
                                         <Input
@@ -306,6 +311,50 @@ const AccountSettings = ({user}) => {
                                             value={formData.mailAddress}
                                             onChange={handleChange}
                                         />
+                                    </FormControl>
+                                    </Stack>
+                                    <FormControl sx={{ flexGrow: 1 }}>
+                                        <FormLabel>Display publicly?</FormLabel>
+                                        <ToggleButton
+                                            value="check"
+                                            selected={formData.isEmailPublic}
+                                            onChange={() => {
+                                                setFormData((prev) => ({
+                                                    ...prev,
+                                                    isEmailPublic: !prev.isEmailPublic
+                                                }));
+                                            }}
+                                            color={formData.isEmailPublic ? "primary" : "standard"}
+                                            size="small"
+                                            sx={{
+                                                height: "38px",
+                                                borderRadius: "8px",
+                                                textTransform: "none",
+                                                fontWeight: "md",
+                                                gap: 1,
+                                                display: "flex",
+                                                justifyContent: "center",
+                                                alignItems: "center",
+                                                border: "1px solid",
+                                                borderColor: "neutral.outlinedBorder",
+                                                backgroundColor: formData.isEmailPublic ? "primary.softBg" : "background.body",
+                                                "&:hover": {
+                                                    backgroundColor: formData.isEmailPublic ? "primary.softHoverBg" : "neutral.softHoverBg"
+                                                }
+                                            }}
+                                        >
+                                            {formData.isEmailPublic ? (
+                                                <>
+                                                    <Visibility fontSize="small" color="primary" />
+                                                    <Typography level="body-sm" color="primary">Public</Typography>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <VisibilityOff fontSize="small" />
+                                                    <Typography level="body-sm">Hidden</Typography>
+                                                </>
+                                            )}
+                                        </ToggleButton>
                                     </FormControl>
                                 </Stack>
                             </Stack>
