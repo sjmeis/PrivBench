@@ -22,7 +22,7 @@ const UserCard = ({user, cardStyle}) => {
                             <Typography level="title-lg" color="primary">
                                 {user.username}
                             </Typography>
-                            {user.display_email &&
+                            {user.is_email_public &&
                                 <Typography level="body-md" color="neutral">
                                     {user.mailAddress}
                                 </Typography>
