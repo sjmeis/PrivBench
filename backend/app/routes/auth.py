@@ -197,7 +197,8 @@ def get_user():
                         "admin": user.admin,
                         "bio": user.bio,
                         "id": user.id,
-                        "profilePicturePath": user.profile_picture_path
+                        "profilePicturePath": user.profile_picture_path,
+                        "isEmailPublic": user.is_email_public
                     }
                 }
             ),
