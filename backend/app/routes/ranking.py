@@ -648,7 +648,8 @@ def get_submission_detail():
                 "badges": submission.user.badges or [],
                 "researchInstitute": submission.user.research_institute,
                 "profilePicturePath": submission.user.profile_picture_path,
-                "bio": submission.user.bio
+                "bio": submission.user.bio,
+                "isEmailPublic": submission.user.is_email_public
             },
             "benchmarkScores": [],
         }
