@@ -3,6 +3,7 @@ import { Card, Typography, Table, Chip, Box, Button } from '@mui/joy';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { API_BASE_URL } from '../../config';
+import { getDateString } from "../../utils/Date";
 
 const RankingsPreview = () => {
   const [rankings, setRankings] = useState([]);
@@ -56,7 +57,7 @@ const RankingsPreview = () => {
             <tr key={row.id}>
               <td>{row.name}</td>
               <td>{row.user.username}</td>
-              <td>{row.submissionDate}</td>
+              <td>{getDateString(row.submissionDate)}</td>
               <td className="text-right">{row.overallScore.toFixed(2)}%</td>
             </tr>
           ))}
