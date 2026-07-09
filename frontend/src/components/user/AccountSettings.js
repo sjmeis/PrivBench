@@ -23,7 +23,7 @@ import { DeleteForever } from "@mui/icons-material";
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import InfoOutlined from '@mui/icons-material/InfoOutlined';
-import ToggleButton from '@mui/material/ToggleButton';
+import Switch from '@mui/joy/Switch';
 import { FormHelperText } from '@mui/joy';
 import axios from 'axios';
 import { API_BASE_URL } from '../../config';
@@ -314,46 +314,42 @@ const AccountSettings = ({user}) => {
                                     </FormControl>
                                     <FormControl sx={{ flexGrow: 1 }}>
                                         <FormLabel>Display publicly?</FormLabel>
-                                        <ToggleButton
-                                            value="check"
-                                            selected={formData.isEmailPublic}
-                                            onChange={() => {
-                                                setFormData((prev) => ({
-                                                    ...prev,
-                                                    isEmailPublic: !prev.isEmailPublic
-                                                }));
-                                            }}
-                                            color={formData.isEmailPublic ? "primary" : "standard"}
-                                            size="small"
+                                        <Box
                                             sx={{
                                                 height: "38px",
-                                                borderRadius: "8px",
-                                                textTransform: "none",
-                                                fontWeight: "md",
-                                                gap: 1,
                                                 display: "flex",
-                                                justifyContent: "center",
                                                 alignItems: "center",
+                                                justifyContent: "space-between",
+                                                px: 1.5,
                                                 border: "1px solid",
                                                 borderColor: "neutral.outlinedBorder",
+                                                borderRadius: "8px",
                                                 backgroundColor: formData.isEmailPublic ? "primary.softBg" : "background.body",
-                                                "&:hover": {
-                                                    backgroundColor: formData.isEmailPublic ? "primary.softHoverBg" : "neutral.softHoverBg"
-                                                }
+                                                transition: "background-color 0.2s",
                                             }}
                                         >
-                                            {formData.isEmailPublic ? (
-                                                <>
+                                            <Stack direction="row" spacing={1} alignItems="center">
+                                                {formData.isEmailPublic ? (
                                                     <Visibility fontSize="small" color="primary" />
-                                                    <Typography level="body-sm" color="primary">Public</Typography>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <VisibilityOff fontSize="small" />
-                                                    <Typography level="body-sm">Hidden</Typography>
-                                                </>
-                                            )}
-                                        </ToggleButton>
+                                                ) : (
+                                                    <VisibilityOff fontSize="small" sx={{ color: "text.secondary" }} />
+                                                )}
+                                                <Typography level="body-sm" sx={{ fontWeight: "md" }}>
+                                                    {formData.isEmailPublic ? "Public" : "Hidden"}
+                                                </Typography>
+                                            </Stack>
+                                            
+                                            <Switch
+                                                size="sm"
+                                                checked={formData.isEmailPublic}
+                                                onChange={(e) => {
+                                                    setFormData((prev) => ({
+                                                        ...prev,
+                                                        isEmailPublic: e.target.checked
+                                                    }));
+                                                }}
+                                            />
+                                        </Box>
                                     </FormControl>
                                 </Stack>
                             </Stack>
