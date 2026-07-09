@@ -4,6 +4,8 @@ import DocumentPage from "../components/shared/DocumentPage";
 const PrivacyPolicy = () => {
   return (
     <DocumentPage title="Privacy Policy">
+      Last Updated: July 2026
+
       <Typography level="h4" sx={{ mt: 3, mb: 1 }}>1. An Overview of Data Protection</Typography>
       <p>
         The following information provides a simple overview of what happens to your personal data 
@@ -108,6 +110,21 @@ const PrivacyPolicy = () => {
           a data protection supervisory authority if you believe our processing of your data violates the GDPR.
         </ListItem>
       </List>
+
+      <Typography level="h4" sx={{ mt: 3, mb: 1 }}>9. Children's Privacy</Typography>
+      <p>
+        Our platform and benchmarking datasets are intended strictly for academic and professional research. 
+        We do not knowingly collect or solicit personal data from children under the age of 16. If we learn 
+        that we have collected personal data from a child under 16 without verifiable parental consent, 
+        we will delete that information as quickly as possible.
+      </p>
+
+      <Typography level="h4" sx={{ mt: 3, mb: 1 }}>10. Changes to this Privacy Policy</Typography>
+      <p>
+        We may update our Privacy Policy from time to time. We will notify you of any changes by posting 
+        the new Privacy Policy on this page and updating the "Last Updated" date at the top of this document. 
+        You are advised to review this Privacy Policy periodically for any changes.
+      </p>
     </DocumentPage>
   );
 };

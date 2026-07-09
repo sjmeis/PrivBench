@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link as RouterLink } from 'react-router-dom';
 import { 
     Box,
     Typography,
@@ -9,7 +9,9 @@ import {
     Button,
     Alert,
     Stack,
-    Divider
+    Divider,
+    Checkbox,
+    Link
 } from "@mui/joy";
 import { useAuth } from '../contexts/AuthContext';
 import {Login, PersonAdd} from "@mui/icons-material";
@@ -30,6 +32,7 @@ const Register = () => {
         mailAddress: '',
         researchInstitute: ''
     });
+    const [agreedToTerms, setAgreedToTerms] = useState(false);
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
@@ -69,6 +72,10 @@ const Register = () => {
         }
         if (formData.username.length < 3) {
             setError("Username must be at least 3 characters long.");
+            return false;
+        }
+        if (!agreedToTerms) { 
+            setError("You must accept the Terms of Service and Privacy Policy to register.");
             return false;
         }
         return true;
@@ -236,6 +243,25 @@ const Register = () => {
                             autoComplete="new-password"
                         />
                     </FormControl>
+
+                    <Checkbox
+                        checked={agreedToTerms}
+                        onChange={(e) => setAgreedToTerms(e.target.checked)}
+                        label={
+                            <Typography level="body-sm">
+                                I accept the{" "}
+                                <Link component={RouterLink} to="/terms" target="_blank" rel="noopener">
+                                    Terms of Service
+                                </Link>{" "}
+                                and have read the{" "}
+                                <Link component={RouterLink} to="/privacy" target="_blank" rel="noopener">
+                                    Privacy Policy
+                                </Link>
+                                .
+                            </Typography>
+                        }
+                        sx={{ alignItems: "flex-start", mt: 1 }}
+                    />
 
                     <Button
                         type="submit"
