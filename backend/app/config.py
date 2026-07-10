@@ -12,7 +12,7 @@ class Config:
         "DATABASE_URL", "postgresql://user:password@db:5432/dbname"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "REDACTED_JWT_KEY")
+    JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "jwtsecretkey")
     # JWT settings
     JWT_TOKEN_LOCATION = ["cookies"]
     JWT_COOKIE_SECURE = os.getenv("FLASK_ENV", "development") == "production"  # Only True in production
