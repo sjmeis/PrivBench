@@ -48,8 +48,9 @@ const RankingsPreview = () => {
           <tr>
             <th className="text-left w-1/3">Name</th>
             <th className="text-left w-1/4">Submitted By</th>
-            <th className="text-left w-1/4">Date</th>
+            <th className="text-left w-1/6">Date</th>
             <th className="text-right w-1/6">Score</th>
+             <th className="text-left w-1/4">Status</th>
           </tr>
         </thead>
         <tbody>
@@ -59,6 +60,15 @@ const RankingsPreview = () => {
               <td>{row.user.username}</td>
               <td>{getDateString(row.submissionDate)}</td>
               <td className="text-right">{row.overallScore.toFixed(2)}%</td>
+              <td>
+                <Chip
+                  size="sm"
+                  variant="soft"
+                  color={row.status === 'completed' ? 'success' : 'warning'}
+                >
+                  {row.status}
+                </Chip>
+              </td>
             </tr>
           ))}
         </tbody>
