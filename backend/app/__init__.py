@@ -3,6 +3,7 @@ from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from flask_mail import Mail
 from celery import Celery
+from datetime import datetime
 
 from .utils.monitor import start_monitor
 from .utils.container_manager import container_manager
@@ -159,9 +160,74 @@ def create_app():
                     requirements_path=computed_req_path if os.path.exists(computed_req_path) else None,
                     use_gpu=m.use_gpu
                 )
+
+                from .models import AppVersion, ModuleUpdate
+                
+                v1_release = db.session.query(AppVersion).filter_by(version='1.0.0').first()
+                if not v1_release:
+                    v1_release = AppVersion(version='1.0.0', created_at=datetime.utcnow())
+                    db.session.add(v1_release)
+                    db.session.flush()
+
+                for m in modules:
+                    exists = db.session.query(ModuleUpdate).filter_by(module_id=m.id, version_id=v1_release.id).first()
+                    if not exists:
+                        log = ModuleUpdate(
+                            version_id=v1_release.id,
+                            module_id=m.id,
+                            update_type='new_module',
+                            change_level='major',
+                            is_updated=True,
+                            description=f"Initialized and compiled baseline benchmark module for '{m.name}'."
+                        )
+                        db.session.add(log)
+            
+            db.session.commit()
+            logger.info("Automatically synchronized changelog history logs for v1.0.0!")
             logger.info("All target benchmark module containers updated successfully!")
         except Exception as e:
             error_msg = f"Rebuild transaction aborted: {e}"
+            logger.error(error_msg)
+            raise Exception(error_msg) from e
+        
+    @app.cli.command("build-logs")
+    def logs():
+        """Build baseline logs for v1.0.0"""
+        logger = logging.getLogger(__name__)
+        try:
+            from .models import BenchmarkModule
+            from .utils.module_manager import ModuleManager
+            manager = ModuleManager()
+            modules = db.session.query(BenchmarkModule).all()
+            
+            logger.info(f"Discovered {len(modules)} module blueprints in database.")
+            
+            for m in modules:
+                from .models import AppVersion, ModuleUpdate
+                
+                v1_release = db.session.query(AppVersion).filter_by(version='1.0.0').first()
+                if not v1_release:
+                    v1_release = AppVersion(version='1.0.0', created_at=datetime.utcnow())
+                    db.session.add(v1_release)
+                    db.session.flush()
+
+                for m in modules:
+                    exists = db.session.query(ModuleUpdate).filter_by(module_id=m.id, version_id=v1_release.id).first()
+                    if not exists:
+                        log = ModuleUpdate(
+                            version_id=v1_release.id,
+                            module_id=m.id,
+                            update_type='new_module',
+                            change_level='major',
+                            is_updated=True,
+                            description=f"Initialized and compiled baseline benchmark module for '{m.name}'."
+                        )
+                        db.session.add(log)
+            
+            db.session.commit()
+            logger.info("Automatically synchronized changelog history logs for v1.0.0!")
+        except Exception as e:
+            error_msg = f"Transaction aborted: {e}"
             logger.error(error_msg)
             raise Exception(error_msg) from e
 
