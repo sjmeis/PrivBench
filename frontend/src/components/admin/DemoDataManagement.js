@@ -51,7 +51,7 @@ const DemoDataManagement = () => {
         <Box>
           <Typography level="title-md">Platform Demonstration Mock Data</Typography>
           <Typography level="body-xs" textColor="text.secondary">
-            Generates or purges artificial evaluation profiles, submission runs, and global charts on demand.
+            Generates or delete mock data for demonstration purposes.
           </Typography>
         </Box>
         <Switch
@@ -67,7 +67,7 @@ const DemoDataManagement = () => {
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mt: 2 }}>
           <CircularProgress size="sm" />
           <Typography level="body-xs" sx={{ italic: true }}>
-            Modifying environment parameters... This may take several seconds.
+            Running population script... This may take a little bit.
           </Typography>
         </Box>
       )}
