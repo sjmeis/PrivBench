@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react"; // ── FIX: Added useRef import ──
 import { Typography, Box, Button } from "@mui/joy";
 import { useSnackbar } from "../../contexts/SnackbarProvider";
 import TaskProgressCard from "./TaskProgressCard";
@@ -19,15 +19,18 @@ const FinalStep = ({ onComplete, onCancel }) => {
   const { showSnackbar } = useSnackbar();
   const navigate = useNavigate();
 
+  // Keep tracking reference up to date on every state change frame
+  const tasksRef = useRef(tasks);
+  useEffect(() => {
+    tasksRef.current = tasks;
+  }, [tasks]);
+
   useEffect(() => {
     const initializeComponent = () => {
       const savedTasks = JSON.parse(localStorage.getItem("tasks"));
-      const savedQueueEntries = JSON.parse(
-        localStorage.getItem("queueEntries")
-      );
+      const savedQueueEntries = JSON.parse(localStorage.getItem("queueEntries"));
       const savedSubmissionId = localStorage.getItem("submission_id");
 
-      // If resuming a previous session
       if (savedTasks && savedSubmissionId) {
         setTasks(savedTasks);
         setQueueEntries(savedQueueEntries || []);
@@ -42,7 +45,6 @@ const FinalStep = ({ onComplete, onCancel }) => {
 
   useEffect(() => {
     if (!loading) {
-      // Clean up localStorage when evaluation is complete
       localStorage.removeItem("tasks");
       localStorage.removeItem("queueEntries");
       localStorage.removeItem("submission_id");
@@ -86,7 +88,6 @@ const FinalStep = ({ onComplete, onCancel }) => {
       }
 
       const data = await response.json();
-      // Handle queue entries and immediate tasks
       const allQueueEntries = data.queue_entries || [];
       const immediateTasks = data.immediate_tasks || [];
       const initialTasks = allQueueEntries.map((queueEntry) => {
@@ -112,7 +113,7 @@ const FinalStep = ({ onComplete, onCancel }) => {
       setTasks(initialTasks);
       setQueueEntries(allQueueEntries);
       setSubmissionId(data.submission_id);
-      // Save data to localStorage
+      
       localStorage.setItem("tasks", JSON.stringify(initialTasks));
       localStorage.setItem("queueEntries", JSON.stringify(allQueueEntries));
       localStorage.setItem("submission_id", data.submission_id);
@@ -123,23 +124,17 @@ const FinalStep = ({ onComplete, onCancel }) => {
     }
   };
 
-  // Function to fetch queue status for modules without running tasks
   const fetchQueueStatus = async (submissionId, moduleId) => {
     try {
       const response = await fetch(
         `${API_BASE_URL}/queue-status/${submissionId}/${moduleId}`,
-        {
-          credentials: "include",
-        }
+        { credentials: "include" }
       );
       if (response.ok) {
         return await response.json();
       }
     } catch (error) {
-      console.error(
-        `Error fetching queue status for module ${moduleId}:`,
-        error
-      );
+      console.error(`Error fetching queue status for module ${moduleId}:`, error);
     }
     return null;
   };
@@ -151,51 +146,43 @@ const FinalStep = ({ onComplete, onCancel }) => {
 
     const pollStatus = async () => {
       try {
-        if (tasks.length === 0) return; // Don't poll if tasks aren't loaded yet
+        const currentTasks = tasksRef.current;
+        if (currentTasks.length === 0) return;
 
-        // Use current tasks state directly
-        if (tasks.every((t) => t.completed || t.error)) {
+        // ── FIX: Evaluate condition using currentTasks reference ──
+        if (currentTasks.every((t) => t.completed || t.error)) {
           setLoading(false);
           return;
         }
 
-        const queuePositionInfos = new Map(); // To store updated position info
-        const moduleQueueStatuses = new Map(); // Collect module queue status information for all modules
+        const queuePositionInfos = new Map(); 
+        const moduleQueueStatuses = new Map(); 
 
-        // Process all tasks in parallel
+        // ── FIX: Map over currentTasks instead of the stale tasks array ──
         const updatedTasks = await Promise.all(
-          tasks.map(async (task) => {
+          currentTasks.map(async (task) => {
             if (task.completed || task.error) {
-              return task; // Skip finished tasks
+              return task; 
             }
 
-            // Get the latest queue status for the module
-            const queueStatusResponse = await fetchQueueStatus(
-              submissionId,
-              task.module_id
-            );
-
+            const queueStatusResponse = await fetchQueueStatus(submissionId, task.module_id);
             if (!queueStatusResponse) {
-              return task; // Keep existing task if can't get status
+              return task; 
             }
 
             const queuePositionInfo = queueStatusResponse.queue_position_info;
             const moduleQueueStatus = queueStatusResponse.module_queue_status;
 
-            // Store the module queue status and queue position info for use in TaskProgressCard
             moduleQueueStatuses.set(task.module_id, moduleQueueStatus);
             if (queuePositionInfo) {
               queuePositionInfos.set(task.module_id, queuePositionInfo);
             }
 
-            // If we have a task_id, poll the Celery task and also persist it on the task
             if (queuePositionInfo?.task_id) {
               try {
                 const response = await fetch(
                   `${API_BASE_URL}/task-status/${queuePositionInfo.task_id}`,
-                  {
-                    credentials: "include",
-                  }
+                  { credentials: "include" }
                 );
                 const data = await response.json();
 
@@ -215,32 +202,24 @@ const FinalStep = ({ onComplete, onCancel }) => {
               }
             }
 
-            // No task_id yet — reflect the queue status accurately
             const statusStr = (queuePositionInfo?.status || "").toLowerCase();
-            const isProcessing =
-              statusStr === "processing" || queuePositionInfo?.position === 0; // treat 0 as processing fallback
+            const isProcessing = statusStr === "processing" || queuePositionInfo?.position === 0;
 
-            // Task is waiting
             return {
               ...task,
               status: isProcessing
                 ? "Processing..."
-                : `In queue (Position: ${Math.max(
-                    1,
-                    Number(queuePositionInfo?.position ?? 1)
-                  )})`,
+                : `In queue (Position: ${Math.max(1, Number(queuePositionInfo?.position ?? 1))})`,
             };
           })
         );
 
         setTasks(updatedTasks);
+        localStorage.setItem("tasks", JSON.stringify(updatedTasks));
 
-        // Update queue entries based on new task states
         setQueueEntries((currentQueueEntries) =>
           currentQueueEntries.map((entry) => {
-            const correspondingTask = updatedTasks.find(
-              (t) => t.module_id === entry.module_id
-            );
+            const correspondingTask = updatedTasks.find((t) => t.module_id === entry.module_id);
             const moduleStatus = moduleQueueStatuses.get(entry.module_id);
             const newPositionInfo = queuePositionInfos.get(entry.module_id);
 
@@ -256,19 +235,14 @@ const FinalStep = ({ onComplete, onCancel }) => {
             }
             return {
               ...entry,
-              ...(newPositionInfo || {}), // Overwrite with fresh data (position, etc.)
-              // Normalize position for display if backend emitted 0
-              position: Math.max(
-                1,
-                Number(newPositionInfo?.position ?? entry.position ?? 1)
-              ),
+              ...(newPositionInfo || {}), 
+              position: Math.max(1, Number(newPositionInfo?.position ?? entry.position ?? 1)),
               status: newStatus,
               moduleQueueStatus: moduleStatus,
             };
           })
         );
 
-        // Check for completion
         const allFinished = updatedTasks.every((t) => t.completed || t.error);
         if (allFinished) {
           const successfulTasks = updatedTasks.filter((t) => t.completed);
@@ -280,9 +254,7 @@ const FinalStep = ({ onComplete, onCancel }) => {
             }));
             
             setModuleScores(scores);
-            setAverageScore(
-              scores.reduce((sum, curr) => sum + curr.score, 0) / scores.length
-            );
+            setAverageScore(scores.reduce((sum, curr) => sum + curr.score, 0) / scores.length);
             
             setLoading(false);
             if (onComplete) onComplete();
@@ -296,7 +268,6 @@ const FinalStep = ({ onComplete, onCancel }) => {
     };
 
     pollStatus();
-
     const intervalId = setInterval(pollStatus, 2000);
 
     return () => {
@@ -306,38 +277,24 @@ const FinalStep = ({ onComplete, onCancel }) => {
 
   const handleCancel = async () => {
     try {
-      console.log("Attempting to cancel submission:", submissionId);
-
-      if (!submissionId) {
-        throw new Error("No submission ID found");
-      }
-      const response = await fetch(
-        `${API_BASE_URL}/cancel-benchmark/${submissionId}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-        }
-      );
-      console.log("Cancel response status:", response.status);
+      if (!submissionId) throw new Error("No submission ID found");
+      
+      const response = await fetch(`${API_BASE_URL}/cancel-benchmark/${submissionId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      });
 
       if (!response.ok) {
         let errorMessage;
         try {
           const errorData = await response.json();
-          console.log("Error response data:", errorData);
           errorMessage = errorData.message;
-        } catch (e) {
-          console.error("Error parsing error response:", e);
+        } catch {
           errorMessage = `HTTP error! status: ${response.status}`;
         }
         throw new Error(errorMessage);
       }
-
-      const responseData = await response.json();
-      console.log("Success response data:", responseData);
 
       showSnackbar("Benchmark cancelled successfully", "success");
       setLoading(false);
@@ -354,15 +311,7 @@ const FinalStep = ({ onComplete, onCancel }) => {
 
   return (
     <>
-      <Box sx={{ 
-        width: "100%", 
-        maxWidth: 1000, 
-        mx: "auto", 
-        p: 3,
-        display: 'flex',
-        flexDirection: 'column',
-        minHeight: 0
-      }}>
+      <Box sx={{ width: "100%", maxWidth: 1000, mx: "auto", p: 3, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         <Typography level="h2" mb={2}>
           {loading ? "Evaluation in progress!" : "Evaluation Summary"}
         </Typography>
@@ -370,39 +319,19 @@ const FinalStep = ({ onComplete, onCancel }) => {
         {loading ? (
           <>
             <TaskProgressCard tasks={tasks} queueEntries={queueEntries} />
-            <Button
-              variant="outlined"
-              color="danger"
-              onClick={() => setIsCancelModalOpen(true)}
-              sx={{ 
-                mt: 2, 
-                alignSelf: 'flex-start',
-                mb: 5
-              }}
-            >
+            <Button variant="outlined" color="danger" onClick={() => setIsCancelModalOpen(true)} sx={{ mt: 2, alignSelf: 'flex-start', mb: 5 }}>
               Cancel Evaluation
             </Button>
           </>
         ) : moduleScores.length > 0 ? (
           <>
-            <ScoreOverviewCard
-              averageScore={averageScore}
-              moduleScores={moduleScores}
-            />
+            <ScoreOverviewCard averageScore={averageScore} moduleScores={moduleScores} />
             <Box sx={{ mt: 2, p: 2, bgcolor: 'background.level1', borderRadius: 'sm', border: '1px border', borderColor: 'divider' }}>
               <Typography level="body-sm" sx={{ fontStyle: 'italic' }}>
-                🔒 This submission is currently <strong>Private</strong>. 
-                You can make it public to appear on the Rankings leaderboard via your profile.
+                🔒 This submission is currently <strong>Private</strong>. You can make it public to appear on the Rankings leaderboard via your profile.
               </Typography>
             </Box>
-            <Button
-              fullWidth
-              variant="solid"
-              color="primary"
-              sx={{ mt: 3 }}
-              onClick={handleViewSubmissions}
-              endDecorator={<RemoveRedEye />}
-            >
+            <Button fullWidth variant="solid" color="primary" sx={{ mt: 3 }} onClick={handleViewSubmissions} endDecorator={<RemoveRedEye />}>
               Finish and View My Submissions
             </Button>
           </>
@@ -412,11 +341,7 @@ const FinalStep = ({ onComplete, onCancel }) => {
           </Typography>
         )}
       </Box>
-      <CancelEvaluationModal
-        isOpen={isCancelModalOpen}
-        onClose={() => setIsCancelModalOpen(false)}
-        handleCancel={handleCancel}
-      />
+      <CancelEvaluationModal isOpen={isCancelModalOpen} onClose={() => setIsCancelModalOpen(false)} handleCancel={handleCancel} />
     </>
   );
 };
