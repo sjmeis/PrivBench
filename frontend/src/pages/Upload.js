@@ -161,12 +161,17 @@ const Upload = () => {
       return;
     }
 
-    if (currentStep === 2 && step > 2 && !isMetadataValid) {
-      showSnackbar("Please complete all required metadata fields before proceeding.", "error");
+    if (step < currentStep) {
+      setCurrentStep(step);
       return;
     }
 
-    if (currentStep === 3 && step > 3) {
+    if (step > 2 && !isMetadataValid) {
+      showSnackbar("Please complete all required metadata fields before proceeding to upload or evaluation.", "error");
+      return;
+    }
+
+    if (step > 3) {
       const allFilesUploaded = requiredDatasets.every((dataset) => uploadedFiles[dataset.id]);
       if (!allFilesUploaded) {
         showSnackbar("You must upload all privatized dataset files before running the evaluation.", "error");
