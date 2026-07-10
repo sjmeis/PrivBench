@@ -317,12 +317,23 @@ The PrivBench Team
                 f"Starting task for module {module.name} (queue entry {queue_entry.id})"
             )
 
+            target_queue = "gpu_queue" if getattr(module, "use_gpu", False) else "default"
+
             # Start the benchmark task with queue entry ID
-            task = run_benchmark_task.delay(
-                module.id,
-                queue_entry.submission_id,
-                queue_entry.user_id,
-                queue_entry_id=queue_entry.id,
+            # task = run_benchmark_task.delay(
+            #     module.id,
+            #     queue_entry.submission_id,
+            #     queue_entry.user_id,
+            #     queue_entry_id=queue_entry.id,
+            # )
+            task = run_benchmark_task.apply_async(
+                args=[
+                    module.id,
+                    queue_entry.submission_id,
+                    queue_entry.user_id,
+                ],
+                kwargs={"queue_entry_id": queue_entry.id},
+                queue=target_queue
             )
 
             # Mark as processing in queue
