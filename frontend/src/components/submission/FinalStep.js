@@ -3,7 +3,7 @@ import { Typography, Box, Button } from "@mui/joy";
 import { useSnackbar } from "../../contexts/SnackbarProvider";
 import TaskProgressCard from "./TaskProgressCard";
 import ScoreOverviewCard from "./ScoreOverviewCard";
-import { RemoveRedEye } from "@mui/icons-material";
+import { RemoveRedEye, EmailOutlined } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import CancelEvaluationModal from "./CancelEvaluationModal";
 import { API_BASE_URL } from "../../config";
@@ -335,6 +335,38 @@ const FinalStep = ({ metadata, onStart, onComplete, onCancel }) => {
 
         {loading ? (
           <>
+            <Box 
+              sx={{ 
+                mb: 3, 
+                p: 2, 
+                bgcolor: 'primary.softBg', 
+                borderRadius: 'sm', 
+                border: '1px solid', 
+                borderColor: 'primary.softBorder',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: 2
+              }}
+            >
+              <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+                <EmailOutlined color="primary" />
+                <Typography level="body-sm" sx={{ color: 'primary.shortText' }}>
+                  Feel free to navigate away or close the tab — your evaluation will continue to run in the background, and <strong>we will email you when it finishes!</strong>.
+                </Typography>
+              </Box>
+              <Button 
+                size="sm" 
+                variant="outlined" 
+                color="primary" 
+                onClick={handleViewSubmissions}
+                startDecorator={<RemoveRedEye />}
+                sx={{ whiteSpace: 'nowrap' }}
+              >
+                Go to My Submissions
+              </Button>
+            </Box>
+
             <TaskProgressCard tasks={tasks} queueEntries={queueEntries} />
             <Button variant="outlined" color="danger" onClick={() => setIsCancelModalOpen(true)} sx={{ mt: 2, alignSelf: 'flex-start', mb: 5 }}>
               Cancel Evaluation
