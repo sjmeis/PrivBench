@@ -8,7 +8,7 @@ import { useNavigate } from "react-router-dom";
 import CancelEvaluationModal from "./CancelEvaluationModal";
 import { API_BASE_URL } from "../../config";
 
-const FinalStep = ({ onStart, onComplete, onCancel }) => {
+const FinalStep = ({ metadata, onStart, onComplete, onCancel }) => {
   const [loading, setLoading] = useState(true);
   const [averageScore, setAverageScore] = useState(null);
   const [moduleScores, setModuleScores] = useState([]);
@@ -327,6 +327,11 @@ const FinalStep = ({ onStart, onComplete, onCancel }) => {
         <Typography level="h2" mb={2}>
           {loading ? "Evaluation in progress!" : "Evaluation Summary"}
         </Typography>
+        {metadata?.modelName && (
+          <Typography level="title-md" textColor="text.secondary" sx={{ mb: 2, fontStyle: 'italic' }}>
+            Target: <strong>{metadata.modelName}</strong>
+          </Typography>
+        )}
 
         {loading ? (
           <>
