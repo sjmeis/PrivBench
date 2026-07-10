@@ -319,13 +319,6 @@ The PrivBench Team
 
             target_queue = "gpu_queue" if getattr(module, "use_gpu", False) else "default"
 
-            # Start the benchmark task with queue entry ID
-            # task = run_benchmark_task.delay(
-            #     module.id,
-            #     queue_entry.submission_id,
-            #     queue_entry.user_id,
-            #     queue_entry_id=queue_entry.id,
-            # )
             task = run_benchmark_task.apply_async(
                 args=[
                     module.id,
