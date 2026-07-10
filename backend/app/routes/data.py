@@ -4,11 +4,7 @@ import os
 from werkzeug.utils import secure_filename
 from ..extensions import db
 from ..models import PrivatizedDataset, Submission, Dataset, BenchmarkModule, ModuleDatasetChoice
-<<<<<<< HEAD
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
-=======
-from flask_jwt_extended import jwt_required, get_jwt_identity
->>>>>>> 59e8671f50dd7d0868cb60d4325cd4013aca4fba
 from datetime import datetime
 import logging
 import csv
