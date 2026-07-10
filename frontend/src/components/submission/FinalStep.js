@@ -337,7 +337,7 @@ const FinalStep = ({ metadata, onStart, onComplete, onCancel }) => {
           <>
             <Box 
               sx={{ 
-                mb: 3, 
+                mb: 2, 
                 p: 2, 
                 bgcolor: 'primary.softBg', 
                 borderRadius: 'sm', 
