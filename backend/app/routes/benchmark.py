@@ -224,6 +224,9 @@ def benchmark():
             # Verify all compatible datasets have a matching privatized dataset
             missing_datasets = []
             for compat_ds in module.compatible_datasets:
+                if compat_ds.is_deleted or not compat_ds.is_active:
+                    continue
+
                 priv = (
                     db.session.query(PrivatizedDataset)
                     .filter_by(
@@ -592,6 +595,9 @@ def benchmark_update():
             # Verify all compatible datasets have a matching privatized dataset
             missing_datasets = []
             for compat_ds in module.compatible_datasets:
+                if compat_ds.is_deleted or not compat_ds.is_active:
+                    continue
+                
                 priv = (
                     db.session.query(PrivatizedDataset)
                     .filter_by(
