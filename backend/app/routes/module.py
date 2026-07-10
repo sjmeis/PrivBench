@@ -1093,20 +1093,13 @@ def download_module_requirements(module_id):
         logger.error(f"Error downloading requirements: {e}")
         return jsonify({"message": str(e)}), 500
 
-
 @module_bp.route("/versions/history", methods=["GET"])
-@jwt_required()
 def get_version_history():
     """
     Returns all published versions with their associated module updates.
-    JWT required.
+    Publicly accessible route.
     """
     try:
-        user_id = get_jwt_identity()
-        user = User.query.get(int(user_id))
-        if not user or not user.admin:
-            return jsonify({"message": "Forbidden"}), 403
-
         versions = (
             db.session.query(AppVersion).order_by(AppVersion.created_at.desc()).all()
         )
@@ -1138,7 +1131,6 @@ def get_version_history():
             jsonify({"message": "Failed to fetch version history", "error": str(e)}),
             500,
         )
-
 
 @module_bp.route("/modules/<int:module_id>/datasets", methods=["POST"])
 @jwt_required()
