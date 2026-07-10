@@ -15,6 +15,7 @@ services:
               count: all
               capabilities: [gpu]
     volumes:
+      - ./backend:/app
       - ./data/datasets:/data/datasets
       - /home/ubuntu/privbench_data/privatized_datasets:/data/privatized_datasets
       - ./modules:/app/modules
