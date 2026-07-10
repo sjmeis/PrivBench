@@ -149,7 +149,6 @@ const FinalStep = ({ onComplete, onCancel }) => {
         const currentTasks = tasksRef.current;
         if (currentTasks.length === 0) return;
 
-        // ── FIX: Evaluate condition using currentTasks reference ──
         if (currentTasks.every((t) => t.completed || t.error)) {
           setLoading(false);
           return;
@@ -158,7 +157,6 @@ const FinalStep = ({ onComplete, onCancel }) => {
         const queuePositionInfos = new Map(); 
         const moduleQueueStatuses = new Map(); 
 
-        // ── FIX: Map over currentTasks instead of the stale tasks array ──
         const updatedTasks = await Promise.all(
           currentTasks.map(async (task) => {
             if (task.completed || task.error) {
@@ -166,59 +164,63 @@ const FinalStep = ({ onComplete, onCancel }) => {
             }
 
             const queueStatusResponse = await fetchQueueStatus(submissionId, task.module_id);
-            if (!queueStatusResponse) {
-              return task; 
+            const queuePositionInfo = queueStatusResponse?.queue_position_info;
+            const moduleQueueStatus = queueStatusResponse?.module_queue_status;
+
+            if (moduleQueueStatus) {
+              moduleQueueStatuses.set(task.module_id, moduleQueueStatus);
             }
-
-            const queuePositionInfo = queueStatusResponse.queue_position_info;
-            const moduleQueueStatus = queueStatusResponse.module_queue_status;
-
-            moduleQueueStatuses.set(task.module_id, moduleQueueStatus);
             if (queuePositionInfo) {
               queuePositionInfos.set(task.module_id, queuePositionInfo);
             }
 
-            if (queuePositionInfo?.task_id) {
+            const activeTaskId = queuePositionInfo?.task_id || task.task_id;
+
+            if (activeTaskId) {
               try {
                 const response = await fetch(
-                  `${API_BASE_URL}/task-status/${queuePositionInfo.task_id}`,
+                  `${API_BASE_URL}/task-status/${activeTaskId}`,
                   { credentials: "include" }
                 );
                 const data = await response.json();
 
                 return {
                   ...task,
-                  task_id: queuePositionInfo.task_id,
-                  progress: Math.round((data.current / data.total) * 100),
-                  processedRows: data.processedRows,
-                  totalRows: data.totalRows,
-                  status: data.status,
+                  task_id: activeTaskId,
+                  progress: data.total ? Math.round((data.current / data.total) * 100) : 100,
+                  processedRows: data.processedRows || task.processedRows,
+                  totalRows: data.totalRows || task.totalRows,
+                  status: data.status || "Completed",
                   completed: data.state === "SUCCESS",
-                  error: data.state === "FAILURE" ? data.status : null,
-                  score: data.score,
+                  error: data.state === "FAILURE" ? (data.status || "Task execution aborted.") : null,
+                  score: data.score !== undefined ? data.score : null,
                 };
               } catch (error) {
-                return { ...task, error: "Failed to fetch task status." };
+                console.error(`Failed fetching fallback task status for ${activeTaskId}:`, error);
               }
             }
 
-            const statusStr = (queuePositionInfo?.status || "").toLowerCase();
-            const isProcessing = statusStr === "processing" || queuePositionInfo?.position === 0;
+            if (!activeTaskId && queuePositionInfo) {
+              const statusStr = (queuePositionInfo.status || "").toLowerCase();
+              const isProcessing = statusStr === "processing" || queuePositionInfo.position === 0;
 
-            return {
-              ...task,
-              status: isProcessing
-                ? "Processing..."
-                : `In queue (Position: ${Math.max(1, Number(queuePositionInfo?.position ?? 1))})`,
-            };
+              return {
+                ...task,
+                status: isProcessing
+                  ? "Processing..."
+                  : `In queue (Position: ${Math.max(1, Number(queuePositionInfo.position ?? 1))})`,
+              };
+            }
+
+            return task;
           })
         );
 
         setTasks(updatedTasks);
         localStorage.setItem("tasks", JSON.stringify(updatedTasks));
 
-        setQueueEntries((currentQueueEntries) =>
-          currentQueueEntries.map((entry) => {
+        setQueueEntries((currentQueueEntries) => {
+          const updatedEntries = currentQueueEntries.map((entry) => {
             const correspondingTask = updatedTasks.find((t) => t.module_id === entry.module_id);
             const moduleStatus = moduleQueueStatuses.get(entry.module_id);
             const newPositionInfo = queuePositionInfos.get(entry.module_id);
@@ -240,8 +242,10 @@ const FinalStep = ({ onComplete, onCancel }) => {
               status: newStatus,
               moduleQueueStatus: moduleStatus,
             };
-          })
-        );
+          });
+          localStorage.setItem("queueEntries", JSON.stringify(updatedEntries));
+          return updatedEntries;
+        });
 
         const allFinished = updatedTasks.every((t) => t.completed || t.error);
         if (allFinished) {
@@ -255,7 +259,6 @@ const FinalStep = ({ onComplete, onCancel }) => {
             
             setModuleScores(scores);
             setAverageScore(scores.reduce((sum, curr) => sum + curr.score, 0) / scores.length);
-            
             setLoading(false);
             if (onComplete) onComplete();
           } else {
