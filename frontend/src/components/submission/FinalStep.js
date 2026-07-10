@@ -328,7 +328,7 @@ const FinalStep = ({ metadata, onStart, onComplete, onCancel }) => {
           {loading ? "Evaluation in progress!" : "Evaluation Summary"}
         </Typography>
         {metadata?.modelName && (
-          <Typography level="h3" textColor="text.secondary" sx={{ mb: 2, fontStyle: 'italic' }}>
+          <Typography level="h3" textColor="text.secondary" sx={{ mb: 2 }}>
             Method: <strong>{metadata.modelName}</strong>
           </Typography>
         )}
