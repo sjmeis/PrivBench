@@ -8,7 +8,7 @@ import { useNavigate } from "react-router-dom";
 import CancelEvaluationModal from "./CancelEvaluationModal";
 import { API_BASE_URL } from "../../config";
 
-const FinalStep = ({ onComplete, onCancel }) => {
+const FinalStep = ({ onStart, onComplete, onCancel }) => {
   const [loading, setLoading] = useState(true);
   const [averageScore, setAverageScore] = useState(null);
   const [moduleScores, setModuleScores] = useState([]);
@@ -55,8 +55,17 @@ const FinalStep = ({ onComplete, onCancel }) => {
     navigate("/profile", { state: "submissions" });
   };
 
+  const onStartRef = useRef(onStart);
+  useEffect(() => {
+    onStartRef.current = onStart;
+  }, [onStart]);
+
   const startBenchmark = async () => {
     try {
+      if (onStartRef.current) {
+        onStartRef.current();
+      }
+
       const response = await fetch(`${API_BASE_URL}/run-benchmark`, {
         method: "POST",
         headers: {

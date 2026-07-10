@@ -663,7 +663,7 @@ const Upload = () => {
             )}
 
             {currentStep === 4 && (
-              <FinalStep onComplete={() => setIsLocked(true)} onCancel={() => setIsLocked(false)} />
+              <FinalStep onStart={() => setIsLocked(true)} onComplete={() => setIsLocked(true)} onCancel={() => setIsLocked(false)} />
             )}
           </Box>
           </>
