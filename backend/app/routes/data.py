@@ -504,25 +504,6 @@ def upload_dataset():
         return jsonify({"error": str(e)}), 500
     
 @data_bp.route('/datasets/<int:id>', methods=['DELETE'])
-def delete_dataset(id):
-    dataset = Dataset.query.get_or_404(id)
-    if dataset.submissions:
-        return jsonify({
-            "error": "Cannot delete dataset. It is currently linked to existing user submissions."
-        }), 400
-
-    try:
-        if os.path.exists(dataset.file_path):
-            os.remove(dataset.file_path)
-        
-        db.session.delete(dataset)
-        db.session.commit()
-        return jsonify({"message": "Dataset deleted successfully"}), 200
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": str(e)}), 500
-    
-@data_bp.route('/datasets/<int:id>', methods=['DELETE'])
 @jwt_required()
 def delete_dataset(id):
     if not get_jwt().get("is_admin"):
