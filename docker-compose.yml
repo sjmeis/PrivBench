@@ -28,11 +28,12 @@ services:
       - PYTHONPATH=/app
       - FLASK_ENV=production
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-      - JWT_SECRET_KEY=REDACTED_JWT_KEY
+      - SECRET_KEY=${SECRET_KEY}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      # Set CLEAN_DB=true to reset database and migrations (development)
-      # Set CLEAN_DB=false to preserve database and migrations (production)
+      # CLEAN_DB=true to reset database and migrations (development)
+      # CLEAN_DB=false to preserve database and migrations (production)
       - CLEAN_DB=false
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}

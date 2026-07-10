@@ -30,8 +30,8 @@ class Config:
     MAIL_PORT = int(os.getenv("MAIL_PORT", 587))  # Default port for SMTP
     MAIL_USE_TLS = bool(int(os.getenv("MAIL_USE_TLS", 1)))  # Use TLS
     MAIL_USE_SSL = bool(int(os.getenv("MAIL_USE_SSL", 0)))  # Use SSL (if set to true)
-    MAIL_USERNAME = os.getenv("MAIL_USERNAME", "privbench@web.de")  # Email address
-    MAIL_PASSWORD = os.getenv("MAIL_PASSWORD", "REDACTED_PASSWORD")  # Password
+    MAIL_USERNAME = os.getenv("MAIL_USERNAME")
+    MAIL_PASSWORD = os.getenv("MAIL_PASSWORD")
     MAIL_DEFAULT_SENDER = os.getenv(
         "MAIL_DEFAULT_SENDER", ("PrivBench", "privbench@web.de")
     )  # Default sender email
