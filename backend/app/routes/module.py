@@ -646,6 +646,8 @@ def delete_benchmark_module(module_id):
         except Exception as e:
             logger.warning(f"Failed deleting queue entries for module {module.name}: {e}")
 
+        _recalculate_version_scores_after_module_delete(module_id)
+
         module.is_active = False
         module.is_deleted = True 
 
