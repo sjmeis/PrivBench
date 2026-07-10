@@ -161,26 +161,26 @@ def create_app():
                     use_gpu=m.use_gpu
                 )
 
-                from .models import AppVersion, ModuleUpdate
-                
-                v1_release = db.session.query(AppVersion).filter_by(version='1.0.0').first()
-                if not v1_release:
-                    v1_release = AppVersion(version='1.0.0', created_at=datetime.utcnow())
-                    db.session.add(v1_release)
-                    db.session.flush()
+            from .models import AppVersion, ModuleUpdate
+            
+            v1_release = db.session.query(AppVersion).filter_by(version='1.0.0').first()
+            if not v1_release:
+                v1_release = AppVersion(version='1.0.0', created_at=datetime.utcnow())
+                db.session.add(v1_release)
+                db.session.flush()
 
-                for m in modules:
-                    exists = db.session.query(ModuleUpdate).filter_by(module_id=m.id, version_id=v1_release.id).first()
-                    if not exists:
-                        log = ModuleUpdate(
-                            version_id=v1_release.id,
-                            module_id=m.id,
-                            update_type='new_module',
-                            change_level='major',
-                            is_updated=True,
-                            description=f"Initialized and compiled baseline benchmark module for '{m.name}'."
-                        )
-                        db.session.add(log)
+            for m in modules:
+                exists = db.session.query(ModuleUpdate).filter_by(module_id=m.id, version_id=v1_release.id).first()
+                if not exists:
+                    log = ModuleUpdate(
+                        version_id=v1_release.id,
+                        module_id=m.id,
+                        update_type='new_module',
+                        change_level='major',
+                        is_updated=True,
+                        description=f"Initialized and compiled baseline benchmark module for '{m.name}'."
+                    )
+                    db.session.add(log)
             
             db.session.commit()
             logger.info("Automatically synchronized changelog history logs for v1.0.0!")
@@ -202,27 +202,25 @@ def create_app():
             
             logger.info(f"Discovered {len(modules)} module blueprints in database.")
             
-            for m in modules:
-                from .models import AppVersion, ModuleUpdate
-                
-                v1_release = db.session.query(AppVersion).filter_by(version='1.0.0').first()
-                if not v1_release:
-                    v1_release = AppVersion(version='1.0.0', created_at=datetime.utcnow())
-                    db.session.add(v1_release)
-                    db.session.flush()
+            from .models import AppVersion, ModuleUpdate    
+            v1_release = db.session.query(AppVersion).filter_by(version='1.0.0').first()
+            if not v1_release:
+                v1_release = AppVersion(version='1.0.0', created_at=datetime.utcnow())
+                db.session.add(v1_release)
+                db.session.flush()
 
-                for m in modules:
-                    exists = db.session.query(ModuleUpdate).filter_by(module_id=m.id, version_id=v1_release.id).first()
-                    if not exists:
-                        log = ModuleUpdate(
-                            version_id=v1_release.id,
-                            module_id=m.id,
-                            update_type='new_module',
-                            change_level='major',
-                            is_updated=True,
-                            description=f"Initialized and compiled baseline benchmark module for '{m.name}'."
-                        )
-                        db.session.add(log)
+            for m in modules:
+                exists = db.session.query(ModuleUpdate).filter_by(module_id=m.id, version_id=v1_release.id).first()
+                if not exists:
+                    log = ModuleUpdate(
+                        version_id=v1_release.id,
+                        module_id=m.id,
+                        update_type='new_module',
+                        change_level='major',
+                        is_updated=True,
+                        description=f"Initialized and compiled baseline benchmark module for '{m.name}'."
+                    )
+                    db.session.add(log)
             
             db.session.commit()
             logger.info("Automatically synchronized changelog history logs for v1.0.0!")
