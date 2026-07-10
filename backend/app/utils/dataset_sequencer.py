@@ -49,6 +49,9 @@ def get_dataset_sequencer_paths(module, submission_id, seed=42):
             raise ValueError(f"Privatized dataset missing for '{dataset.name}', submission {submission_id}")
 
         priv_df = pd.read_csv(priv_dataset.file_path)
+        text_data = priv_df["text"].fillna("").astype(str).tolist()
+        text_data = [str(item) for item in text_data]
+        priv_df["text"] = text_data
         total_rows = len(orig_df)
 
         sampled_orig = clean_text(orig_df.copy(), text_column='text')
