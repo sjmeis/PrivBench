@@ -10,11 +10,8 @@ import {
 } from "@mui/joy";
 import { useTheme } from "@mui/joy";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
-//import LockIcon from "@mui/icons-material/Lock";
 import ViewModuleIcon from '@mui/icons-material/ViewModule';
 import SpeedIcon from "@mui/icons-material/Speed";
-//import StorageIcon from "@mui/icons-material/Storage";
-//import SecurityIcon from "@mui/icons-material/Security";
 import LeaderboardIcon from '@mui/icons-material/Leaderboard';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
 import { useNavigate } from "react-router-dom";
@@ -31,8 +28,8 @@ const Home = () => {
   const navigate = useNavigate();
   const isLightMode = theme.palette.mode === "light";
   const submissionsPreviewImage = isLightMode
-    ? "/images/submissions-light.jpeg"
-    : "/images/submissions-dark.jpeg";
+    ? "/images/submissions-light.png"
+    : "/images/submissions-dark.png";
 
   useEffect(() => {
     const handleScroll = () => {
