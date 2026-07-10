@@ -1,3 +1,18 @@
+# Copyright (C) 2026 Stephen Meisenbacher
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 from flask import Blueprint, request, jsonify, make_response, current_app
 from flask_jwt_extended import (
     get_jwt_identity,
@@ -12,8 +27,6 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 user_bp = Blueprint("user", __name__)
 
-#BASE_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
-#UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads', 'profile_pics')
 UPLOAD_FOLDER = '/app/static/uploads/profile_pics'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 

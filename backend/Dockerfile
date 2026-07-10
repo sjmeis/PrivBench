@@ -1,9 +1,22 @@
+# Copyright (C) 2026 Stephen Meisenbacher
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 FROM nvidia/cuda:11.8.0-base-ubuntu22.04
-#FROM python:3.9
 
 WORKDIR /app
 
-# 1. Install system dependencies (Root)
 RUN apt-get update && apt-get install -y \
     build-essential \
     curl \
@@ -23,31 +36,24 @@ RUN ln -sf $(which python3) /usr/bin/python && \
 
 RUN python --version && pip --version
 
-# 2. Create User and Data Directories (Root)
 RUN useradd -m celeryuser && \
     mkdir -p /data/privatized_datasets && \
     chown -R celeryuser:celeryuser /data /app
 
-# 2. Setup Requirements (Root)
 COPY backend/requirements.txt .
 COPY modules/ ./modules/
 RUN cat modules/*-reqs.txt >> requirements.txt || true
 
-# 3. Install Python packages (Root)
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt && \
     pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.5.0/en_core_web_sm-3.5.0-py3-none-any.whl
 
-# 5. Copy Application Code & Fix Permissions (Root)
-#COPY . .
 COPY backend/ .
 RUN chmod +x /app/entrypoint.sh /app/celery_entrypoint.sh && \
     chown -R celeryuser:celeryuser /app
 
-# 6. Switch to non-root user
 USER celeryuser
 
-# 7. Environment Variables
 ENV FLASK_APP=app \
     FLASK_DEBUG=1 \
     C_FORCE_ROOT=true \

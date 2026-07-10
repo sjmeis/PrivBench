@@ -114,10 +114,11 @@ For more detailed information on each component, refer to the respective directo
 ## Licensing, Terms, & Privacy Policy
 PrivBench operates under a dual-licensing framework to encourage open-source community contributions to the underlying architecture while maintaining the scientific integrity of the hosted platform.
 
-### Software Core License (MIT)
-The core codebase, container orchestrators, CLI tools, evaluation scaffolding, and utility microservices contained within this repository are released under the MIT License.
+### Software Core License (GPL-3.0)
+The core codebase, container orchestrators, CLI tools, evaluation scaffolding, and utility microservices contained within this repository are released under the GPL-3.0 License.
 
- - **What this means**: You are completely free to fork this repository, modify the orchestration layers, add proprietary evaluation modules, and deploy your own private benchmarking instances for commercial or academic research without restriction.
+ - **What this means for private and internal use**: You are 100% free to fork this repository, modify the code, connect your own custom evaluation modules, and run your own benchmarking instances for internal commercial or academic research. If you keep your modified version inside your private server, company, or research lab, you have no obligation to publish your code changes.
+ - **What this means for distribution & public forks**: If you modify PrivBench and distribute it to others (e.g., publishing a modified fork on GitHub or delivering a modified version to an external client), the GPL v3 copyleft clause triggers. You must make your entire modified source code, including any integrated evaluation modules, publicly available under the exact same GPL-3.0 license.
 
 ### Web Application & Platform Content (CC BY-NC-ND 4.0)
 The public web portal instance running at [privbench.com](https://privbench.com), along with its official leaderboard records, is protected under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International license.

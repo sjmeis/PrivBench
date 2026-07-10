@@ -1,3 +1,18 @@
+# Copyright (C) 2026 Stephen Meisenbacher
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 import torch
 from transformers import pipeline, AutoTokenizer
 from torch.utils.data import Dataset
@@ -6,8 +21,6 @@ import string
 from tqdm.auto import tqdm
 from benchmarks.base_benchmark import BaseBenchmark
 from benchmarks.benchmark_utils import with_progress_tracking
-
-# WARNING: This module script was modified for demonstration purposes, please replace with original script for deployment
 
 nltk.download("punkt_tab", quiet=True)
 PUNCT = set(string.punctuation)
@@ -34,8 +47,8 @@ class MaskedTokenInference(BaseBenchmark):
         self.mask_token = "<mask>" if "roberta" in model_checkpoint.lower() else "[MASK]"
 
     def score(self, original, private, progress_callback=None):
-        # Only process rows 0
-        selected_indices = [0]
+        # Only process rows 10 rows (for now!)
+        selected_indices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
         
         # Phase 1: Process original texts
         reference = []
