@@ -59,6 +59,7 @@ function App() {
                 <Route path="/imprint" element={<Imprint />} />
                 <Route path="/privacy" element={<PrivacyPolicy />} />
                 <Route path="/tos" element={<TermsOfService />} />
+                <Route path="/version-history" element={<VersionHistory />} />
 
                 <Route element={<ProtectedRoutesAdmin />}>
                   <Route path="/admin" element={<AdminView />} />
@@ -70,9 +71,6 @@ function App() {
                 </Route>
                 <Route element={<ProtectedRoutes />}>
                   <Route path="/profile" element={<UserProfile />} />
-                </Route>
-                <Route element={<ProtectedRoutes />}>
-                  <Route path="/version-history" element={<VersionHistory />} />
                 </Route>
               </Routes>
             </Box>
