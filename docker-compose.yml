@@ -56,11 +56,96 @@ services:
     entrypoint: ["/app/entrypoint.sh"]
     command: ["python3", "-m", "gunicorn", "-w", "2", "-b", "0.0.0.0:5000", "app:app"]
 
-  celery_worker:
+  # celery_worker:
+  #   build:
+  #     context: .
+  #     dockerfile: backend/Dockerfile
+  #   hostname: worker1
+  #   volumes:
+  #     - ./data/datasets:/data/datasets
+  #     - /home/ubuntu/privbench_data/privatized_datasets:/data/privatized_datasets
+  #     - ./modules:/app/modules
+  #     - ./benchmarks:/app/benchmarks
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #   privileged: true
+  #   user: root
+  #   working_dir: /app
+  #   environment:
+  #     - PYTHONPATH=/app
+  #     - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+  #     - CELERY_BROKER_URL=redis://redis:6379/0
+  #     - CELERY_RESULT_BACKEND=redis://redis:6379/0
+  #     - HF_TOKEN=${HF_TOKEN}
+  #     - NVIDIA_VISIBLE_DEVICES=all
+  #     - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+  #     - C_FORCE_ROOT=true
+  #     - HAS_GPU=true
+  #     - PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:64
+  #     - PYTHONDONTWRITEBYTECODE
+  #     - MAIL_SERVER=smtp.web.de
+  #     - MAIL_PORT=587
+  #     - MAIL_USE_TLS=1
+  #     - MAIL_USERNAME=${MAIL_USERNAME}
+  #     - MAIL_PASSWORD=${MAIL_PASSWORD}
+  #     - MAIL_DEFAULT_SENDER=${ADMIN_EMAIL_WEB}
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #           - driver: nvidia
+  #             count: all
+  #             capabilities: [gpu]
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #   entrypoint: ["/app/celery_entrypoint.sh"]
+  #   tty: true
+
+  celery_cpu_worker:
     build:
       context: .
       dockerfile: backend/Dockerfile
-    hostname: worker1
+    hostname: cpu_worker
+    volumes:
+      - ./data/datasets:/data/datasets
+      - /home/ubuntu/privbench_data/privatized_datasets:/data/privatized_datasets
+      - ./modules:/app/modules
+      - ./benchmarks:/app/benchmarks
+      - /var/run/docker.sock:/var/run/docker.sock
+    privileged: true
+    user: root
+    working_dir: /app
+    environment:
+      - PYTHONPATH=/app
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - HF_TOKEN=${HF_TOKEN}
+      - C_FORCE_ROOT=true
+      - HAS_GPU=false
+      - PYTHONDONTWRITEBYTECODE=1
+      - MAIL_SERVER=smtp.web.de
+      - MAIL_PORT=587
+      - MAIL_USE_TLS=1
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - MAIL_DEFAULT_SENDER=${ADMIN_EMAIL_WEB}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    entrypoint: ["/app/celery_entrypoint.sh"]
+    command: ["--loglevel=info", "-Q", "default", "--concurrency=4"]
+    tty: true
+
+  celery_gpu_worker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    hostname: gpu_worker
     volumes:
       - ./data/datasets:/data/datasets
       - /home/ubuntu/privbench_data/privatized_datasets:/data/privatized_datasets
@@ -81,7 +166,7 @@ services:
       - C_FORCE_ROOT=true
       - HAS_GPU=true
       - PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:64
-      - PYTHONDONTWRITEBYTECODE
+      - PYTHONDONTWRITEBYTECODE=1
       - MAIL_SERVER=smtp.web.de
       - MAIL_PORT=587
       - MAIL_USE_TLS=1
@@ -101,6 +186,7 @@ services:
       redis:
         condition: service_healthy
     entrypoint: ["/app/celery_entrypoint.sh"]
+    command: ["--loglevel=info", "-Q", "gpu_queue", "--concurrency=1"]
     tty: true
 
   frontend:
