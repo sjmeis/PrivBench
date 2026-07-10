@@ -122,11 +122,9 @@ The core codebase, container orchestrators, CLI tools, evaluation scaffolding, a
 ### Web Application & Platform Content (CC BY-NC-ND 4.0)
 The public web portal instance running at [privbench.com](https://privbench.com), along with its official leaderboard records, is protected under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International license.
 
-Attribution (BY): You must give appropriate credit and provide a link to the original benchmark if you reference PrivBench scores or data charts in academic publications.
-
-Non-Commercial (NC): You may not use the official platform results or public leaderboard content for commercial advertising or proprietary product placement.
-
-No Derivatives (ND): If you remix, transform, or build upon the specific data or visualizations hosted on the live web portal, you may not distribute the modified material as official PrivBench metrics.
+ - Attribution (BY): You must give appropriate credit and provide a link to the original benchmark if you reference PrivBench scores or data charts in academic publications. 
+ - Non-Commercial (NC): You may not use the official platform results or public leaderboard content for commercial advertising or proprietary product placement.
+ - No Derivatives (ND): If you remix, transform, or build upon the specific data or visualizations hosted on the live web portal, you may not distribute the modified material as official PrivBench metrics.
 
 ### Data Privacy & Terms of Service (ToS)
 On the public website, we clearly state our Privacy Policy and Terms of Service, in order to main compliance with data protection regulations, as well as to remain transparent about the operation of the public, free-to-use web application.
