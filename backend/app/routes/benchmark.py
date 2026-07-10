@@ -31,7 +31,7 @@ benchmark_bp = Blueprint("benchmark", __name__)
 
 def _compute_modules_to_update(submission: Submission):
     """Return list of modules requiring update with reason and dataset requirement."""
-    active_modules = BenchmarkModule.query.filter_by(is_active=True).all()
+    active_modules = BenchmarkModule.query.filter_by(is_active=True, is_deleted=False).all()
 
     # Build AppVersion lookup for ModuleUpdate.version_id
     versions_by_id = {
@@ -216,9 +216,7 @@ def benchmark():
         # Instead of starting tasks immediately, add to queue for each module
         queue_entries = []
         immediate_tasks = []
-        benchmark_modules = (
-            db.session.query(BenchmarkModule).filter_by(is_active=True).all()
-        )
+        benchmark_modules = db.session.query(BenchmarkModule).filter_by(is_active=True, is_deleted=False).all()
 
         for module in benchmark_modules:
             logger.info(f"Processing module: {module.name}")

@@ -130,7 +130,7 @@ def _stable_requirements_path(module: BenchmarkModule) -> str:
 @module_bp.route("/modules", methods=["GET"])
 def get_all_benchmark_modules():
     try:
-        modules = BenchmarkModule.query.all()
+        modules = BenchmarkModule.query.filter_by(is_deleted=False).all()
 
         module_list = []
         for module in modules:
@@ -610,7 +610,6 @@ def delete_benchmark_module(module_id):
         if not module:
             return jsonify({"message": "Benchmark module not found"}), 404
 
-        # Record deletion as a pending update before removing the module
         db.session.add(
             ModuleUpdate(
                 module_id=module.id,
@@ -623,7 +622,6 @@ def delete_benchmark_module(module_id):
         )
         db.session.flush()
 
-        # Stop and remove the running Docker container for this module (if any)
         try:
             container = container_manager.get_container(module.name)
             if container:
@@ -637,7 +635,6 @@ def delete_benchmark_module(module_id):
         except Exception as e:
             logger.warning(f"Could not stop/remove container for {module.name}: {e}")
 
-        # Clean up any queue entries pointing to this module to avoid NOT NULL violations
         try:
             deleted_rows = (
                 db.session.query(BenchmarkQueue)
@@ -645,68 +642,47 @@ def delete_benchmark_module(module_id):
                 .delete(synchronize_session=False)
             )
             if deleted_rows:
-                logger.info(
-                    f"Deleted {deleted_rows} queue entries for module {module.name}"
-                )
+                logger.info(f"Deleted {deleted_rows} active queue entries for module {module.name}")
         except Exception as e:
-            logger.warning(
-                f"Failed deleting queue entries for module {module.name}: {e}"
-            )
+            logger.warning(f"Failed deleting queue entries for module {module.name}: {e}")
 
-        # Delete ModuleUpdate rows referencing this module (module_id is NOT NULL)
-        try:
-            updates_deleted = (
-                db.session.query(ModuleUpdate)
-                .filter(ModuleUpdate.module_id == module_id)
-                .delete(synchronize_session=False)
-            )
-            if updates_deleted:
-                logger.info(
-                    f"Deleted {updates_deleted} ModuleUpdate rows for module {module.name}"
-                )
-        except Exception as e:
-            logger.warning(f"Failed deleting ModuleUpdate rows for {module.name}: {e}")
+        module.is_active = False
+        module.is_deleted = True 
 
-        # Update versioned scores that included this module
-        _recalculate_version_scores_after_module_delete(module_id)
-
-        # Delete BenchmarkScore entries for this module
-        BenchmarkScore.query.filter_by(module_id=module_id).delete()
-
-        # Update overall scores for submissions with status COMPLETED
         completed_submissions = Submission.query.filter_by(
             status=SubmissionStatus.COMPLETED
         ).all()
+        
         for submission in completed_submissions:
             remaining_scores = (
                 db.session.query(BenchmarkScore)
-                .filter_by(submission_id=submission.id)
+                .join(BenchmarkModule)
+                .filter(
+                    BenchmarkScore.submission_id == submission.id,
+                    BenchmarkModule.is_active == True,
+                    BenchmarkModule.is_deleted == False
+                )
                 .all()
             )
             if remaining_scores:
-                overall_score = sum(s.score for s in remaining_scores) / len(
-                    remaining_scores
-                )
+                overall_score = sum(s.score for s in remaining_scores) / len(remaining_scores)
                 submission.score = round(overall_score, 2)
             else:
                 submission.score = None
 
         db.session.commit()
-        # Delete the module
-        db.session.delete(module)
-        db.session.commit()
 
         return (
             jsonify(
                 {
-                    "message": "Benchmark module and associated scores deleted successfully",
+                    "message": "Benchmark module softly archived and deactivated successfully",
                 }
             ),
             200,
         )
 
     except Exception as e:
-        logger.error(f"Error deleting benchmark module: {e}")
+        logger.error(f"Error executing soft-delete sequence on benchmark module: {e}")
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 

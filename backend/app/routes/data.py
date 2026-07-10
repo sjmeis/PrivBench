@@ -4,7 +4,7 @@ import os
 from werkzeug.utils import secure_filename
 from ..extensions import db
 from ..models import PrivatizedDataset, Submission, Dataset, BenchmarkModule, ModuleDatasetChoice
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from datetime import datetime
 import logging
 import csv
@@ -290,7 +290,7 @@ def get_submission_datasets(submission_id):
 @data_bp.route("/datasets", methods=["GET"])
 def get_all_datasets():
     try:
-        datasets = Dataset.query.all()
+        datasets = Dataset.query.filter_by(is_deleted=False).all()
 
         dataset_list = [
             {
@@ -521,3 +521,20 @@ def delete_dataset(id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
+    
+@data_bp.route('/datasets/<int:id>', methods=['DELETE'])
+@jwt_required()
+def delete_dataset(id):
+    if not get_jwt().get("is_admin"):
+        return jsonify({"message": "Forbidden"}), 403
+        
+    dataset = Dataset.query.get_or_404(id)
+    
+    if dataset.submissions:
+        return jsonify({"error": "Cannot archive dataset. Active submissions depend on it."}), 400
+        
+    dataset.is_active = False
+    dataset.is_deleted = True  # Add this column to your Dataset DB Model
+    db.session.commit()
+    
+    return jsonify({"message": "Dataset archived successfully"}), 200

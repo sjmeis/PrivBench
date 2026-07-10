@@ -27,6 +27,7 @@ class BenchmarkModule(db.Model):
     title = db.Column(db.String(120), nullable=False)
     version = db.Column(db.String(50), nullable=False)
     is_active = db.Column(db.Boolean, default=True)
+    is_deleted = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     path = db.Column(db.String(255), nullable=False)
     dataset_id = db.Column(db.Integer, db.ForeignKey("dataset.id"), nullable=True)

@@ -94,6 +94,7 @@ def get_ranking_filters():
                 .filter(
                     SubmissionVersionScore.version == version_filter,
                     BenchmarkModule.is_active == True,
+                    BenchmarkModule.is_deleted == False,
                     or_(
                         and_(
                             Submission.status == SubmissionStatus.COMPLETED,
@@ -521,7 +522,10 @@ def get_all_filtered():
                 all_scores = (
                     db.session.query(BenchmarkScore)
                     .join(BenchmarkModule)
-                    .filter(BenchmarkScore.submission_id == submission.id)
+                    .filter(
+                        BenchmarkScore.submission_id == submission.id,
+                        BenchmarkModule.is_deleted == False
+                    )
                     .all()
                 )
 

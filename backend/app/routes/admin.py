@@ -17,8 +17,12 @@ import os
 from sqlalchemy import or_, text
 from werkzeug.utils import secure_filename
 import docker
+import logging
 from ..utils.module_manager import ModuleManager
 from ..utils.container_manager import module_image_tag, module_container_name
+
+from ..tasks.add_module import install_and_load_module
+from .module import _find_existing_requirements_path
 
 import sys
 sys.path.append("/app")
@@ -31,6 +35,8 @@ try:
     HAS_GPU = True
 except:
     HAS_GPU = False
+
+logger = logging.getLogger(__name__)
 
 admin_bp = Blueprint("admin", __name__)
 client = docker.from_env()
@@ -314,7 +320,8 @@ def start_container(module_id):
 
         # Start new container
         device_requests = []
-        if module.use_gpu:
+        use_gpu_flag = (module.device_specification == "gpu" or getattr(module, "use_gpu", False))
+        if use_gpu_flag:
             device_requests = [docker.types.DeviceRequest(count=-1, capabilities=[['gpu']])]
 
         client.containers.run(
@@ -352,6 +359,7 @@ def rebuild_module(module_id):
         return jsonify({"message": "Forbidden"}), 403
 
     module = BenchmarkModule.query.get_or_404(module_id)
+    use_gpu_flag = (module.device_specification == "gpu" or getattr(module, "use_gpu", False))
     try:
         # 1. Stop and remove existing container
         container_name = module_container_name(module.name)
@@ -366,7 +374,7 @@ def rebuild_module(module_id):
             module_path=module.path,
             module_name=module.name,
             requirements_path=module.requirements_path,
-            use_gpu=module.use_gpu
+            use_gpu=use_gpu_flag
         )
         return jsonify({"message": f"Rebuilt {module.name}"}), 200
     except Exception as e:
@@ -475,7 +483,21 @@ def rollback_version():
                 if "compatible_datasets" in item:
                     datasets = Dataset.query.filter(Dataset.name.in_(item["compatible_datasets"])).all()
                     m.compatible_datasets = datasets
-        
+
+                try:
+                    # Force reload/restart the container to use the rolled-back paths/specs
+                    install_and_load_module.delay(
+                        module_id=m.id,
+                        module_name=m.name,
+                        module_path=m.path,
+                        requirements_path=_find_existing_requirements_path(m),
+                        is_new_module=False,
+                        restart_container=True,
+                        use_gpu=m.device_specification == "gpu"
+                    )
+                except Exception as e:
+                    logger.warning(f"Could not automatically sync container state during rollback: {e}")
+                        
         db.session.flush()
 
         all_submissions = Submission.query.all()
