@@ -82,13 +82,6 @@ const Upload = () => {
   }, [location.pathname, state, isLocked]);
 
   const fetchUserSubmission = async () => {
-    // If metadata is already loaded from a template, don't overwrite it.
-    // if (state?.templateId) {
-    //   if (state?.currentStep !== undefined) {
-    //     setCurrentStep(state.currentStep);
-    //   }
-    //   return;
-    // }
     try {
       const data = await getUserSubmissions();
 
@@ -123,56 +116,6 @@ const Upload = () => {
       console.error("Error fetching user submission:", error);
     }
   };
-
-  //     if (data.remaining <= 0 && !hasActiveSubmission) {
-  //         setIsOverLimit(true);
-  //     } else {
-  //         setIsOverLimit(false); // Reset if they deleted an old submission
-  //     }
-
-  //     const pendingSubmission = data.submissions.find(
-  //       (sub) => sub.status === SubmissionStatus.PENDING
-  //     );
-
-  //     const inProgressSubmission = data.submissions.find(
-  //       (sub) => sub.status === SubmissionStatus.IN_PROGRESS
-  //     );
-
-  //     const completedSubmission = data.submissions.find(
-  //       (sub) => sub.status === SubmissionStatus.COMPLETED
-  //     );
-
-  //     if (completedSubmission) {
-  //       setIsLocked(true);
-  //       setCurrentStep(4);
-  //     } else if (pendingSubmission) {
-  //       setCurrentStep(3);
-  //       setMetadata(pendingSubmission.metadata);
-  //       setInitialMetadata(pendingSubmission.metadata);
-  //       setSubmissionId(pendingSubmission.id);
-  //     } else if (inProgressSubmission) {
-  //       setCurrentStep(4);
-  //       setMetadata(inProgressSubmission.metadata);
-  //       setInitialMetadata(inProgressSubmission.metadata);
-  //       setSubmissionId(inProgressSubmission.id);
-  //     } else if (!state?.metadata) {
-  //       // Only reset if no metadata was passed in state
-  //       setMetadata({
-  //         modelName: "",
-  //         modelDescription: "",
-  //         license: "",
-  //         tags: [],
-  //         authors: "",
-  //         researchPaperUrl: "",
-  //         githubUrl: "",
-  //         bibtexCitation: "",
-  //       });
-  //       setInitialMetadata({});
-  //     }
-  //   } catch (error) {
-  //     console.error("An error occurred while fetching user submission:", error);
-  //   }
-  // };
 
   const fetchTemplates = async () => {
     try {
@@ -217,6 +160,20 @@ const Upload = () => {
       showSnackbar("Evaluation is in progress. Please wait until it completes.", "warning");
       return;
     }
+
+    if (currentStep === 2 && step > 2 && !isMetadataValid) {
+      showSnackbar("Please complete all required metadata fields before proceeding.", "error");
+      return;
+    }
+
+    if (currentStep === 3 && step > 3) {
+      const allFilesUploaded = requiredDatasets.every((dataset) => uploadedFiles[dataset.id]);
+      if (!allFilesUploaded) {
+        showSnackbar("You must upload all privatized dataset files before running the evaluation.", "error");
+        return;
+      }
+    }
+
     setCurrentStep(step);
   };
 
@@ -663,7 +620,7 @@ const Upload = () => {
             )}
 
             {currentStep === 4 && (
-              <FinalStep onStart={() => setIsLocked(true)} onComplete={() => setIsLocked(true)} onCancel={() => setIsLocked(false)} />
+              <FinalStep metadata={metadata} onStart={() => setIsLocked(true)} onComplete={() => setIsLocked(true)} onCancel={() => setIsLocked(false)} />
             )}
           </Box>
           </>
