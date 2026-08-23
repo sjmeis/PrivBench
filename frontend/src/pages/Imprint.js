@@ -32,7 +32,7 @@ const Imprint = () => {
 
       <Typography level="h4">Contact</Typography>
       <p>
-        Email: stephen.meisenbacher@tum.de<br />
+        Email: admin@privbench.com<br />
       </p>
 
       <Typography level="h4">Responsible for content according to § 55 Abs. 2 RStV</Typography>

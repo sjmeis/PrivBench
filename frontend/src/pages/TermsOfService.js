@@ -91,7 +91,7 @@ const TermsOfService = () => {
         These Terms of Service and any contractual disputes arising from your use of the platform are governed 
         by the laws of Germany, without regard to its conflict of law principles. Any legal actions or proceedings 
         related to PrivBench shall be brought exclusively in the courts located in Germany. For any questions, 
-        disputes, or support requests regarding these terms, please contact us at <strong>privbench@web.de</strong>.
+        disputes, or support requests regarding these terms, please contact us at <strong>admin@privbench.com</strong>.
       </p>
 
       <Typography level="h4" sx={{ mt: 3, mb: 1 }}>9. Modifications to the Terms of Service</Typography>

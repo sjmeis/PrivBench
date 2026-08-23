@@ -95,7 +95,7 @@ const PrivacyPolicy = () => {
       <Typography level="h4" sx={{ mt: 3, mb: 1 }}>8. Your Rights</Typography>
       <p>
         Under the GDPR, you possess specific, enforceable rights regarding your personal data. You can 
-        exercise these rights at any time by contacting us at <strong>privbench@web.de</strong>.
+        exercise these rights at any time by contacting us at <strong>admin@privbench.com</strong>.
       </p>
       <List marker="disc">
         <ListItem>
