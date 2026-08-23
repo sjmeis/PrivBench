@@ -41,7 +41,7 @@ class Config:
     CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://redis:6379/0")
 
     # Mail settings
-    MAIL_SERVER = os.getenv("MAIL_SERVER", "smtp.web.de")
+    MAIL_SERVER = os.getenv("MAIL_SERVER", "smtp.office365.com")
     MAIL_PORT = int(os.getenv("MAIL_PORT", 587))  # Default port for SMTP
     MAIL_USE_TLS = bool(int(os.getenv("MAIL_USE_TLS", 1)))  # Use TLS
     MAIL_USE_SSL = bool(int(os.getenv("MAIL_USE_SSL", 0)))  # Use SSL (if set to true)
