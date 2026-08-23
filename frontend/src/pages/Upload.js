@@ -75,7 +75,7 @@ const Upload = () => {
     const isFreshEntry = !state?.submissionId && !state?.currentStep;
     const isNavbarReset = state?.reset;
 
-    if ((isFreshEntry || isNavbarReset) && !isLocked) {
+    if ((isFreshEntry || isNavbarReset) && !isLocked && currentStep === 0 && !submissionId) {
       setCurrentStep(0);
       setSubmissionId(null);
 
@@ -94,7 +94,7 @@ const Upload = () => {
         bibtexCitation: "",
       });
     }
-  }, [location.pathname, state, isLocked]);
+  }, [location.pathname, state, isLocked, currentStep, submissionId]);
 
   const fetchUserSubmission = async () => {
     try {

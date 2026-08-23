@@ -43,7 +43,12 @@ data_bp = Blueprint("data", __name__)
 
 
 @data_bp.route("/load-dataset", methods=["POST"])
+@jwt_required()
 def load_dataset():
+    claims = get_jwt()
+    if not claims.get("is_admin", False):
+        return jsonify({"message": "Forbidden"}), 403
+
     try:
         # Ensure the dataset folder exists
         if not os.path.exists(DATASET_FOLDER):
@@ -476,7 +481,12 @@ def get_dataset_choices(submission_id):
         return jsonify({"error": str(e)}), 500
 
 @data_bp.route('/datasets/upload', methods=['POST'])
+@jwt_required()
 def upload_dataset():
+    claims = get_jwt()
+    if not claims.get("is_admin", False):
+        return jsonify({"message": "Forbidden"}), 403
+
     if 'file' not in request.files:
         return jsonify({"error": "No file part"}), 400
     

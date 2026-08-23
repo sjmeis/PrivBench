@@ -31,7 +31,7 @@ class Dataset(db.Model):
     file_path = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_active = db.Column(db.Boolean, default=True)
-    is_deleted = db.Column(db.Boolean, default=True)
+    is_deleted = db.Column(db.Boolean, default=False)
 
     # Many-to-many relationship with Submission
     submissions = db.relationship('Submission', secondary=submission_datasets, back_populates='datasets')

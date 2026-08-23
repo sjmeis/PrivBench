@@ -28,6 +28,7 @@ import SystemHealth from "../components/admin/SystemHealth";
 import DemoDataManagement from "../components/admin/DemoDataManagement";
 import AdminManagementPanel from "../components/admin/AdminManagementPanel";
 import MainLayout from "../components/layout/MainLayout";
+import { useAuth } from "../contexts/AuthContext";
 
 const checkSuperAdminStatus = () => {
   try {
@@ -49,15 +50,10 @@ const checkSuperAdminStatus = () => {
 
 const AdminView = () => {
   const { state } = useLocation();
+  const { user } = useAuth();
   const [selectedItem, setSelectedItem] = useState("modules");
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
-  useEffect(() => {
-    setIsSuperAdmin(checkSuperAdminStatus());
-    if (state) {
-      setSelectedItem(state);
-    }
-  }, [state]);
+  const isSuperAdmin = Boolean(user?.is_superadmin);
 
   useEffect(() => {
     if (state) {
@@ -97,10 +93,6 @@ const AdminView = () => {
         display: "flex",
         minHeight: "100vh",
         bgcolor: "background.body",
-        // marginTop: "-10px",
-        // marginBottom: "-40px",
-        // marginLeft: "-40px",
-        // marginRight: "-40px",
       }}
     >
       <SideNavAdmin

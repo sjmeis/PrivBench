@@ -715,8 +715,13 @@ def get_submission_detail():
 
 
 @ranking_bp.route("/ranking/detail", methods=["PUT"])
+@jwt_required()
 def update_submission_detail():
     try:
+        user_id = int(get_jwt_identity())
+        claims = get_jwt()
+        is_admin = claims.get("is_admin", False)
+        
         data = request.get_json()
         submission_id = data.get("id")
 
@@ -731,6 +736,9 @@ def update_submission_detail():
 
         if not submission:
             return jsonify({"message": "Submission not found"}), 404
+
+        if submission.user_id != user_id and not is_admin:
+            return jsonify({"message": "Forbidden: Cannot edit another user's submission"}), 403
 
         submission.name = data.get("name", submission.name)
         submission.status = data.get("status", submission.status)
