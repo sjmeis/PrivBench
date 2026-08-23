@@ -43,8 +43,8 @@ class Config:
     # Mail settings
     MAIL_SERVER = os.getenv("MAIL_SERVER", "smtp.office365.com")
     MAIL_PORT = int(os.getenv("MAIL_PORT", 587))  # Default port for SMTP
-    MAIL_USE_TLS = bool(int(os.getenv("MAIL_USE_TLS", 1)))  # Use TLS
-    MAIL_USE_SSL = bool(int(os.getenv("MAIL_USE_SSL", 0)))  # Use SSL (if set to true)
+    MAIL_USE_TLS = str(os.getenv("MAIL_USE_TLS", "True")).strip().lower() in ["true", "1", "yes", "t"]
+    MAIL_USE_SSL = str(os.getenv("MAIL_USE_SSL", "False")).strip().lower() in ["true", "1", "yes", "t"]
     MAIL_USERNAME = os.getenv("MAIL_USERNAME")
     MAIL_PASSWORD = os.getenv("MAIL_PASSWORD")
     MAIL_DEFAULT_SENDER = os.getenv(
