@@ -96,13 +96,6 @@ def register():
 
         return jsonify({"message": "Verification email sent"}), 201
 
-        # Create and set access token immediately after registration
-        # access_token = create_access_token(identity=str(new_user.id))
-        # response = jsonify({"message": "Registration successful!", "success": True})
-        # set_access_cookies(response, access_token)
-
-        #return response, 201
-
     except Exception as e:
         db.session.rollback()  # Rollback in case of error
         current_app.logger.error(f"Registration error: {str(e)}")
@@ -237,7 +230,6 @@ def logout():
         current_app.logger.error(f"Logout error: {str(e)}")
         return jsonify({"message": "Logout failed!"}), 500
 
-@auth_bp.route("/forgot-password", methods=["POST"])
 @auth_bp.route("/auth/forgot-password", methods=["POST"])
 def forgot_password():
     data = request.get_json() or {}
@@ -264,7 +256,6 @@ def forgot_password():
 
     return jsonify({"message": "If that email exists, a reset link has been sent."}), 200
 
-@auth_bp.route("/reset-password", methods=["POST"])
 @auth_bp.route("/auth/reset-password", methods=["POST"])
 def reset_password():
     data = request.get_json() or {}
