@@ -45,7 +45,7 @@ class BenchmarkQueue(db.Model):
     completed_at = db.Column(db.DateTime, nullable=True)
 
     # Relationships
-    submission = db.relationship("Submission", backref="queue_entries")
+    submission = db.relationship("Submission", backref="tasks_in_queue")
     module = db.relationship("BenchmarkModule", backref="queue_entries")
     user = db.relationship("User", backref="queue_entries")
 
