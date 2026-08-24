@@ -31,15 +31,14 @@ export const AuthProvider = ({ children }) => {
 
     const checkAuth = useCallback(async () => {
         try {
-          const response = await axiosInstance.get('/user');
-          setUser(response.data.user);
+            const response = await axiosInstance.get('/user');
+            setUser(response.data.user);
         } catch (error) {
-          console.error('Auth check failed:', error);
-          setUser(null);
+            setUser(null);
         } finally {
-          setLoading(false);
+            setLoading(false);
         }
-      }, []);
+    }, []);
 
     useEffect(() => {
         checkAuth();

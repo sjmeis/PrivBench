@@ -237,9 +237,11 @@ def logout():
         current_app.logger.error(f"Logout error: {str(e)}")
         return jsonify({"message": "Logout failed!"}), 500
 
-@auth_bp.route('/auth/forgot-password', methods=['POST'])
+@auth_bp.route("/forgot-password", methods=["POST"])
+@auth_bp.route("/auth/forgot-password", methods=["POST"])
 def forgot_password():
-    email = request.get_json().get('email', '').strip()
+    data = request.get_json() or {}
+    email = data.get("email", "").strip()
     user = User.query.filter_by(mail_address=email).first()
 
     if user:
@@ -250,10 +252,9 @@ def forgot_password():
             additional_claims={"reset": True}
         )
         
-        frontend_url = current_app.config.get('FRONTEND_URL', 'http://localhost:3000')
+        frontend_url = current_app.config.get("FRONTEND_URL", "http://localhost:3000")
         reset_url = f"{frontend_url}/reset-password/{reset_token}"
-
-        sender_email = current_app.config.get('MAIL_DEFAULT_SENDER')
+        sender_email = current_app.config.get("MAIL_DEFAULT_SENDER")
         
         msg = Message("Password Reset Request",
                       sender=sender_email,
@@ -263,11 +264,12 @@ def forgot_password():
 
     return jsonify({"message": "If that email exists, a reset link has been sent."}), 200
 
-@auth_bp.route('/auth/reset-password', methods=['POST'])
+@auth_bp.route("/reset-password", methods=["POST"])
+@auth_bp.route("/auth/reset-password", methods=["POST"])
 def reset_password():
-    data = request.get_json()
-    token = data.get('token')
-    new_password = data.get('newPassword').strip()
+    data = request.get_json() or {}
+    token = data.get("token")
+    new_password = (data.get("newPassword") or "").strip()
 
     try:
         decoded = decode_token(token)
