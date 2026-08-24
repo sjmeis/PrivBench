@@ -47,7 +47,5 @@ class Config:
     MAIL_USE_SSL = str(os.getenv("MAIL_USE_SSL", "False")).strip().lower() in ["true", "1", "yes", "t"]
     MAIL_USERNAME = os.getenv("MAIL_USERNAME")
     MAIL_PASSWORD = os.getenv("MAIL_PASSWORD")
-    MAIL_DEFAULT_SENDER = os.getenv(
-        "MAIL_DEFAULT_SENDER", ("PrivBench", "admin@privbench.com")
-    )  # Default sender email
+    MAIL_DEFAULT_SENDER = os.getenv("MAIL_DEFAULT_SENDER", "PrivBench <admin@privbench.com>")
     ADMIN_EMAIL = os.getenv("ADMIN_EMAIL_WEB")

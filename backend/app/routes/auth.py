@@ -90,7 +90,7 @@ def register():
         token = generate_verification_token(new_user.mail_address)
         confirm_url = f"{current_app.config['FRONTEND_URL']}/verify-email/{token}"
 
-        msg = Message("Confirm Your PrivBench Account", recipients=[new_user.mail_address])
+        msg = Message("Confirm Your PrivBench Account", sender=current_app.config.get("MAIL_DEFAULT_SENDER"), recipients=[new_user.mail_address])
         msg.body = f"Hi {new_user.username},\n\nWelcome to PrivBench! Click here to verify your account: {confirm_url}\nThis link expires in 24 hours.\n\nBest regards,\nThe PrivBench Team"
         mail.send(msg)
 
@@ -239,7 +239,7 @@ def logout():
 
 @auth_bp.route('/auth/forgot-password', methods=['POST'])
 def forgot_password():
-    email = request.get_json().get('email').strip()
+    email = request.get_json().get('email', '').strip()
     user = User.query.filter_by(mail_address=email).first()
 
     if user:
@@ -250,10 +250,13 @@ def forgot_password():
             additional_claims={"reset": True}
         )
         
-        reset_url = f"https://privbench.com/reset-password/{reset_token}"
+        frontend_url = current_app.config.get('FRONTEND_URL', 'http://localhost:3000')
+        reset_url = f"{frontend_url}/reset-password/{reset_token}"
+
+        sender_email = current_app.config.get('MAIL_DEFAULT_SENDER')
         
         msg = Message("Password Reset Request",
-                      sender="privbench@web.de",
+                      sender=sender_email,
                       recipients=[email])
         msg.body = f"To reset your password, visit the following link: {reset_url}\nIf you did not make this request, simply ignore this email."
         mail.send(msg)
