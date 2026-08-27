@@ -335,7 +335,8 @@ const Rankings = () => {
   };
 
   const onViewClick = (row) => {
-    navigate(`/rankings/detail/${row.id}`);
+    const versionToView = selectedVersion || row.version;
+    navigate(`/rankings/detail/${row.id}?version=${versionToView}`);
   };
 
   const onNextPageClick = () => {

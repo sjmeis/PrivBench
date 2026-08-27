@@ -13,7 +13,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
 
-import { useEffect, useState, Fragment } from "react";
+import { useEffect, useState, useMemo, Fragment } from "react";
 import IconButton from "@mui/joy/IconButton";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
@@ -26,11 +26,11 @@ import {
   Menu,
   MenuButton,
   MenuItem,
-  Stack
+  Stack,
+  Switch,
+  Sheet,
+  Table,
 } from "@mui/joy";
-import Switch from "@mui/joy/Switch";
-import Sheet from "@mui/joy/Sheet";
-import Table from "@mui/joy/Table";
 import { SubmissionStatus } from "../../enums/SubmissionStatus";
 import { Update } from "@mui/icons-material";
 
@@ -53,38 +53,12 @@ const UserSubmissionsTableRow = ({
   onTogglePublic,
   onUpdateSubmission,
   onViewProgress,
-  onCancelSubmission
+  onCancelSubmission,
 }) => {
   const [open, setOpen] = useState(false);
-  const [selectedVersion, setSelectedVersion] = useState(row.version);
-  const [displayedModules, setDisplayedModules] = useState([]);
 
-  const getModulesForVersion = (versionData) => {
-    if (!versionData) return [];
-    
-    // If the version object already has embedded scores
-    if (versionData.modules && versionData.modules.length > 0 && versionData.modules[0].score !== undefined) {
-      return versionData.modules;
-    }
-
-    // Match module IDs with the submission's overall benchmarkScores
-    const moduleList = versionData.modules || [];
-    const allScores = row.benchmarkScores || [];
-    
-    return moduleList.map((mod) => {
-      const modId = mod.id || mod.module_id;
-      const matchingScore = allScores.find(
-        (s) => (s.benchmarkModule?.id || s.module_id) === modId
-      );
-      return {
-        ...mod,
-        name: mod.name || mod.title || matchingScore?.benchmarkModule?.name,
-        score: matchingScore ? matchingScore.score : null,
-      };
-    });
-  };
-
-  const getAvailableVersions = () => {
+  // Parse and sort all available version objects for this submission
+  const availableVersions = useMemo(() => {
     const rawVersions = row.version_scores || row.versionScores || [];
     if (rawVersions.length > 0) {
       return [...rawVersions].sort((a, b) =>
@@ -93,36 +67,62 @@ const UserSubmissionsTableRow = ({
     }
     return [
       {
-        version: row.version,
+        version: row.version || "1.0.0",
         score: row.overallScore ?? row.score,
         modules: row.benchmarkScores || [],
       },
     ];
-  };
-
-  useEffect(() => {
-    const versions = getAvailableVersions();
-    if (versions.length > 0) {
-      const active = versions.find((v) => v.version === row.version) || versions[0];
-      setSelectedVersion(active);
-      setDisplayedModules(active.modules || row.benchmarkScores || []);
-    }
   }, [row]);
+
+  // Selected version snapshot object
+  const [selectedVersion, setSelectedVersion] = useState(availableVersions[0]);
+
+  // Sync selected version whenever row data changes
+  useEffect(() => {
+    if (availableVersions.length > 0) {
+      const current =
+        availableVersions.find((v) => v.version === row.version) ||
+        availableVersions[0];
+      setSelectedVersion(current);
+    }
+  }, [availableVersions, row.version]);
+
+  // Resolves modules & scores for the active version
+  const displayedModules = useMemo(() => {
+    if (!selectedVersion) return [];
+
+    // If version snapshot already contains module score entries
+    if (selectedVersion.modules && selectedVersion.modules.length > 0) {
+      const allScores = row.benchmarkScores || [];
+      return selectedVersion.modules.map((mod) => {
+        const modId = mod.id || mod.module_id || mod.benchmarkModule?.id;
+        const matchingRaw = allScores.find(
+          (s) => (s.benchmarkModule?.id || s.module_id) === modId
+        );
+        return {
+          id: modId,
+          name:
+            mod.name ||
+            mod.title ||
+            mod.benchmarkModule?.name ||
+            matchingRaw?.benchmarkModule?.name ||
+            "Module",
+          score: mod.score ?? matchingRaw?.score ?? null,
+        };
+      });
+    }
+
+    return (row.benchmarkScores || []).map((s) => ({
+      id: s.benchmarkModule?.id || s.module_id,
+      name: s.benchmarkModule?.name || "Module",
+      score: s.score,
+    }));
+  }, [selectedVersion, row.benchmarkScores]);
 
   const handleVersionChange = (versionData) => {
     setSelectedVersion(versionData);
-    if (versionData.modules && versionData.modules.length > 0) {
-      setDisplayedModules(versionData.modules);
-    } else {
-      setDisplayedModules(row.benchmarkScores || []);
-    }
   };
 
-  const availableVersions = getAvailableVersions();
-
-  const canUpdateSubmission =
-    row.status === SubmissionStatus.OUTDATED ||
-    row.status === SubmissionStatus.IN_PROGRESS;
   const isProcessing = row.status === SubmissionStatus.IN_PROGRESS;
   const isOutdated = row.status === SubmissionStatus.OUTDATED;
 
@@ -148,9 +148,8 @@ const UserSubmissionsTableRow = ({
           <Chip color={statusColor(row.status)}>{row.status}</Chip>
         </td>
         <td>
-          {selectedVersion?.score !== null &&
-          selectedVersion?.score !== undefined
-            ? selectedVersion.score.toFixed(2)
+          {selectedVersion?.score !== null && selectedVersion?.score !== undefined
+            ? Number(selectedVersion.score).toFixed(2)
             : "N/A"}
         </td>
         <td>
@@ -160,27 +159,18 @@ const UserSubmissionsTableRow = ({
                 {selectedVersion?.version || "N/A"}
               </MenuButton>
               <Menu>
-                {availableVersions.map((versionData) => (
+                {availableVersions.map((v) => (
                   <MenuItem
-                    key={versionData.version}
-                    onClick={() => handleVersionChange(versionData)}
-                    sx={{
-                      backgroundColor:
-                        selectedVersion?.version === versionData.version
-                          ? "action.selected"
-                          : "inherit",
-                    }}
+                    key={v.version}
+                    onClick={() => handleVersionChange(v)}
+                    selected={selectedVersion?.version === v.version}
                   >
                     <Box sx={{ display: "flex", flexDirection: "column" }}>
-                      <Box sx={{ fontWeight: "bold" }}>
-                        {versionData.version}
-                      </Box>
+                      <Box sx={{ fontWeight: "bold" }}>{v.version}</Box>
                       <Box sx={{ fontSize: "0.8em", color: "text.secondary" }}>
-                        {/* 0 is valid */}
                         Score:{" "}
-                        {versionData.score !== null &&
-                        versionData.score !== undefined
-                          ? Number(versionData.score).toFixed(2)
+                        {v.score !== null && v.score !== undefined
+                          ? Number(v.score).toFixed(2)
                           : "N/A"}
                       </Box>
                     </Box>
@@ -194,56 +184,56 @@ const UserSubmissionsTableRow = ({
         </td>
         <td align="center">
           <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", width: "100%" }}>
-          <Stack direction="row" spacing={1} justifyContent="center">
-            {row.status === SubmissionStatus.COMPLETED && (
-               <Switch
-                 color="success"
-                 variant="soft"
-                 checked={row.isPublic}
-                 onClick={() => onTogglePublic(row.id, !row.isPublic)}
-                 title={row.isPublic ? "Make private" : "Make public"}
-               />
-            )}
-            
-            {isProcessing && (
-              <>
+            <Stack direction="row" spacing={1} justifyContent="center">
+              {row.status === SubmissionStatus.COMPLETED && (
+                <Switch
+                  color="success"
+                  variant="soft"
+                  checked={row.isPublic}
+                  onClick={() => onTogglePublic(row.id, !row.isPublic)}
+                  title={row.isPublic ? "Make private" : "Make public"}
+                />
+              )}
+
+              {isProcessing && (
+                <>
+                  <Button
+                    color="primary"
+                    size="sm"
+                    variant="soft"
+                    onClick={() => onViewProgress(row)}
+                  >
+                    View Progress
+                  </Button>
+                  <IconButton
+                    size="sm"
+                    variant="plain"
+                    color="danger"
+                    onClick={() => onCancelSubmission(row.id)}
+                    title="Cancel Evaluation"
+                  >
+                    <Update sx={{ transform: "rotate(45deg)", color: "red" }} />
+                  </IconButton>
+                </>
+              )}
+
+              {isOutdated && (
                 <Button
                   color="primary"
                   size="sm"
                   variant="soft"
-                  onClick={() => onViewProgress(row)}
+                  onClick={() => onUpdateSubmission(row)}
+                  endDecorator={<Update />}
                 >
-                  View Progress
+                  Update
                 </Button>
-                <IconButton
-                  size="sm"
-                  variant="plain"
-                  color="danger"
-                  onClick={() => onCancelSubmission(row.id)}
-                  title="Cancel Evaluation"
-                >
-                  <Update sx={{ transform: 'rotate(45deg)', color: 'red' }} /> 
-                </IconButton>
-              </>
-            )}
-
-            {isOutdated && (
-              <Button
-                color="primary"
-                size="sm"
-                variant="soft"
-                onClick={() => onUpdateSubmission(row)}
-                endDecorator={<Update />}
-              >
-                Update
-              </Button>
-            )}
-          </Stack>
+              )}
+            </Stack>
           </Box>
         </td>
       </tr>
       <tr>
-        <td style={{ height: 0, padding: 0 }} colSpan={6}>
+        <td style={{ height: 0, padding: 0 }} colSpan={7}>
           {open && (
             <Sheet
               variant="soft"
@@ -258,16 +248,17 @@ const UserSubmissionsTableRow = ({
                   Version: {selectedVersion?.version || "N/A"}
                 </Chip>
                 <Chip variant="soft" color="success" size="sm" sx={{ ml: 1 }}>
-                  Overall Score: {selectedVersion?.score?.toFixed(2) || "N/A"}
+                  Overall Score:{" "}
+                  {selectedVersion?.score !== null && selectedVersion?.score !== undefined
+                    ? Number(selectedVersion.score).toFixed(2)
+                    : "N/A"}
                 </Chip>
               </Box>
               <Table
                 borderAxis="bothBetween"
                 size="sm"
                 aria-label="benchmark scores"
-                sx={{
-                  "--TableCell-paddingX": "0.5rem",
-                }}
+                sx={{ "--TableCell-paddingX": "0.5rem" }}
               >
                 <thead>
                   <tr>
@@ -277,29 +268,19 @@ const UserSubmissionsTableRow = ({
                 </thead>
                 <tbody>
                   {displayedModules.length > 0 ? (
-                    displayedModules.map((moduleData, index) => {
-                      // Handle different data structures for modules
-                      const moduleName =
-                        moduleData.benchmarkModule?.name ||
-                        moduleData.name ||
-                        moduleData.module_name;
-                      const moduleScore = moduleData.score;
-
-                      return (
-                        <tr key={index}>
-                          <th scope="row">{moduleName || "Unknown Module"}</th>
-                          <td>
-                            {/* 0 is valid */}
-                            {moduleScore !== null && moduleScore !== undefined
-                              ? Number(moduleScore).toFixed(2)
-                              : "N/A"}
-                          </td>
-                        </tr>
-                      );
-                    })
+                    displayedModules.map((mod, index) => (
+                      <tr key={index}>
+                        <th scope="row">{mod.name}</th>
+                        <td>
+                          {mod.score !== null && mod.score !== undefined
+                            ? Number(mod.score).toFixed(2)
+                            : "N/A"}
+                        </td>
+                      </tr>
+                    ))
                   ) : (
                     <tr>
-                      <td colSpan={3} align="center">
+                      <td colSpan={2} align="center">
                         No benchmarking scores available for this version
                       </td>
                     </tr>
@@ -313,4 +294,5 @@ const UserSubmissionsTableRow = ({
     </Fragment>
   );
 };
+
 export default UserSubmissionsTableRow;

@@ -81,10 +81,22 @@ const fetchRankingFilters = async (version = null) => {
   }
 };
 
-const fetchSubmissionDetails = async (submissionId) => {
+const fetchSubmissionDetails = async (
+  submissionId,
+  version = null,
+  moduleWeights = {}
+) => {
   try {
     const url = `${API_BASE_URL}/ranking/detail`;
-    const response = await axios.post(url, { id: submissionId });
+    const response = await axios.post(
+      url,
+      {
+        id: submissionId,
+        version: version || null,
+        moduleWeights: moduleWeights || {},
+      },
+      { withCredentials: true }
+    );
 
     if (response.status === 200) {
       return response.data.submission;

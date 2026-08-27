@@ -8,7 +8,7 @@ import Link from "@mui/joy/Link";
 import HomeRoundedIcon from "@mui/icons-material/HomeRounded";
 import Typography from "@mui/joy/Typography";
 import React, {useEffect, useState} from "react";
-import {useLocation, useParams} from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import {fetchSubmissionDetails} from "../services/RankingsService"
 import LoadingSpinner from "../components/shared/LoadingSpinner";
 import ModelCard from "../components/ranking/ModelCard";
@@ -27,11 +27,14 @@ const RankingDetailView = () => {
     const [copied, setCopied] = useState(false);
     const { showSnackbar } = useSnackbar();
 
+    const [searchParams] = useSearchParams();
+    const versionParam = searchParams.get("version");
+
    useEffect(() => {
         if (id) {
             const getSubmissionDetails = async () => {
                 setLoading(true);
-                const data = await fetchSubmissionDetails(id);
+                const data = await fetchSubmissionDetails(id, versionParam);
                 if (data.error) {
                     setError(data.error);
                     setLoading(false)
@@ -61,9 +64,7 @@ const RankingDetailView = () => {
         height: '100%',
         minHeight: '35vh',
         '&:hover': {
-            borderColor: 'primary.500',
-            //transform: 'scale(1.02)', //todo: implement this together with modals
-            //transition: 'transform 0.2s ease-in-out',
+            borderColor: 'primary.500'
         },
         overflow: 'hidden'
     }

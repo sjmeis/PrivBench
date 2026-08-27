@@ -568,9 +568,9 @@ def get_all_filtered():
 @jwt_required(optional=True)
 def get_submission_detail():
     try:
-        data = request.get_json()
+        data = request.get_json() or {}
         submission_id = data.get("id")
-
+        target_version = data.get("version")
         module_weights = data.get("moduleWeights", {})
 
         if module_weights:
@@ -584,26 +584,97 @@ def get_submission_detail():
         submission = (
             db.session.query(Submission)
             .filter(Submission.id == submission_id)
-            .join(User)
-            .join(SubmissionMetadata, isouter=True)
-            .join(BenchmarkScore, isouter=True)
-            .join(
-                BenchmarkModule, BenchmarkScore.benchmark_module, isouter=True
-            )  # Using relationship to join BenchmarkModule
+            .options(
+                joinedload(Submission.user),
+                joinedload(Submission.submission_metadata),
+                joinedload(Submission.version_scores).joinedload(SubmissionVersionScore.modules),
+                joinedload(Submission.benchmark_scores).joinedload(BenchmarkScore.benchmark_module)
+            )
             .one_or_none()
         )
 
         if not submission:
             return jsonify({"message": "Submission not found"}), 404
-        
+
         current_user_id = get_jwt_identity()
         claims = get_jwt()
         is_admin = claims.get("is_admin", False)
 
-        # if not public, you must be the owner OR an admin
         if not submission.is_public:
-            if not current_user_id or (current_user_id != submission.user_id and not is_admin):
+            if not current_user_id or (int(current_user_id) != submission.user_id and not is_admin):
                 return jsonify({"message": "This submission is private."}), 403
+
+        # Locate version snapshot if requested
+        effective_version = target_version or submission.version
+        matching_snapshot = None
+        if submission.version_scores:
+            matching_snapshot = next(
+                (vs for vs in submission.version_scores if vs.version == effective_version),
+                None
+            )
+
+        display_score = matching_snapshot.score if matching_snapshot else submission.score
+
+        # Map all raw benchmark scores
+        score_lookup = {
+            bs.module_id: bs for bs in submission.benchmark_scores if bs.benchmark_module
+        }
+
+        # Build module score list based on the version's module snapshot
+        module_scores_detail = []
+        if matching_snapshot and matching_snapshot.modules:
+            for mod in matching_snapshot.modules:
+                bs = score_lookup.get(mod.id)
+                if bs:
+                    module_scores_detail.append({
+                        "id": bs.id,
+                        "score": bs.score,
+                        "createdAt": bs.created_at.isoformat(),
+                        "benchmarkModule": {
+                            "id": mod.id,
+                            "name": mod.name,
+                            "title": mod.title,
+                            "version": mod.version,
+                            "description": mod.description,
+                            "isActive": mod.is_active,
+                            "createdAt": mod.created_at.isoformat() if mod.created_at else None,
+                        },
+                    })
+        else:
+            for bs in submission.benchmark_scores:
+                if bs.benchmark_module:
+                    module_scores_detail.append({
+                        "id": bs.id,
+                        "score": bs.score,
+                        "createdAt": bs.created_at.isoformat(),
+                        "benchmarkModule": {
+                            "id": bs.benchmark_module.id,
+                            "name": bs.benchmark_module.name,
+                            "title": bs.benchmark_module.title,
+                            "version": bs.benchmark_module.version,
+                            "description": bs.benchmark_module.description,
+                            "isActive": bs.benchmark_module.is_active,
+                            "createdAt": bs.benchmark_module.created_at.isoformat() if bs.benchmark_module.created_at else None,
+                        },
+                    })
+
+        # Calculate custom weights if provided on the detail page
+        if module_weights and module_scores_detail:
+            total_weighted = sum(
+                m["score"] * module_weights.get(str(m["benchmarkModule"]["id"]), 1.0)
+                for m in module_scores_detail
+            )
+            total_weight = sum(
+                module_weights.get(str(m["benchmarkModule"]["id"]), 1.0)
+                for m in module_scores_detail
+            )
+            if total_weight > 0:
+                display_score = round(total_weighted / total_weight, 2)
+
+        # Available versions for the detail view dropdown
+        available_versions_list = [
+            {"version": vs.version, "score": vs.score} for vs in submission.version_scores
+        ] if submission.version_scores else [{"version": submission.version, "score": submission.score}]
 
         submission_detail = {
             "id": submission.id,
@@ -611,23 +682,10 @@ def get_submission_detail():
             "submissionDate": submission.submission_date.isoformat(),
             "status": submission.status.value,
             "isPublic": submission.is_public,
-            "overallScore": submission.score,
-            "metadata": None,
-            "user": {
-                "id": submission.user.id,
-                "username": submission.user.username,
-                "mailAddress": submission.user.mail_address,
-                "badges": submission.user.badges or [],
-                "researchInstitute": submission.user.research_institute,
-                "profilePicturePath": submission.user.profile_picture_path,
-                "bio": submission.user.bio,
-                "isEmailPublic": submission.user.is_email_public
-            },
-            "benchmarkScores": [],
-        }
-
-        if submission.submission_metadata:
-            submission_detail["metadata"] = {
+            "overallScore": display_score,
+            "version": effective_version,
+            "availableVersions": available_versions_list,
+            "metadata": {
                 "modelName": submission.submission_metadata.model_name,
                 "modelDescription": submission.submission_metadata.model_description,
                 "license": str(submission.submission_metadata.license),
@@ -640,26 +698,19 @@ def get_submission_detail():
                 "researchPaperUrl": submission.submission_metadata.research_paper_url,
                 "githubUrl": submission.submission_metadata.github_url,
                 "bibtexCitation": submission.submission_metadata.bibtex_citation,
-            }
-
-        if submission.benchmark_scores:
-            submission_detail["benchmarkScores"] = [
-                {
-                    "id": score.id,
-                    "score": score.score,
-                    "createdAt": score.created_at.isoformat(),
-                    "benchmarkModule": {
-                        "id": score.benchmark_module.id,
-                        "name": score.benchmark_module.name,
-                        "title": score.benchmark_module.title,
-                        "version": score.benchmark_module.version,
-                        "description": score.benchmark_module.description,
-                        "isActive": score.benchmark_module.is_active,
-                        "createdAt": score.benchmark_module.created_at.isoformat(),
-                    },
-                }
-                for score in submission.benchmark_scores
-            ]
+            } if submission.submission_metadata else None,
+            "user": {
+                "id": submission.user.id,
+                "username": submission.user.username,
+                "mailAddress": submission.user.mail_address,
+                "badges": submission.user.badges or [],
+                "researchInstitute": submission.user.research_institute,
+                "profilePicturePath": submission.user.profile_picture_path,
+                "bio": submission.user.bio,
+                "isEmailPublic": submission.user.is_email_public,
+            },
+            "benchmarkScores": module_scores_detail,
+        }
 
         return jsonify({"submission": submission_detail}), 200
 
