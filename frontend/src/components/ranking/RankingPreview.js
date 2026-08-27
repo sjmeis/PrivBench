@@ -13,37 +13,60 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
 
-
 import React, { useState, useEffect } from 'react';
-import { Card, Typography, Table, Chip, Box, Button } from '@mui/joy';
+import { Card, Typography, Table, Chip, Box, Button, Stack } from '@mui/joy';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { API_BASE_URL } from '../../config';
 import { getDateString } from "../../utils/Date";
+import { fetchRankingFilters } from '../../services/RankingsService';
 
 const RankingsPreview = () => {
   const [rankings, setRankings] = useState([]);
+  const [currentVersion, setCurrentVersion] = useState('');
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const fetchRankings = async () => {
+  uuseEffect(() => {
+    let isMounted = true;
+
+    const loadTopRankings = async () => {
       try {
+        setLoading(true);
+        // Fetch available versions to get the latest release
+        const filterData = await fetchRankingFilters();
+        const latestVersion = filterData.versions?.[0] || null;
+
+        if (!isMounted) return;
+        if (latestVersion) {
+          setCurrentVersion(latestVersion);
+        }
+
+        // Fetch top 5 submissions strictly scoped to the latest version
         const response = await axios.post(`${API_BASE_URL}/ranking`, {
           page: 1,
           limit: 5,
           sortBy: 'score',
-          sortOrder: 'desc'
+          sortOrder: 'desc',
+          version: latestVersion,
         });
-        setRankings(response.data.results);
+
+        if (isMounted) {
+          setRankings(response.data.results || []);
+        }
       } catch (error) {
-        console.error('Error fetching rankings:', error);
+        console.error('Error fetching rankings preview:', error);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
-    fetchRankings();
+    loadTopRankings();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   if (loading) {
@@ -56,9 +79,16 @@ const RankingsPreview = () => {
 
   return (
     <Card className="w-full overflow-hidden">
-      <Typography level="h4" className="p-4">
-        Top Submissions
-      </Typography>
+      <Box className="p-4 flex justify-between items-center flex-wrap gap-2">
+        <Stack direction="row" spacing={1.5} alignItems="center">
+          <Typography level="h4">Top Submissions</Typography>
+          {currentVersion && (
+            <Chip color="primary" variant="soft" size="sm">
+              v{currentVersion}
+            </Chip>
+          )}
+        </Stack>
+      </Box>
       <Table aria-label="rankings preview" className="mb-4">
         <thead>
           <tr>
@@ -70,23 +100,35 @@ const RankingsPreview = () => {
           </tr>
         </thead>
         <tbody>
-          {rankings.map((row) => (
-            <tr key={row.id}>
-              <td>{row.name}</td>
-              <td>{row.user.username}</td>
-              <td>{getDateString(row.submissionDate)}</td>
-              <td className="text-right">{row.overallScore.toFixed(2)}%</td>
-              <td>
-                <Chip
-                  size="sm"
-                  variant="soft"
-                  color={row.status === 'completed' ? 'success' : 'warning'}
-                >
-                  {row.status}
-                </Chip>
+          {rankings.length === 0 ? (
+            <tr>
+              <td colSpan={5} className="text-center p-8 text-neutral-400">
+                No public submissions evaluated for v{currentVersion || 'the latest version'} yet.
               </td>
             </tr>
-          ))}
+          ) : (
+            rankings.map((row) => (
+              <tr key={row.id}>
+                <td>{row.name}</td>
+                <td>{row.user.username}</td>
+                <td>{getDateString(row.submissionDate)}</td>
+                <td className="text-right">
+                  {row.overallScore !== null && row.overallScore !== undefined
+                    ? `${Number(row.overallScore).toFixed(2)}%`
+                    : 'N/A'}
+                </td>
+                <td>
+                  <Chip
+                    size="sm"
+                    variant="soft"
+                    color={row.status === 'completed' ? 'success' : 'danger'}
+                  >
+                    {row.status}
+                  </Chip>
+                </td>
+              </tr>
+            ))
+          )}
         </tbody>
       </Table>
       <Box className="p-4 flex justify-center">
