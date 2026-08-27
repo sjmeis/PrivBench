@@ -139,6 +139,7 @@ def get_ranking_filters():
                             "name": module.name,
                             "title": module.title,
                             "version": module.version,
+                            "description": module.description or "No description available.",
                         }
                         for module in modules
                     ],

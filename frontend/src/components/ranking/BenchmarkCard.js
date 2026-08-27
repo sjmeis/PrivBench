@@ -61,7 +61,7 @@ const BenchmarkCard = ({ title, description }) => {
                     }}
                 >
                     <Typography
-                        level="title-sm"
+                        level="title-md"
                         sx={{
                             textAlign: 'center',
                             fontWeight: 'bold',
