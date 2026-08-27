@@ -13,7 +13,6 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
 
-
 import { useState } from 'react';
 import {
     Box,
@@ -62,15 +61,20 @@ const BenchmarkCard = ({ title, description }) => {
                     }}
                 >
                     <Typography
-                        level="h4"
+                        level="title-sm"
                         sx={{
                             textAlign: 'center',
+                            fontWeight: 'bold',
+                            fontSize: '0.85rem',
+                            lineHeight: 1.3,
                             display: '-webkit-box',
-                            WebkitLineClamp: 2,
+                            WebkitLineClamp: 3,
                             WebkitBoxOrient: 'vertical',
                             overflow: 'hidden',
-                            flex: 1
-
+                            textOverflow: 'ellipsis',
+                            wordBreak: 'break-word',
+                            overflowWrap: 'anywhere',
+                            my: 'auto',
                         }}
                     >
                         {title}
