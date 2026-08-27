@@ -21,6 +21,7 @@ from ..models import (
     BenchmarkModule,
     BenchmarkScore,
     SubmissionVersionScore,
+    AppVersion
 )
 from .. import db
 from ..enums import SubmissionStatus, License
@@ -99,40 +100,26 @@ def get_ranking_filters():
 
         # Modules query based on version filter
         if version_filter:
-            print(f"DEBUG: Getting modules for version: {version_filter}")
-
-            # Only get modules from submission_version_score table for this specific version
-            modules = (
-                db.session.query(BenchmarkModule)
-                .join(SubmissionVersionScore.modules)
-                .join(Submission, SubmissionVersionScore.submission_id == Submission.id)
-                .filter(
-                    SubmissionVersionScore.version == version_filter,
-                    BenchmarkModule.is_active == True,
-                    BenchmarkModule.is_deleted == False,
-                    or_(
-                        and_(
-                            Submission.status == SubmissionStatus.COMPLETED,
-                            Submission.is_public == True,
-                        ),
-                        and_(
-                            Submission.status == SubmissionStatus.OUTDATED,
-                            Submission.outdated_at
-                            >= datetime.utcnow() - timedelta(days=3),
-                        ),
-                    ),
+            target_release = AppVersion.query.filter_by(version=version_filter).first()
+            if target_release and target_release.blueprint:
+                module_ids = [item["module_id"] for item in target_release.blueprint]
+                modules = (
+                    db.session.query(BenchmarkModule)
+                    .filter(BenchmarkModule.id.in_(module_ids))
+                    .order_by(BenchmarkModule.name)
+                    .all()
                 )
-                .distinct()
-                .order_by(BenchmarkModule.name)
-                .all()
-            )
-
-            print(f"DEBUG: Found {len(modules)} modules for version {version_filter}")
+            else:
+                modules = (
+                    db.session.query(BenchmarkModule)
+                    .filter(BenchmarkModule.is_active == True, BenchmarkModule.is_deleted == False)
+                    .order_by(BenchmarkModule.name)
+                    .all()
+                )
         else:
-            # Get all active benchmark modules if no version filter
             modules = (
                 db.session.query(BenchmarkModule)
-                .filter(BenchmarkModule.is_active == True)
+                .filter(BenchmarkModule.is_active == True, BenchmarkModule.is_deleted == False)
                 .order_by(BenchmarkModule.name)
                 .all()
             )
@@ -462,11 +449,10 @@ def get_all_filtered():
 
         submissions_with_scores = []
         for submission in all_submissions:
-            display_version = version_filter or submission.version
-            display_score = submission.score
-
-            # If filtering by a version, locate the snapshot score for that exact version
+            display_score = None
+            display_version = None
             matching_snapshot = None
+
             if submission.version_scores:
                 target_ver = version_filter or submission.version
                 matching_snapshot = next(
@@ -477,11 +463,14 @@ def get_all_filtered():
             if matching_snapshot:
                 display_score = matching_snapshot.score
                 display_version = matching_snapshot.version
-            elif version_filter and submission.version == version_filter:
+            elif submission.version == version_filter or not version_filter:
                 display_score = submission.score
                 display_version = submission.version
 
-            # Gather module scores
+            # Strict Filter: omit submission if no valid score exists for requested version
+            if version_filter and display_score is None:
+                continue
+
             score_lookup = {
                 bs.module_id: bs for bs in submission.benchmark_scores if bs.benchmark_module
             }
@@ -490,7 +479,7 @@ def get_all_filtered():
             if module_ids and len(module_ids) > 0:
                 for mid in module_ids:
                     bs = score_lookup.get(mid)
-                    if bs and not bs.benchmark_module.is_deleted:
+                    if bs:
                         module_scores.append({
                             "moduleId": bs.module_id,
                             "moduleName": bs.benchmark_module.name,
@@ -498,21 +487,15 @@ def get_all_filtered():
                             "score": bs.score,
                         })
 
-                # Calculate weighted or average score for filtered modules
                 if module_weights and module_scores:
-                    total_weighted_score = 0
-                    total_weight = 0
-                    for ms in module_scores:
-                        weight = module_weights.get(str(ms["moduleId"]), 1.0)
-                        total_weighted_score += ms["score"] * weight
-                        total_weight += weight
-
+                    total_weighted_score = sum(ms["score"] * module_weights.get(str(ms["moduleId"]), 1.0) for ms in module_scores)
+                    total_weight = sum(module_weights.get(str(ms["moduleId"]), 1.0) for ms in module_scores)
                     if total_weight > 0:
                         display_score = round(total_weighted_score / total_weight, 2)
                 elif module_scores:
                     display_score = round(sum(ms["score"] for ms in module_scores) / len(module_scores), 2)
             else:
-                # Include modules belonging to this specific version snapshot
+                # Include modules recorded in the version snapshot (including historical/archived modules)
                 if matching_snapshot and matching_snapshot.modules:
                     for mod in matching_snapshot.modules:
                         bs = score_lookup.get(mod.id)
@@ -525,7 +508,7 @@ def get_all_filtered():
                             })
                 else:
                     for bs in submission.benchmark_scores:
-                        if bs.benchmark_module and not bs.benchmark_module.is_deleted:
+                        if bs.benchmark_module:
                             module_scores.append({
                                 "moduleId": bs.module_id,
                                 "moduleName": bs.benchmark_module.name,
