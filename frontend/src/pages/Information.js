@@ -14,7 +14,6 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
 
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import {
   Typography,
   Box,
@@ -24,6 +23,12 @@ import {
   Divider,
   Button,
   Tooltip,
+  Select,
+  Option,
+  FormControl,
+  FormLabel,
+  Chip,
+  Stack,
 } from "@mui/joy";
 import StepIndicator from "@mui/joy/StepIndicator";
 import { Add } from "@mui/icons-material";
@@ -31,7 +36,7 @@ import { useNavigate } from "react-router-dom";
 import BenchmarkCard from "../components/ranking/BenchmarkCard";
 import { motion } from "framer-motion";
 import { ModuleService } from "../services/ModuleService";
-import { API_BASE_URL } from '../config';
+import { fetchRankingFilters } from "../services/RankingsService";
 import MainLayout from "../components/layout/MainLayout";
 
 const stepVariants = {
@@ -40,7 +45,7 @@ const stepVariants = {
     opacity: 1,
     y: 0,
     transition: {
-      delay: i * 1,
+      delay: i * 0.3,
       duration: 0.5,
     },
   }),
@@ -49,21 +54,61 @@ const stepVariants = {
 const Information = () => {
   const navigate = useNavigate();
   const [modules, setModules] = useState([]);
+  const [availableVersions, setAvailableVersions] = useState([]);
+  const [selectedVersion, setSelectedVersion] = useState("");
   const [submissionsBlocked, setSubmissionsBlocked] = useState(false);
+  const [loadingModules, setLoadingModules] = useState(false);
 
+  // 1. Fetch available versions on mount and default to newest
   useEffect(() => {
-    const fetchModules = async () => {
+    let isMounted = true;
+    const loadVersionFilters = async () => {
       try {
-        const response = await axios.get(`${API_BASE_URL}/modules`);
-        setModules(response.data);
+        const filterData = await fetchRankingFilters();
+        if (!isMounted) return;
+
+        const versions = filterData.versions || [];
+        setAvailableVersions(versions);
+
+        if (versions.length > 0) {
+          setSelectedVersion(versions[0]);
+        }
       } catch (err) {
-        console.error(err);
+        console.error("Failed to fetch version filters:", err);
       }
     };
 
-    fetchModules();
+    loadVersionFilters();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
+  // 2. Fetch modules whenever selectedVersion changes
+  useEffect(() => {
+    if (!selectedVersion) return;
+
+    let isMounted = true;
+    const fetchModulesForVersion = async () => {
+      try {
+        setLoadingModules(true);
+        const filterData = await fetchRankingFilters(selectedVersion);
+        if (!isMounted) return;
+        setModules(filterData.modules || []);
+      } catch (err) {
+        console.error("Failed to load modules for version:", err);
+      } finally {
+        if (isMounted) setLoadingModules(false);
+      }
+    };
+
+    fetchModulesForVersion();
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedVersion]);
+
+  // 3. Check for pending updates
   useEffect(() => {
     let ignore = false;
     (async () => {
@@ -109,109 +154,158 @@ const Information = () => {
 
   return (
     <MainLayout>
-    <Box sx={{ 
-        px: { xs: 2, md: 4 }, 
-        py: 4, 
-        width: '100%', 
-        boxSizing: 'border-box',
-        display: 'flex',
-        justifyContent: 'center' 
-      }}>
-      <Grid container spacing={3}>
-        <Grid sx={{ height: "auto" }} item xs={4}>
-          <Box>
-            <Typography sx={{ marginBottom: 3 }} level="h3">
-              Submission Process
-            </Typography>
-            <Stepper
-              orientation="vertical"
-              sx={{ "--Stepper-verticalGap": "2rem" }}
-            >
-              {steps.map((step, index) => (
-                <motion.div
-                  key={index}
-                  custom={index}
-                  initial="hidden"
-                  animate="visible"
-                  variants={stepVariants}
-                >
-                  <Step
-                    active
-                    indicator={
-                      <StepIndicator variant="soft" color="success">
-                        {index + 1}
-                      </StepIndicator>
-                    }
+      <Box
+        sx={{
+          px: { xs: 2, md: 4 },
+          py: 4,
+          width: "100%",
+          boxSizing: "border-box",
+          display: "flex",
+          justifyContent: "center",
+        }}
+      >
+        <Grid container spacing={3}>
+          {/* Submission Process Steps */}
+          <Grid sx={{ height: "auto" }} item xs={12} md={4}>
+            <Box>
+              <Typography sx={{ marginBottom: 3 }} level="h3">
+                Submission Process
+              </Typography>
+              <Stepper
+                orientation="vertical"
+                sx={{ "--Stepper-verticalGap": "2rem" }}
+              >
+                {steps.map((step, index) => (
+                  <motion.div
+                    key={index}
+                    custom={index}
+                    initial="hidden"
+                    animate="visible"
+                    variants={stepVariants}
                   >
-                    <Typography level="body1" sx={{ fontWeight: "bold" }}>
-                      {step.title}
-                    </Typography>
-                    <Typography level="body2">{step.description}</Typography>
-                  </Step>
-                </motion.div>
-              ))}
-            </Stepper>
-          </Box>
-        </Grid>
-        <Divider sx={{ margin: 2, height: "auto" }} orientation="vertical" />
-        <Grid item sx={{ height: "auto" }} xs={7}>
-          <Box sx={{ height: "90%" }}>
-            <Typography level="h3" sx={{ marginBottom: 2 }}>
-              Privatization Benchmarking Modules
-            </Typography>
-            <Grid container spacing={2}>
-              {modules.map((module) => (
-                <Grid
-                  sx={{ maxHeight: "200px", maxWidth: "200px" }}
-                  key={module.id}
-                  item
-                  xs={3}
-                >
-                  <BenchmarkCard
-                    title={module.title}
-                    description={
-                      module.description || "No description available."
-                    }
-                  />
+                    <Step
+                      active
+                      indicator={
+                        <StepIndicator variant="soft" color="success">
+                          {index + 1}
+                        </StepIndicator>
+                      }
+                    >
+                      <Typography level="title-sm" sx={{ fontWeight: "bold" }}>
+                        {step.title}
+                      </Typography>
+                      <Typography level="body-sm">{step.description}</Typography>
+                    </Step>
+                  </motion.div>
+                ))}
+              </Stepper>
+            </Box>
+          </Grid>
+
+          <Divider sx={{ margin: 2, display: { xs: "none", md: "block" } }} orientation="vertical" />
+
+          {/* Benchmark Modules & Version Selection */}
+          <Grid item sx={{ height: "auto" }} xs={12} md={7}>
+            <Box sx={{ height: "90%" }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: 1.5,
+                  marginBottom: 2,
+                }}
+              >
+                <Stack direction="row" spacing={1.5} alignItems="center">
+                  <Typography level="h3">
+                    Benchmarking Modules
+                  </Typography>
+                  <Chip color="primary" variant="soft" size="sm">
+                    {modules.length} {modules.length === 1 ? "module" : "modules"}
+                  </Chip>
+                </Stack>
+
+                {availableVersions.length > 0 && (
+                  <FormControl size="sm" sx={{ minWidth: "150px" }}>
+                    <FormLabel sx={{ fontSize: "11px" }}>Protocol Release</FormLabel>
+                    <Select
+                      size="sm"
+                      value={selectedVersion}
+                      onChange={(event, newValue) => setSelectedVersion(newValue || "")}
+                    >
+                      {availableVersions.map((ver) => (
+                        <Option key={ver} value={ver}>
+                          v{ver}
+                        </Option>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )}
+              </Box>
+
+              {loadingModules ? (
+                <Typography level="body-sm" color="neutral" sx={{ py: 4 }}>
+                  Loading modules for v{selectedVersion}...
+                </Typography>
+              ) : (
+                <Grid container spacing={2}>
+                  {modules.map((module) => (
+                    <Grid
+                      sx={{ maxHeight: "200px", maxWidth: "200px" }}
+                      key={module.id}
+                      item
+                      xs={6}
+                      sm={4}
+                      md={3}
+                    >
+                      <BenchmarkCard
+                        title={module.title || module.name}
+                        description={
+                          module.description || "No description available."
+                        }
+                      />
+                    </Grid>
+                  ))}
                 </Grid>
-              ))}
-            </Grid>
-          </Box>
-          <Box
-            sx={{
-              marginTop: 1,
-              marginBottom: 1,
-              display: "flex",
-              justifyContent: "flex-end",
-            }}
-          >
-            <Tooltip
-              title={
-                submissionsBlocked
-                  ? "Submissions are disabled until admin publishes pending module updates."
-                  : ""
-              }
-              variant="outlined"
-              arrow
-              placement="top"
-              disableHoverListener={!submissionsBlocked}
+              )}
+            </Box>
+
+            <Box
+              sx={{
+                marginTop: 3,
+                marginBottom: 1,
+                display: "flex",
+                justifyContent: "flex-end",
+              }}
             >
-              <span>
-                <Button
-                  sx={{ width: "250px" }}
-                  variant="soft"
-                  onClick={() => navigate("/upload")}
-                  color="success"
-                  startDecorator={<Add />}
-                  disabled={submissionsBlocked}
-                >
-                  Try Out
-                </Button>
-              </span>
-            </Tooltip>
-          </Box>
+              <Tooltip
+                title={
+                  submissionsBlocked
+                    ? "Submissions are disabled until admin publishes pending module updates."
+                    : ""
+                }
+                variant="outlined"
+                arrow
+                placement="top"
+                disableHoverListener={!submissionsBlocked}
+              >
+                <span>
+                  <Button
+                    sx={{ width: "250px" }}
+                    variant="soft"
+                    onClick={() => navigate("/upload")}
+                    color="success"
+                    startDecorator={<Add />}
+                    disabled={submissionsBlocked}
+                  >
+                    Try Out
+                  </Button>
+                </span>
+              </Tooltip>
+            </Box>
+          </Grid>
         </Grid>
-      </Grid>
       </Box>
     </MainLayout>
   );
