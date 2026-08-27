@@ -27,7 +27,7 @@ const RankingsPreview = () => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  uuseEffect(() => {
+  useEffect(() => {
     let isMounted = true;
 
     const loadTopRankings = async () => {
