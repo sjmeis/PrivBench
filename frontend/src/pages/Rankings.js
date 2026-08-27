@@ -122,15 +122,18 @@ const Rankings = () => {
 
   // Load filter options on component mount
   useEffect(() => {
+    let isMounted = true;
     const loadFilters = async () => {
       try {
         const filterData = await fetchRankingFilters();
+        if (!isMounted) return;
+
         const versions = filterData.versions || [];
         setAvailableVersions(versions);
         setAvailableModules(filterData.modules || []);
         setFilteredModules(filterData.modules || []);
 
-        // Default to the first (most current) version
+        // Default to the latest (first) version immediately
         if (versions.length > 0) {
           setSelectedVersion(versions[0]);
         }
@@ -140,6 +143,9 @@ const Rankings = () => {
     };
 
     loadFilters();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Update selected modules when version changes
@@ -189,19 +195,19 @@ const Rankings = () => {
   }, [selectedModules]);
 
   useEffect(() => {
+    // Prevent unversioned query on mount if versions are still loading
+    if (availableVersions.length > 0 && !selectedVersion) {
+      return;
+    }
+
+    if (selectedModules.length >= 2 && validWeights === "invalid") {
+      return;
+    }
+
     const loadRankings = async () => {
-      if (availableVersions.length > 0 && !selectedVersion) {
-        return;
-      }
-
-      if (selectedModules.length >= 2 && validWeights === "invalid") {
-        return; 
-      }
-
       try {
-        setIsLoading(true)
+        setIsLoading(true);
         const moduleIds = selectedModules.map((module) => module.id);
-
         const weightsToSend =
           validWeights === "invalid" ? {} : JSON.parse(validWeights);
 
@@ -221,8 +227,8 @@ const Rankings = () => {
       } catch (error) {
         console.error("Failed to load rankings:", error);
       } finally {
-            setIsLoading(false);
-        }
+        setIsLoading(false);
+      }
     };
 
     loadRankings();
@@ -235,7 +241,7 @@ const Rankings = () => {
     selectedVersion,
     selectedModules,
     validWeights,
-    availableVersions.length
+    availableVersions.length,
   ]);
 
   useLayoutEffect(() => {
@@ -341,8 +347,8 @@ const Rankings = () => {
   };
 
   const onViewClick = (row) => {
-    const versionToView = selectedVersion || row.version;
-    navigate(`/rankings/detail/${row.id}?version=${versionToView}`);
+    const versionParam = selectedVersion || row.version;
+    navigate(`/rankings/detail/${row.id}?version=${encodeURIComponent(versionParam)}`);
   };
 
   const onNextPageClick = () => {
