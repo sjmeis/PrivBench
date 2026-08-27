@@ -243,16 +243,95 @@ def get_user_submissions():
         submissions = (
             db.session.query(Submission)
             .filter(Submission.user_id == current_user_id)
-            .join(User)
-            .join(SubmissionMetadata, isouter=True)
-            .join(BenchmarkScore, isouter=True)
-            .join(BenchmarkModule, BenchmarkScore.benchmark_module, isouter=True)
+            .options(
+                joinedload(Submission.user),
+                joinedload(Submission.submission_metadata),
+                joinedload(Submission.version_scores).joinedload(SubmissionVersionScore.modules),
+                joinedload(Submission.benchmark_scores).joinedload(BenchmarkScore.benchmark_module)
+            )
             .order_by(Submission.submission_date.desc())
             .all()
         )
 
         submissions_data = []
         for submission in submissions:
+            # Score lookup by module_id
+            score_map = {
+                bs.module_id: {
+                    "score": bs.score,
+                    "created_at": bs.created_at.isoformat() if bs.created_at else None,
+                    "module": bs.benchmark_module
+                }
+                for bs in submission.benchmark_scores
+                if bs.benchmark_module is not None
+            }
+
+            version_scores_list = []
+            if submission.version_scores:
+                for version_score in submission.version_scores:
+                    version_modules = []
+                    for module in version_score.modules:
+                        entry = score_map.get(module.id)
+                        version_modules.append({
+                            "id": module.id,
+                            "module_id": module.id,
+                            "name": module.name,
+                            "title": module.title,
+                            "version": module.version,
+                            "score": entry["score"] if entry else None,
+                            "createdAt": entry["created_at"] if entry else None,
+                            "benchmarkModule": {
+                                "id": module.id,
+                                "name": module.name,
+                                "title": module.title,
+                                "version": module.version,
+                                "isActive": module.is_active,
+                                "createdAt": module.created_at.isoformat() if module.created_at else None,
+                            }
+                        })
+
+                    version_scores_list.append({
+                        "version": version_score.version,
+                        "score": version_score.score,
+                        "created_at": version_score.created_at.isoformat() if version_score.created_at else None,
+                        "modules": version_modules,
+                    })
+
+            # Fallback if no version snapshots exist yet
+            if not version_scores_list:
+                all_current_modules = []
+                for bs in submission.benchmark_scores:
+                    if not bs.benchmark_module:
+                        continue
+                    all_current_modules.append({
+                        "id": bs.benchmark_module.id,
+                        "module_id": bs.benchmark_module.id,
+                        "name": bs.benchmark_module.name,
+                        "title": bs.benchmark_module.title,
+                        "score": bs.score,
+                        "createdAt": bs.created_at.isoformat() if bs.created_at else None,
+                        "benchmarkModule": {
+                            "id": bs.benchmark_module.id,
+                            "name": bs.benchmark_module.name,
+                            "title": bs.benchmark_module.title,
+                            "version": bs.benchmark_module.version,
+                            "isActive": bs.benchmark_module.is_active,
+                            "createdAt": bs.benchmark_module.created_at.isoformat() if bs.benchmark_module.created_at else None,
+                        }
+                    })
+
+                version_scores_list.append({
+                    "version": submission.version,
+                    "score": submission.score,
+                    "created_at": submission.submission_date.isoformat(),
+                    "modules": all_current_modules,
+                })
+
+            # Sort version list descending (e.g. 1.1.0 before 1.0.0)
+            sorted_version_scores = sorted(
+                version_scores_list, key=lambda x: x["version"], reverse=True
+            )
+
             submission_detail = {
                 "id": submission.id,
                 "name": submission.name,
@@ -260,8 +339,18 @@ def get_user_submissions():
                 "status": submission.status.value,
                 "isPublic": submission.is_public,
                 "overallScore": submission.score,
+                "score": submission.score,
                 "version": submission.version,
-                "metadata": None,
+                "metadata": {
+                    "modelName": submission.submission_metadata.model_name,
+                    "modelDescription": submission.submission_metadata.model_description,
+                    "license": str(submission.submission_metadata.license),
+                    "tags": submission.submission_metadata.tags,
+                    "authors": submission.submission_metadata.authors,
+                    "researchPaperUrl": submission.submission_metadata.research_paper_url,
+                    "githubUrl": submission.submission_metadata.github_url,
+                    "bibtexCitation": submission.submission_metadata.bibtex_citation,
+                } if submission.submission_metadata else None,
                 "user": {
                     "id": submission.user.id,
                     "username": submission.user.username,
@@ -271,23 +360,8 @@ def get_user_submissions():
                     "profilePicturePath": submission.user.profile_picture_path,
                     "bio": submission.user.bio
                 },
-                "benchmarkScores": [],
-            }
-
-            if submission.submission_metadata:
-                submission_detail["metadata"] = {
-                    "modelName": submission.submission_metadata.model_name,
-                    "modelDescription": submission.submission_metadata.model_description,
-                    "license": str(submission.submission_metadata.license),
-                    "tags": submission.submission_metadata.tags,
-                    "authors": submission.submission_metadata.authors,
-                    "researchPaperUrl": submission.submission_metadata.research_paper_url,
-                    "githubUrl": submission.submission_metadata.github_url,
-                    "bibtexCitation": submission.submission_metadata.bibtex_citation,
-                }
-
-            if submission.benchmark_scores:
-                submission_detail["benchmarkScores"] = [
+                "version_scores": sorted_version_scores,
+                "benchmarkScores": [
                     {
                         "id": score.id,
                         "score": score.score,
@@ -302,251 +376,162 @@ def get_user_submissions():
                         },
                     }
                     for score in submission.benchmark_scores
-                ]
-
-            version_scores_list = []
-
-            # Process submission_version_scores if they exist
-            if submission.version_scores:
-                for version_score in submission.version_scores:
-                    # Filter to only significant versions (x.y.0)
-                    parsed = parse_version(version_score.version)
-                    if not parsed or parsed[2] != 0:
-                        continue
-
-                    # Get modules for this version and find their scores
-                    version_modules = []
-                    for module in version_score.modules:
-                        # Find the corresponding score from benchmark_scores for this module
-                        matching_score = None
-                        for score in submission.benchmark_scores:
-                            if score.benchmark_module.id == module.id:
-                                matching_score = score
-                                break
-
-                        if matching_score:
-                            version_modules.append(
-                                {
-                                    "benchmarkModule": {
-                                        "id": module.id,
-                                        "name": module.name,
-                                        "title": module.title,
-                                        "version": module.version,
-                                        "isActive": module.is_active,
-                                        "createdAt": module.created_at.isoformat(),
-                                    },
-                                    "score": matching_score.score,
-                                    "createdAt": matching_score.created_at.isoformat(),
-                                }
-                            )
-
-                    version_scores_list.append(
-                        {
-                            "version": version_score.version,
-                            "score": version_score.score,
-                            "created_at": version_score.created_at.isoformat(),
-                            "modules": version_modules,
-                        }
-                    )
-
-            # If no significant version_scores exist, check if current version is significant
-            if not version_scores_list:
-                parsed = parse_version(submission.version)
-                if parsed and parsed[2] == 0:
-                    version_scores_list.append(
-                        {
-                            "version": submission.version,
-                            "score": submission.score,
-                            "created_at": submission.submission_date.isoformat(),
-                            "modules": [
-                                {
-                                    "benchmarkModule": {
-                                        "id": score.benchmark_module.id,
-                                        "name": score.benchmark_module.name,
-                                        "title": score.benchmark_module.title,
-                                        "version": score.benchmark_module.version,
-                                        "isActive": score.benchmark_module.is_active,
-                                        "createdAt": score.benchmark_module.created_at.isoformat(),
-                                    },
-                                    "score": score.score,
-                                    "createdAt": score.created_at.isoformat(),
-                                }
-                                for score in submission.benchmark_scores
-                            ],
-                        }
-                    )
-
-            # Sort by version
-            submission_detail["version_scores"] = sorted(
-                version_scores_list, key=lambda x: x["version"], reverse=True
-            )
+                    if score.benchmark_module is not None
+                ],
+            }
 
             submissions_data.append(submission_detail)
 
-        return jsonify({"submissions": submissions_data, "remaining": remaining, "limit": user.daily_submission_limit}), 200
+        return jsonify({
+            "submissions": submissions_data, 
+            "remaining": remaining, 
+            "limit": user.daily_submission_limit
+        }), 200
 
     except Exception as e:
         return jsonify({"message": "Internal server error", "error": str(e)}), 500
 
-
 @ranking_bp.route("/ranking", methods=["POST"])
 def get_all_filtered():
     try:
-        data = request.get_json()
+        data = request.get_json() or {}
         search_term = data.get("searchTerm", "").strip()
         page = data.get("page", 1)
         limit = data.get("limit", 8)
         sort_by = data.get("sortBy", "score")
         sort_order = data.get("sortOrder", "desc")
         version_filter = data.get("version", None)
-        module_ids = data.get("moduleIds", [])  # List of module IDs to filter by
+        module_ids = data.get("moduleIds", [])
         module_weights = data.get("moduleWeights", {})
 
-        # Base query
+        # Base query for public submissions
         query = (
             db.session.query(Submission).join(User)
-            .options(joinedload(Submission.user), joinedload(Submission.version_scores), joinedload(Submission.benchmark_scores).joinedload(BenchmarkScore.benchmark_module))
+            .options(
+                joinedload(Submission.user),
+                joinedload(Submission.version_scores).joinedload(SubmissionVersionScore.modules),
+                joinedload(Submission.benchmark_scores).joinedload(BenchmarkScore.benchmark_module)
+            )
             .filter(
                 or_(
                     and_(
                         Submission.status == SubmissionStatus.COMPLETED,
-                        Submission.is_public == True,  # Ensure submission is public
+                        Submission.is_public == True,
                     ),
                     and_(
                         Submission.status == SubmissionStatus.OUTDATED,
-                        Submission.outdated_at
-                        >= datetime.utcnow()
-                        - timedelta(days=3),  # Check if outdated within last 3 days
+                        Submission.outdated_at >= datetime.utcnow() - timedelta(days=3),
                     ),
                 )
             )
         )
 
-        # Version filtering
+        # 1. Version filtering (match current version OR historical snapshot)
         if version_filter:
-            version_condition = or_(
-                Submission.version == version_filter,
-                Submission.version_scores.any(
-                    SubmissionVersionScore.version == version_filter
-                ),
+            query = query.filter(
+                or_(
+                    Submission.version == version_filter,
+                    Submission.version_scores.any(SubmissionVersionScore.version == version_filter)
+                )
             )
-            query = query.filter(version_condition)
 
-        # Module filtering
+        # 2. Module filtering
         if module_ids and len(module_ids) > 0:
-            # Convert to integers if they're strings
             module_ids = [int(mid) for mid in module_ids]
-            print(f"Filtering by module IDs: {module_ids}")  # Debug log
-
-            # Filter submissions that have scores for all specified modules
             submission_ids_with_modules = (
                 db.session.query(BenchmarkScore.submission_id)
                 .filter(BenchmarkScore.module_id.in_(module_ids))
                 .group_by(BenchmarkScore.submission_id)
-                .having(
-                    db.func.count(db.distinct(BenchmarkScore.module_id))
-                    == len(module_ids)
-                )
+                .having(db.func.count(db.distinct(BenchmarkScore.module_id)) == len(module_ids))
                 .subquery()
             )
-
             query = query.filter(Submission.id.in_(submission_ids_with_modules))
 
-        # Search filter
+        # 3. Search filter
         if search_term:
-            search_term = f"%{search_term}%"
+            search_pattern = f"%{search_term}%"
             query = query.filter(
                 or_(
-                    Submission.name.ilike(search_term),
-                    User.username.ilike(search_term),
-                    User.research_institute.ilike(search_term)
+                    Submission.name.ilike(search_pattern),
+                    User.username.ilike(search_pattern),
+                    User.research_institute.ilike(search_pattern)
                 )
             )
 
-        # Get all results before sorting (we need to calculate weighted scores)
         all_submissions = query.all()
 
-        # Calculate weighted scores if weights are provided
         submissions_with_scores = []
         for submission in all_submissions:
             display_version = version_filter or submission.version
             display_score = submission.score
 
-            if version_filter and version_filter != submission.version:
-                version_score = next(
-                    (vs for vs in submission.version_scores if vs.version == version_filter),
-                    None,
+            # If filtering by a version, locate the snapshot score for that exact version
+            matching_snapshot = None
+            if submission.version_scores:
+                target_ver = version_filter or submission.version
+                matching_snapshot = next(
+                    (vs for vs in submission.version_scores if vs.version == target_ver),
+                    None
                 )
-                if version_score:
-                    display_score = version_score.score
 
-            # Get module-specific scores
+            if matching_snapshot:
+                display_score = matching_snapshot.score
+                display_version = matching_snapshot.version
+            elif version_filter and submission.version == version_filter:
+                display_score = submission.score
+                display_version = submission.version
+
+            # Gather module scores
+            score_lookup = {
+                bs.module_id: bs for bs in submission.benchmark_scores if bs.benchmark_module
+            }
+
             module_scores = []
             if module_ids and len(module_ids) > 0:
-                filtered_scores = (
-                    db.session.query(BenchmarkScore)
-                    .join(BenchmarkModule)
-                    .filter(
-                        BenchmarkScore.submission_id == submission.id,
-                        BenchmarkScore.module_id.in_(module_ids),
-                    )
-                    .all()
-                )
+                for mid in module_ids:
+                    bs = score_lookup.get(mid)
+                    if bs and not bs.benchmark_module.is_deleted:
+                        module_scores.append({
+                            "moduleId": bs.module_id,
+                            "moduleName": bs.benchmark_module.name,
+                            "moduleVersion": bs.benchmark_module.version,
+                            "score": bs.score,
+                        })
 
-                module_scores = [
-                    {
-                        "moduleId": score.module_id,
-                        "moduleName": score.benchmark_module.name,
-                        "moduleVersion": score.benchmark_module.version,
-                        "score": score.score,
-                    }
-                    for score in filtered_scores
-                ]
-
-                # Calculate weighted score if weights are provided
+                # Calculate weighted or average score for filtered modules
                 if module_weights and module_scores:
                     total_weighted_score = 0
                     total_weight = 0
-
-                    for module_score in module_scores:
-                        module_id = str(module_score["moduleId"])
-                        weight = module_weights.get(
-                            module_id, 1.0
-                        )  # Default weight of 1.0
-                        total_weighted_score += module_score["score"] * weight
+                    for ms in module_scores:
+                        weight = module_weights.get(str(ms["moduleId"]), 1.0)
+                        total_weighted_score += ms["score"] * weight
                         total_weight += weight
 
                     if total_weight > 0:
-                        display_score = total_weighted_score / total_weight
-                        print(
-                            f"Calculated weighted score for submission {submission.id}: {display_score}"
-                        )
+                        display_score = round(total_weighted_score / total_weight, 2)
                 elif module_scores:
-                    # Calculate simple average if no weights provided
-                    display_score = sum(ms["score"] for ms in module_scores) / len(
-                        module_scores
-                    )
+                    display_score = round(sum(ms["score"] for ms in module_scores) / len(module_scores), 2)
             else:
-                # When not filtering by modules, show ALL module scores
-                all_scores = (
-                    db.session.query(BenchmarkScore)
-                    .join(BenchmarkModule)
-                    .filter(
-                        BenchmarkScore.submission_id == submission.id,
-                        BenchmarkModule.is_deleted == False
-                    )
-                    .all()
-                )
-
-                module_scores = [
-                    {
-                        "moduleId": score.module_id,
-                        "moduleName": score.benchmark_module.name,
-                        "moduleVersion": score.benchmark_module.version,
-                        "score": score.score,
-                    }
-                    for score in all_scores
-                ]
+                # Include modules belonging to this specific version snapshot
+                if matching_snapshot and matching_snapshot.modules:
+                    for mod in matching_snapshot.modules:
+                        bs = score_lookup.get(mod.id)
+                        if bs:
+                            module_scores.append({
+                                "moduleId": mod.id,
+                                "moduleName": mod.name,
+                                "moduleVersion": mod.version,
+                                "score": bs.score,
+                            })
+                else:
+                    for bs in submission.benchmark_scores:
+                        if bs.benchmark_module and not bs.benchmark_module.is_deleted:
+                            module_scores.append({
+                                "moduleId": bs.module_id,
+                                "moduleName": bs.benchmark_module.name,
+                                "moduleVersion": bs.benchmark_module.version,
+                                "score": bs.score,
+                            })
 
             submission_data = {
                 "id": submission.id,
@@ -567,43 +552,34 @@ def get_all_filtered():
                     "bio": submission.user.bio
                 },
             }
-
             submissions_with_scores.append(submission_data)
 
-        # Sort by the calculated scores
+        # Sort results
         sort_key_map = {
-            "score": lambda x: x["overallScore"],
-            "name": lambda x: x["name"],
+            "score": lambda x: (x["overallScore"] is not None, x["overallScore"]),
+            "name": lambda x: x["name"].lower() if x["name"] else "",
             "submissionDate": lambda x: x["submissionDate"],
-            "username": lambda x: x["user"]["username"],
+            "username": lambda x: x["user"]["username"].lower() if x["user"]["username"] else "",
         }
 
-        sort_key = sort_key_map.get(sort_by, lambda x: x["overallScore"])
+        sort_key = sort_key_map.get(sort_by, sort_key_map["score"])
         reverse_order = sort_order == "desc"
-
-        sorted_submissions = sorted(
-            submissions_with_scores, key=sort_key, reverse=reverse_order
-        )
+        sorted_submissions = sorted(submissions_with_scores, key=sort_key, reverse=reverse_order)
 
         total = len(sorted_submissions)
-
-        # Pagination
         offset = (page - 1) * limit
         paginated_results = sorted_submissions[offset : offset + limit]
         total_pages = (total + limit - 1) // limit if total > 0 else 1
 
-        response = {
+        return jsonify({
             "results": paginated_results,
             "totalEntries": total,
-            #"totalPages": (total + limit - 1) // limit,
             "totalPages": total_pages,
             "currentPage": page,
-        }
-        return jsonify(response), 200
+        }), 200
 
     except Exception as e:
         return jsonify({"message": "Internal server error", "error": str(e)}), 500
-
 
 @ranking_bp.route("/ranking/detail", methods=["POST"])
 @jwt_required(optional=True)
@@ -706,7 +682,6 @@ def get_submission_detail():
 
     except Exception as e:
         return jsonify({"message": "Internal server error", "error": str(e)}), 500
-
 
 @ranking_bp.route("/ranking/detail", methods=["PUT"])
 @jwt_required()

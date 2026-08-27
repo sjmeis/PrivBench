@@ -103,16 +103,19 @@ const UserSubmissionsTableRow = ({
   useEffect(() => {
     const versions = getAvailableVersions();
     if (versions.length > 0) {
-      // Find matching current version or default to the highest version
       const active = versions.find((v) => v.version === row.version) || versions[0];
       setSelectedVersion(active);
-      setDisplayedModules(getModulesForVersion(active));
+      setDisplayedModules(active.modules || row.benchmarkScores || []);
     }
   }, [row]);
 
   const handleVersionChange = (versionData) => {
     setSelectedVersion(versionData);
-    setDisplayedModules(getModulesForVersion(versionData));
+    if (versionData.modules && versionData.modules.length > 0) {
+      setDisplayedModules(versionData.modules);
+    } else {
+      setDisplayedModules(row.benchmarkScores || []);
+    }
   };
 
   const availableVersions = getAvailableVersions();
