@@ -34,8 +34,9 @@ import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import Link from "@mui/joy/Link";
 import HomeRoundedIcon from "@mui/icons-material/HomeRounded";
 import Typography from "@mui/joy/Typography";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import React, { useEffect, useState, useMemo } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { fetchSubmissionDetails } from "../services/RankingsService";
 import LoadingSpinner from "../components/shared/LoadingSpinner";
 import ModelCard from "../components/ranking/ModelCard";
@@ -56,6 +57,8 @@ const RankingDetailView = () => {
 
   const [searchParams, setSearchParams] = useSearchParams();
   const versionParam = searchParams.get("version");
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (id) {
@@ -118,52 +121,58 @@ const RankingDetailView = () => {
         ) : submission ? (
           <>
             <Box
-              sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                paddingBottom: "16px",
-              }}
-            >
-              <Breadcrumbs
-                size="sm"
-                aria-label="breadcrumbs"
-                separator={<ChevronRightRoundedIcon fontSize="sm" />}
-                sx={{ pl: 0 }}
-              >
-                <Link
-                  underline="none"
-                  color="neutral"
-                  href="/"
-                  aria-label="Home"
+                sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    paddingBottom: "16px",
+                    flexWrap: "wrap",
+                    gap: 1.5,
+                }}
                 >
-                  <HomeRoundedIcon />
-                </Link>
-                <Link
-                  underline="hover"
-                  color="neutral"
-                  href="/rankings"
-                  sx={{ fontSize: 12, fontWeight: 500 }}
+                <Stack direction="row" spacing={1.5} alignItems="center">
+                    <Button
+                    size="sm"
+                    variant="plain"
+                    color="neutral"
+                    startDecorator={<ArrowBackIcon />}
+                    onClick={() => navigate("/rankings")}
+                    >
+                    Back
+                    </Button>
+                    <Breadcrumbs
+                    size="sm"
+                    aria-label="breadcrumbs"
+                    separator={<ChevronRightRoundedIcon fontSize="sm" />}
+                    sx={{ pl: 0 }}
+                    >
+                    <Link underline="none" color="neutral" href="/" aria-label="Home">
+                        <HomeRoundedIcon />
+                    </Link>
+                    <Link
+                        underline="hover"
+                        color="neutral"
+                        href="/rankings"
+                        sx={{ fontSize: 12, fontWeight: 500 }}
+                    >
+                        Ranking
+                    </Link>
+                    <Typography color="primary" sx={{ fontWeight: 500, fontSize: 12 }}>
+                        Detailed View
+                    </Typography>
+                    </Breadcrumbs>
+                </Stack>
+
+                <Button
+                    size="sm"
+                    variant="outlined"
+                    color="neutral"
+                    startDecorator={copied ? <CheckIcon /> : <ContentCopyIcon />}
+                    onClick={handleShare}
+                    sx={{ borderRadius: "xl" }}
                 >
-                  Ranking
-                </Link>
-                <Typography
-                  color="primary"
-                  sx={{ fontWeight: 500, fontSize: 12 }}
-                >
-                  Detailed View
-                </Typography>
-              </Breadcrumbs>
-              <Button
-                size="sm"
-                variant="outlined"
-                color="neutral"
-                startDecorator={copied ? <CheckIcon /> : <ContentCopyIcon />}
-                onClick={handleShare}
-                sx={{ borderRadius: "xl" }}
-              >
-                {copied ? "Link Copied!" : "Share Results?"}
-              </Button>
+                    {copied ? "Link Copied!" : "Share Results?"}
+                </Button>
             </Box>
 
             {/* Version Indicator Banner */}
@@ -185,10 +194,10 @@ const RankingDetailView = () => {
                 <InfoOutlinedIcon color="primary" />
                 <Box>
                   <Typography level="title-sm" fontWeight="bold">
-                    Viewing Benchmark Protocol Snapshot: v{submission.version}
+                    Viewing Results for PrivBench v{submission.version}
                   </Typography>
                   <Typography level="body-xs" color="text.secondary">
-                    Scores and modules reflect the active benchmark suite for release v{submission.version}.
+                    Scores and modules reflect the benchmark suite for this release.
                   </Typography>
                 </Box>
               </Stack>

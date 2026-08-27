@@ -83,28 +83,40 @@ const getDynamicRowPerPageCount = () => {
   //return Math.floor(availableHeight / rowHeight);
 };
 
+const CACHE_KEY = "privbench_ranking_filters";
+
 const Rankings = () => {
+  const cachedState = useMemo(() => {
+    try {
+      const raw = sessionStorage.getItem(CACHE_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  }, []);
+
   const [rankings, setRankings] = useState([]);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(cachedState.page || 1);
   const [totalPages, setTotalPages] = useState(1);
-  const [order, setOrder] = useState("desc");
-  const [orderBy, setOrderBy] = useState("score");
+  const [order, setOrder] = useState(cachedState.order || "desc");
+  const [orderBy, setOrderBy] = useState(cachedState.orderBy || "score");
   const [rowsPerPage, setRowsPerPage] = useState(getDynamicRowPerPageCount);
-  const [searchValue, setSearchValue] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchValue, setSearchValue] = useState(cachedState.search || "");
+  const [searchTerm, setSearchTerm] = useState(cachedState.search || "");
   const [availableVersions, setAvailableVersions] = useState([]);
   const [availableModules, setAvailableModules] = useState([]);
-  const [selectedModules, setSelectedModules] = useState([]);
+  const [selectedModules, setSelectedModules] = useState(cachedState.modules || []);
   const [filteredModules, setFilteredModules] = useState([]);
-  const [selectedVersion, setSelectedVersion] = useState("");
-  const [moduleWeights, setModuleWeights] = useState({});
-  const [showFilters, setShowFilters] = useState(false);
+  const [selectedVersion, setSelectedVersion] = useState(cachedState.version || "");
+  const [moduleWeights, setModuleWeights] = useState(cachedState.weights || {});
+  const [showFilters, setShowFilters] = useState(Boolean(cachedState.showFilters));
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const timerRef = useRef(null);
   const navigate = useNavigate();
   const { user } = useAuth();
 
   const [isLoading, setIsLoading] = useState(false);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
   const validWeights = useMemo(() => {
     const total = Object.values(moduleWeights).reduce(
@@ -120,6 +132,38 @@ const Rankings = () => {
     return "invalid"; // Always return the same string when invalid
   }, [moduleWeights]);
 
+  // Persist filter state into sessionStorage whenever values change
+  useEffect(() => {
+    if (!initialLoadComplete) return;
+    try {
+      sessionStorage.setItem(
+        CACHE_KEY,
+        JSON.stringify({
+          version: selectedVersion,
+          modules: selectedModules,
+          weights: moduleWeights,
+          search: searchTerm,
+          page: currentPage,
+          order,
+          orderBy,
+          showFilters,
+        })
+      );
+    } catch (e) {
+      console.warn("Failed to cache filters:", e);
+    }
+  }, [
+    selectedVersion,
+    selectedModules,
+    moduleWeights,
+    searchTerm,
+    currentPage,
+    order,
+    orderBy,
+    showFilters,
+    initialLoadComplete,
+  ]);
+
   // Load filter options on component mount
   useEffect(() => {
     let isMounted = true;
@@ -133,12 +177,13 @@ const Rankings = () => {
         setAvailableModules(filterData.modules || []);
         setFilteredModules(filterData.modules || []);
 
-        // Default to the latest (first) version immediately
-        if (versions.length > 0) {
-          setSelectedVersion(versions[0]);
-        }
+        // Default to cached version or latest available version
+        const targetVersion = cachedState.version || versions[0] || "";
+        setSelectedVersion(targetVersion);
+        setInitialLoadComplete(true);
       } catch (error) {
         console.error("Failed to load filter options:", error);
+        setInitialLoadComplete(true);
       }
     };
 
@@ -150,14 +195,14 @@ const Rankings = () => {
 
   // Update selected modules when version changes
   useEffect(() => {
+    if (!selectedVersion) return;
     const loadModulesForVersion = async () => {
       try {
         const filterData = await fetchRankingFilters(selectedVersion);
-        setFilteredModules(filterData.modules);
+        setFilteredModules(filterData.modules || []);
 
-        // Clean up selected modules that don't exist in the new version
         if (selectedModules.length > 0) {
-          const availableModuleIds = filterData.modules.map((m) => m.id);
+          const availableModuleIds = (filterData.modules || []).map((m) => m.id);
           const validSelectedModules = selectedModules.filter((module) =>
             availableModuleIds.includes(module.id)
           );
@@ -176,33 +221,8 @@ const Rankings = () => {
 
   // Effect to initialize weights when modules change
   useEffect(() => {
-    if (selectedModules.length >= 2) {
-      const equalWeight = 1.0 / selectedModules.length; // Equal distribution that sums to 1.0
-      const defaultWeights = {};
-      selectedModules.forEach((module) => {
-        if (!moduleWeights[module.id]) {
-          defaultWeights[module.id] = equalWeight;
-        }
-      });
-
-      if (Object.keys(defaultWeights).length > 0) {
-        setModuleWeights((prev) => ({ ...prev, ...defaultWeights }));
-      }
-    } else if (selectedModules.length < 2) {
-      // Clear weights if less than 2 modules
-      setModuleWeights({});
-    }
-  }, [selectedModules]);
-
-  useEffect(() => {
-    // Prevent unversioned query on mount if versions are still loading
-    if (availableVersions.length > 0 && !selectedVersion) {
-      return;
-    }
-
-    if (selectedModules.length >= 2 && validWeights === "invalid") {
-      return;
-    }
+    if (!initialLoadComplete) return;
+    if (selectedModules.length >= 2 && validWeights === "invalid") return;
 
     const loadRankings = async () => {
       try {
@@ -221,9 +241,9 @@ const Rankings = () => {
           moduleIds,
           weightsToSend
         );
-        setRankings(data.results);
-        setTotalPages(data.totalPages);
-        setCurrentPage(data.currentPage);
+        setRankings(data.results || []);
+        setTotalPages(data.totalPages || 1);
+        setCurrentPage(data.currentPage || 1);
       } catch (error) {
         console.error("Failed to load rankings:", error);
       } finally {
@@ -233,6 +253,7 @@ const Rankings = () => {
 
     loadRankings();
   }, [
+    initialLoadComplete,
     rowsPerPage,
     currentPage,
     searchTerm,
@@ -241,13 +262,11 @@ const Rankings = () => {
     selectedVersion,
     selectedModules,
     validWeights,
-    availableVersions.length,
   ]);
 
   useLayoutEffect(() => {
     setRowsPerPage(getDynamicRowPerPageCount);
     window.addEventListener("resize", getDynamicRowPerPageCount);
-
     return () => {
       window.removeEventListener("resize", getDynamicRowPerPageCount);
     };
@@ -317,16 +336,19 @@ const Rankings = () => {
   };
 
   const clearFilters = () => {
-    setSelectedVersion(availableVersions.length > 0 ? availableVersions[0] : "");
+    const defaultVer = availableVersions.length > 0 ? availableVersions[0] : "";
+    setSelectedVersion(defaultVer);
     setSelectedModules([]);
     setModuleWeights({});
+    setSearchValue("");
+    setSearchTerm("");
     setCurrentPage(1);
   };
 
   // Individual filter removal handlers
   const removeVersionFilter = (event) => {
     event.stopPropagation();
-    setSelectedVersion("");
+    setSelectedVersion(availableVersions.length > 0 ? availableVersions[0] : "");
     setCurrentPage(1);
   };
 
@@ -512,15 +534,7 @@ const Rankings = () => {
           >
             <FormControl sx={{ minWidth: "150px" }} size="sm">
               <FormLabel>Version</FormLabel>
-              <Select
-                placeholder={
-                  availableVersions.length > 0
-                    ? availableVersions[0]
-                    : "Select version"
-                }
-                value={selectedVersion}
-                onChange={handleVersionChange}
-              >
+              <Select value={selectedVersion} onChange={handleVersionChange}>
                 {availableVersions.map((version) => (
                   <Option key={version} value={version}>
                     {version}
@@ -589,33 +603,39 @@ const Rankings = () => {
                       backgroundColor: "background.surface",
                     }}
                   >
-                    <Chip variant="soft" color="primary" size="sm">
-                      Version: {selectedVersion}
-                    </Chip>
-                    <IconButton
+                    <Chip
+                      variant="soft"
+                      color="primary"
                       size="sm"
-                      variant="plain"
-                      onClick={removeVersionFilter}
-                      sx={{
-                        minHeight: "20px",
-                        minWidth: "20px",
-                        borderRadius: "50%",
-                        fontSize: "12px",
-                        fontWeight: "bold",
-                        backgroundColor: "background.surface",
-                        border: "1px solid",
-                        borderColor: "divider",
-                        "&:hover": {
-                          backgroundColor: "background.level1",
-                          borderColor: "neutral.outlinedHoverBorder",
-                        },
-                        "&:active": {
-                          backgroundColor: "background.level2",
-                        },
-                      }}
-                    >
-                      ×
-                    </IconButton>
+                      endDecorator={
+                        <IconButton
+                          size="sm"
+                          variant="plain"
+                          onClick={removeVersionFilter}
+                          sx={{
+                            minHeight: "20px",
+                            minWidth: "20px",
+                            borderRadius: "50%",
+                            fontSize: "12px",
+                            fontWeight: "bold",
+                            backgroundColor: "background.surface",
+                            border: "1px solid",
+                            borderColor: "divider",
+                            "&:hover": {
+                              backgroundColor: "background.level1",
+                              borderColor: "neutral.outlinedHoverBorder",
+                            },
+                            "&:active": {
+                              backgroundColor: "background.level2",
+                            },
+                          }}
+                        >
+                          ×
+                        </IconButton>
+                      }
+                      >
+                        Version: {selectedVersion}
+                      </Chip>
                   </Box>
                 )}
                 {selectedModules.map((module) => (
@@ -917,7 +937,7 @@ const Rankings = () => {
               <tr>
                 <td colSpan={7} style={{ textAlign: "center", padding: "40px" }}>
                   <Typography level="body-md" color="neutral">
-                    No public submissions. {searchTerm && "Maybe try adjusting your search filters?"}
+                    No public submissions found for v{selectedVersion || "selected version"}. Maybe try adjusting your search filters?
                   </Typography>
                 </td>
               </tr>
