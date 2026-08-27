@@ -37,7 +37,6 @@ import StepIndicator from "@mui/joy/StepIndicator";
 import { Add } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import BenchmarkCard from "../components/ranking/BenchmarkCard";
-import { motion } from "framer-motion";
 import { ModuleService } from "../services/ModuleService";
 import { fetchRankingFilters } from "../services/RankingsService";
 import MainLayout from "../components/layout/MainLayout";
