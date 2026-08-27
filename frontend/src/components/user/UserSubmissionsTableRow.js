@@ -57,7 +57,7 @@ const UserSubmissionsTableRow = ({
 }) => {
   const [open, setOpen] = useState(false);
 
-  // Parse and sort all available version objects for this submission
+  // Parse all available version snapshots
   const availableVersions = useMemo(() => {
     const rawVersions = row.version_scores || row.versionScores || [];
     if (rawVersions.length > 0) {
@@ -74,29 +74,37 @@ const UserSubmissionsTableRow = ({
     ];
   }, [row]);
 
-  // Selected version snapshot object
-  const [selectedVersion, setSelectedVersion] = useState(availableVersions[0]);
+  // Track the selected version string (e.g. "1.1.0" or "1.0.0")
+  const [selectedVersionStr, setSelectedVersionStr] = useState(
+    row.version || (availableVersions[0]?.version ?? "1.0.0")
+  );
 
-  // Sync selected version whenever row data changes
   useEffect(() => {
-    if (availableVersions.length > 0) {
-      const current =
-        availableVersions.find((v) => v.version === row.version) ||
-        availableVersions[0];
-      setSelectedVersion(current);
+    if (row.version) {
+      setSelectedVersionStr(row.version);
+    } else if (availableVersions.length > 0) {
+      setSelectedVersionStr(availableVersions[0].version);
     }
-  }, [availableVersions, row.version]);
+  }, [row.version, availableVersions]);
 
-  // Resolves modules & scores for the active version
+  // Active snapshot object corresponding to the selected version
+  const currentSnapshot = useMemo(() => {
+    return (
+      availableVersions.find((v) => v.version === selectedVersionStr) ||
+      availableVersions[0]
+    );
+  }, [availableVersions, selectedVersionStr]);
+
+  // Extract and sort modules for this version snapshot
   const displayedModules = useMemo(() => {
-    if (!selectedVersion) return [];
+    if (!currentSnapshot) return [];
 
-    // If version snapshot already contains module score entries
-    if (selectedVersion.modules && selectedVersion.modules.length > 0) {
-      const allScores = row.benchmarkScores || [];
-      return selectedVersion.modules.map((mod) => {
+    let moduleList = [];
+    if (currentSnapshot.modules && currentSnapshot.modules.length > 0) {
+      const allRawScores = row.benchmarkScores || [];
+      moduleList = currentSnapshot.modules.map((mod) => {
         const modId = mod.id || mod.module_id || mod.benchmarkModule?.id;
-        const matchingRaw = allScores.find(
+        const rawEntry = allRawScores.find(
           (s) => (s.benchmarkModule?.id || s.module_id) === modId
         );
         return {
@@ -105,23 +113,22 @@ const UserSubmissionsTableRow = ({
             mod.name ||
             mod.title ||
             mod.benchmarkModule?.name ||
-            matchingRaw?.benchmarkModule?.name ||
+            rawEntry?.benchmarkModule?.name ||
             "Module",
-          score: mod.score ?? matchingRaw?.score ?? null,
+          score: mod.score ?? rawEntry?.score ?? null,
         };
       });
+    } else {
+      moduleList = (row.benchmarkScores || []).map((s) => ({
+        id: s.benchmarkModule?.id || s.module_id,
+        name: s.benchmarkModule?.name || "Module",
+        score: s.score,
+      }));
     }
 
-    return (row.benchmarkScores || []).map((s) => ({
-      id: s.benchmarkModule?.id || s.module_id,
-      name: s.benchmarkModule?.name || "Module",
-      score: s.score,
-    }));
-  }, [selectedVersion, row.benchmarkScores]);
-
-  const handleVersionChange = (versionData) => {
-    setSelectedVersion(versionData);
-  };
+    // Sort alphabetically by module name for consistent display
+    return moduleList.sort((a, b) => a.name.localeCompare(b.name));
+  }, [currentSnapshot, row.benchmarkScores]);
 
   const isProcessing = row.status === SubmissionStatus.IN_PROGRESS;
   const isOutdated = row.status === SubmissionStatus.OUTDATED;
@@ -148,22 +155,22 @@ const UserSubmissionsTableRow = ({
           <Chip color={statusColor(row.status)}>{row.status}</Chip>
         </td>
         <td>
-          {selectedVersion?.score !== null && selectedVersion?.score !== undefined
-            ? Number(selectedVersion.score).toFixed(2)
+          {currentSnapshot?.score !== null && currentSnapshot?.score !== undefined
+            ? Number(currentSnapshot.score).toFixed(2)
             : "N/A"}
         </td>
         <td>
           {availableVersions.length > 1 ? (
             <Dropdown>
               <MenuButton size="sm" variant="outlined">
-                {selectedVersion?.version || "N/A"}
+                {selectedVersionStr}
               </MenuButton>
               <Menu>
                 {availableVersions.map((v) => (
                   <MenuItem
                     key={v.version}
-                    onClick={() => handleVersionChange(v)}
-                    selected={selectedVersion?.version === v.version}
+                    onClick={() => setSelectedVersionStr(v.version)}
+                    selected={selectedVersionStr === v.version}
                   >
                     <Box sx={{ display: "flex", flexDirection: "column" }}>
                       <Box sx={{ fontWeight: "bold" }}>{v.version}</Box>
@@ -179,7 +186,7 @@ const UserSubmissionsTableRow = ({
               </Menu>
             </Dropdown>
           ) : (
-            selectedVersion?.version || row.version || "N/A"
+            selectedVersionStr
           )}
         </td>
         <td align="center">
@@ -245,12 +252,12 @@ const UserSubmissionsTableRow = ({
             >
               <Box sx={{ mb: 2 }}>
                 <Chip variant="soft" color="primary" size="sm">
-                  Version: {selectedVersion?.version || "N/A"}
+                  Version: {selectedVersionStr}
                 </Chip>
                 <Chip variant="soft" color="success" size="sm" sx={{ ml: 1 }}>
                   Overall Score:{" "}
-                  {selectedVersion?.score !== null && selectedVersion?.score !== undefined
-                    ? Number(selectedVersion.score).toFixed(2)
+                  {currentSnapshot?.score !== null && currentSnapshot?.score !== undefined
+                    ? Number(currentSnapshot.score).toFixed(2)
                     : "N/A"}
                 </Chip>
               </Box>

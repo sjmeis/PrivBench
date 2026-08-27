@@ -71,29 +71,24 @@ def compute_file_sha256(file_path: str) -> str:
 
 def _recalculate_version_scores_after_module_delete(module_id: int):
     """
-    Remove the deleted module from each SubmissionVersionScore.modules list and
-    recompute the version score using remaining module scores for that submission.
-    If no modules remain for a version, delete that version row.
+    Remove the deleted module only from unfinalized or current active version rows.
+    Historical snapshots (e.g. v1.0.0) remain intact.
     """
     try:
+        current_version = AppVersion.get_current_version()
         with db.session.no_autoflush:
+            # Only modify the score snapshot for the current/future version
             affected_versions = (
                 db.session.query(SubmissionVersionScore)
                 .filter(
+                    SubmissionVersionScore.version == current_version,
                     SubmissionVersionScore.modules.any(BenchmarkModule.id == module_id)
                 )
                 .all()
             )
 
             for vs in affected_versions:
-                # Keep only remaining modules
                 vs.modules = [m for m in vs.modules if m.id != module_id]
-
-                # If no modules left for this version, remove the record entirely
-                if not vs.modules:
-                    db.session.delete(vs)
-                    continue
-
                 remaining_ids = [m.id for m in vs.modules]
                 scores = (
                     db.session.query(BenchmarkScore.score)
@@ -104,16 +99,12 @@ def _recalculate_version_scores_after_module_delete(module_id: int):
                     .all()
                 )
                 score_vals = [row[0] for row in scores]
-
-                # Recompute using available scores. If none found, remove the row.
                 if score_vals:
                     vs.score = round(sum(score_vals) / len(score_vals), 2)
                 else:
                     db.session.delete(vs)
     except Exception as e:
         logger.error(f"Error recalculating version scores after module delete: {e}")
-        raise
-
 
 def _find_existing_requirements_path(module: BenchmarkModule):
     try:
