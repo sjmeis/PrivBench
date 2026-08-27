@@ -14,43 +14,37 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from celery import shared_task
-from ..models import Submission, User
+from datetime import datetime
+from ..models import Submission, User, BenchmarkScore
+from ..enums import SubmissionStatus
 from ..extensions import db
 from ..utils.email_sender import send_email
 from flask import current_app
 from ..config import Config
-from datetime import datetime
-
 
 @shared_task(bind=True)
 def mark_submissions_outdated_and_notify(self, version, changes):
-    """
-    Mark completed submissions as outdated and notify users via email.
-    Triggered only on Publish. 'changes' is a JSON-serializable dict:
-      {
-        "new_modules": [{"id": int, "name": str}],
-        "modified_modules": [{"id": int, "name": str, "description": str}]
-      }
-    """
     try:
-        new_modules = (
-            changes.get("new_modules", []) if isinstance(changes, dict) else []
-        )
-        modified_modules = (
-            changes.get("modified_modules", []) if isinstance(changes, dict) else []
-        )
+        new_modules = changes.get("new_modules", []) if isinstance(changes, dict) else []
+        modified_modules = changes.get("modified_modules", []) if isinstance(changes, dict) else []
 
-        # Get all completed submissions
-        submissions = Submission.query.filter_by(status="COMPLETED").all()
+        modified_ids = {m["id"] for m in modified_modules}
+        has_new_modules = len(new_modules) > 0
 
-        # Group submissions by user
+        # Query only submissions that need attention
+        query = db.session.query(Submission).filter(Submission.status == SubmissionStatus.COMPLETED)
+
+        if not has_new_modules and modified_ids:
+            # Only invalidate submissions that actually rely on the modified modules
+            query = query.join(BenchmarkScore).filter(BenchmarkScore.module_id.in_(modified_ids)).distinct()
+
+        affected_submissions = query.all()
+
         user_submissions = {}
-        for submission in submissions:
-            if submission.user_id not in user_submissions:
-                user_submissions[submission.user_id] = []
-            user_submissions[submission.user_id].append(submission)
-            submission.status = "OUTDATED"
-            submission.outdated_at = datetime.utcnow()  # Set the outdated timestamp
+        for sub in affected_submissions:
+            sub.status = SubmissionStatus.OUTDATED
+            sub.outdated_at = datetime.utcnow()
+            user_submissions.setdefault(sub.user_id, []).append(sub)
 
         db.session.commit()
 

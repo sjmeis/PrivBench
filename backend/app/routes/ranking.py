@@ -424,7 +424,6 @@ def get_all_filtered():
 
         # Version filtering
         if version_filter:
-            # Filter by submissions that have this version either as current version or in version_scores
             version_condition = or_(
                 Submission.version == version_filter,
                 Submission.version_scores.any(
@@ -473,14 +472,9 @@ def get_all_filtered():
             display_version = version_filter or submission.version
             display_score = submission.score
 
-            # If filtering by a specific version that's not the current version
             if version_filter and version_filter != submission.version:
                 version_score = next(
-                    (
-                        vs
-                        for vs in submission.version_scores
-                        if vs.version == version_filter
-                    ),
+                    (vs for vs in submission.version_scores if vs.version == version_filter),
                     None,
                 )
                 if version_score:

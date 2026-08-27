@@ -34,7 +34,7 @@ from werkzeug.utils import secure_filename
 import docker
 import logging
 from ..utils.module_manager import ModuleManager
-from ..utils.container_manager import module_image_tag, module_container_name
+from ..utils.container_manager import container_manager, module_image_tag, module_container_name
 
 from ..tasks.add_module import install_and_load_module
 from .module import _find_existing_requirements_path
@@ -322,31 +322,11 @@ def start_container(module_id):
         return jsonify({"message": "Forbidden"}), 403
 
     module = BenchmarkModule.query.get_or_404(module_id)
-    image_tag = f"{module_image_tag(module.name)}:latest"
-    container_name = module_container_name(module.name)
-    
     try:
-        # If an old container exists but is stopped, remove it first
-        try:
-            old_container = client.containers.get(container_name)
-            old_container.remove(force=True)
-        except:
-            pass
-
-        # Start new container
-        device_requests = []
-        use_gpu_flag = (module.device_specification == "gpu" or getattr(module, "use_gpu", False))
-        if use_gpu_flag:
-            device_requests = [docker.types.DeviceRequest(count=-1, capabilities=[['gpu']])]
-
-        client.containers.run(
-            image_tag,
-            name=container_name,
-            detach=True,
-            device_requests=device_requests,
-            network="privbench_default"
-        )
-        return jsonify({"message": f"Started {module.name}"}), 200
+        container = container_manager.start_module_container(module)
+        if container:
+            return jsonify({"message": f"Started {module.name}"}), 200
+        return jsonify({"message": f"Failed to start container for {module.name}"}), 500
     except Exception as e:
         return jsonify({"message": str(e)}), 500
 
@@ -375,20 +355,21 @@ def rebuild_module(module_id):
 
     module = BenchmarkModule.query.get_or_404(module_id)
     use_gpu_flag = (module.device_specification == "gpu" or getattr(module, "use_gpu", False))
+    requirements_path = _find_existing_requirements_path(module)
+
     try:
-        # 1. Stop and remove existing container
         container_name = module_container_name(module.name)
         try:
             container = client.containers.get(container_name)
             container.remove(force=True)
-        except:
+            container_manager.running_containers.pop(container_name, None)
+        except Exception:
             pass
 
-        # 2. Trigger ModuleManager build logic
         module_manager.build_module_container(
             module_path=module.path,
             module_name=module.name,
-            requirements_path=module.requirements_path,
+            requirements_path=requirements_path,
             use_gpu=use_gpu_flag
         )
         return jsonify({"message": f"Rebuilt {module.name}"}), 200
@@ -453,9 +434,9 @@ def rollback_version():
     if not claims.get("is_admin"):
         return jsonify({"message": "Forbidden"}), 403
 
-    data = request.get_json()
+    data = request.get_json() or {}
     target_version_str = data.get("targetVersion") or data.get("version")
-    
+
     try:
         target_release = AppVersion.query.filter_by(version=target_version_str).first()
         if not target_release:
@@ -475,32 +456,63 @@ def rollback_version():
         blueprint = target_release.blueprint
         if not blueprint:
             return jsonify({"message": "Target version is missing a state blueprint"}), 400
-            
+
         target_module_ids = [item["module_id"] for item in blueprint]
 
-        # Deactivate modules created after this version (soft-delete)
-        db.session.query(BenchmarkModule).filter(
-            BenchmarkModule.id.not_in(target_module_ids)
-        ).update({"is_active": False}, synchronize_session=False)
+        # 1. Stop & deactivate modules excluded from the target version
+        excluded_modules = db.session.query(BenchmarkModule).filter(
+            BenchmarkModule.id.not_in(target_module_ids),
+            BenchmarkModule.is_active == True
+        ).all()
 
-        # Realign module configurations to match the snapshot blueprint
+        for ex_mod in excluded_modules:
+            ex_mod.is_active = False
+            try:
+                container = container_manager.get_container(ex_mod.name)
+                if container:
+                    container.stop()
+                    container.remove(force=True)
+                    container_manager.running_containers.pop(
+                        module_container_name(ex_mod.name), None
+                    )
+            except Exception as e:
+                logger.warning(f"Could not stop container for deactivated module {ex_mod.name}: {e}")
+
+        # 2. Realign module configurations to match the snapshot blueprint
         for item in blueprint:
             m = db.session.query(BenchmarkModule).get(item["module_id"])
             if m:
                 m.is_active = True
+                m.is_deleted = False
                 m.name = item["name"]
-                m.title = item["title"]
+                m.title = item.get("title", item["name"])
                 m.path = item["path"]
-                m.device_specification = item["device_specification"]
-                if "sample_count" in item:
-                    m.sample_count = item["sample_count"]
-                
-                if "compatible_datasets" in item:
+                m.device_specification = item.get("device_specification", "cpu")
+                m.sample_count = item.get("sample_count", 1000)
+
+                # Restore SHA-256 hashes if recorded in snapshot
+                if "code_hash" in item:
+                    m.code_hash = item["code_hash"]
+                if "requirements_hash" in item:
+                    m.requirements_hash = item["requirements_hash"]
+
+                # Re-link datasets (supporting both ID mappings and name fallbacks)
+                if "dataset_mappings" in item:
+                    ds_ids = [d["id"] for d in item["dataset_mappings"]]
+                    datasets = Dataset.query.filter(Dataset.id.in_(ds_ids)).all()
+                    for ds in datasets:
+                        ds.is_active = True
+                        ds.is_deleted = False
+                    m.compatible_datasets = datasets
+                elif "compatible_datasets" in item:
                     datasets = Dataset.query.filter(Dataset.name.in_(item["compatible_datasets"])).all()
+                    for ds in datasets:
+                        ds.is_active = True
+                        ds.is_deleted = False
                     m.compatible_datasets = datasets
 
+                # Force reload/restart the module container
                 try:
-                    # Force reload/restart the container to use the rolled-back paths/specs
                     install_and_load_module.delay(
                         module_id=m.id,
                         module_name=m.name,
@@ -511,15 +523,16 @@ def rollback_version():
                         use_gpu=m.device_specification == "gpu"
                     )
                 except Exception as e:
-                    logger.warning(f"Could not automatically sync container state during rollback: {e}")
-                        
+                    logger.warning(f"Could not sync container state during rollback for {m.name}: {e}")
+
         db.session.flush()
 
+        # 3. Realign submission states and scores to target snapshot
         all_submissions = Submission.query.all()
         for sub in all_submissions:
             if sub.version in bad_version_strs:
                 target_snapshot = SubmissionVersionScore.query.filter_by(
-                    submission_id=sub.id, 
+                    submission_id=sub.id,
                     version=target_version_str
                 ).first()
 
@@ -530,22 +543,36 @@ def rollback_version():
                     sub.version = target_version_str
                     sub.status = SubmissionStatus.COMPLETED
                     sub.score = target_snapshot.score
-                    
-                    if sub.submission_metadata:
-                        sub.submission_metadata.version = target_version_str
-                        
+                    sub.outdated_at = None
+
             elif sub.version == target_version_str and sub.status == SubmissionStatus.OUTDATED:
                 sub.status = SubmissionStatus.COMPLETED
+                sub.outdated_at = None
 
-        SubmissionVersionScore.query.filter(SubmissionVersionScore.version.in_(bad_version_strs)).delete(synchronize_session=False)
-        ModuleUpdate.query.filter(ModuleUpdate.version_id.in_(bad_version_ids)).delete(synchronize_session=False)
-        AppVersion.query.filter(AppVersion.id.in_(bad_version_ids)).delete(synchronize_session=False)
-        
+        # 4. Clean up newer version records and pending updates
+        SubmissionVersionScore.query.filter(
+            SubmissionVersionScore.version.in_(bad_version_strs)
+        ).delete(synchronize_session=False)
+
+        ModuleUpdate.query.filter(
+            ModuleUpdate.version_id.in_(bad_version_ids)
+        ).delete(synchronize_session=False)
+
+        # Clear any dangling unreleased updates created while on newer versions
+        ModuleUpdate.query.filter(
+            ModuleUpdate.version_id.is_(None)
+        ).delete(synchronize_session=False)
+
+        AppVersion.query.filter(
+            AppVersion.id.in_(bad_version_ids)
+        ).delete(synchronize_session=False)
+
         db.session.commit()
         return jsonify({"message": f"Successfully checked out platform state at v{target_version_str}"}), 200
 
     except Exception as e:
         db.session.rollback()
+        logger.error(f"Checkpoint restoration failed: {str(e)}", exc_info=True)
         return jsonify({"message": f"Checkpoint restoration failed: {str(e)}"}), 500
     
 @admin_bp.route('/admin/demo-data/toggle', methods=['POST'])

@@ -16,6 +16,7 @@
 import os
 import logging
 import json
+import hashlib
 from flask import Blueprint, jsonify, request, send_file, current_app
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from sqlalchemy import exists
@@ -58,6 +59,15 @@ MODULES_FOLDER = os.path.abspath(
 
 module_bp = Blueprint("benchmark_module", __name__)
 
+def compute_file_sha256(file_path: str) -> str:
+    """Calculates SHA-256 hex digest for a given file."""
+    if not file_path or not os.path.isfile(file_path):
+        return ""
+    sha = hashlib.sha256()
+    with open(file_path, "rb") as f:
+        while chunk := f.read(8192):
+            sha.update(chunk)
+    return sha.hexdigest()
 
 def _recalculate_version_scores_after_module_delete(module_id: int):
     """
@@ -320,7 +330,7 @@ def publish_module_updates():
         # GIT-STYLE SNAPSHOT LOGIC:
         # Collect all active modules as they exist right now
         # ----------------------------------------------------
-        active_modules = db.session.query(BenchmarkModule).filter_by(is_active=True).all()
+        active_modules = db.session.query(BenchmarkModule).filter_by(is_active=True, is_deleted=False).all()
         blueprint_snapshot = []
         for m in active_modules:
             blueprint_snapshot.append({
@@ -328,16 +338,15 @@ def publish_module_updates():
                 "name": m.name,
                 "title": m.title,
                 "path": m.path,
-                "sample_count": getattr(m, 'sample_count', 100),
+                "sample_count": getattr(m, 'sample_count', 1000),
                 "device_specification": m.device_specification,
-                "compatible_datasets": [d.name for d in m.compatible_datasets]
+                "dataset_mappings": [{"id": d.id, "name": d.name} for d in m.compatible_datasets]
             })
 
-        # Create new AppVersion with its static blueprint log
         new_version = AppVersion(
             version=version_str,
             description=description,
-            blueprint=blueprint_snapshot  # Written directly to JSON Column
+            blueprint=blueprint_snapshot
         )
         db.session.add(new_version)
         db.session.flush()
@@ -457,6 +466,9 @@ def create_benchmark_module():
         # Use current app version or provided version as placeholder.
         current_ver = provided_version or AppVersion.get_current_version()
 
+        logic_hash = compute_file_sha256(algo_path)
+        req_hash = compute_file_sha256(requirements_path) if requirements_path else ""
+
         new_benchmark_module = BenchmarkModule(
             name=name,
             title=name,
@@ -465,8 +477,9 @@ def create_benchmark_module():
             is_active=True,
             path=algo_path,
             device_specification=device_spec or "cpu",
+            code_hash=logic_hash,
+            requirements_hash=req_hash,
         )
-
         db.session.add(new_benchmark_module)
         db.session.flush()
 
@@ -830,6 +843,14 @@ def update_module_logic(module_id):
             stable_name = filename
         save_path = os.path.join(MODULES_FOLDER, stable_name)
         file.save(save_path)
+        new_hash = compute_file_sha256(save_path)
+
+        if module.code_hash and module.code_hash == new_hash:
+            return jsonify({
+                "message": "File content is identical to current version; no update recorded.",
+                "moduleId": module.id,
+                "unchanged": True
+            }), 200
 
         # Find existing requirements for this module (reuse, do not require re-upload)
         requirements_path = _find_existing_requirements_path(module)
@@ -847,17 +868,30 @@ def update_module_logic(module_id):
         except Exception as e:
             logger.warning(f"Could not stop/remove container for {module.name}: {e}")
 
-        # Ensure DB path points to the stable file
-        if module.path != save_path:
-            module.path = save_path
-        db.session.commit()
+        module.code_hash = new_hash
+        module.path = save_path
 
         db.session.add(
             ModuleUpdate(
                 module_id=module.id,
-                update_type="modified",
+                update_type="logic",
                 change_level="major",
-                description="Logic updated",
+                description=f"Algorithm logic updated (SHA256: {new_hash[:8]})",
+                is_updated=True,
+                version_id=None,
+            )
+        )
+        db.session.commit()
+
+        module.code_hash = new_hash
+        module.path = save_path
+
+        db.session.add(
+            ModuleUpdate(
+                module_id=module.id,
+                update_type="logic",
+                change_level="major",
+                description=f"Algorithm logic updated (SHA256: {new_hash[:8]})",
                 is_updated=True,
                 version_id=None,
             )
@@ -1000,13 +1034,24 @@ def update_module_requirements(module_id):
         # Save to stable location so future updates can find it
         save_path = _stable_requirements_path(module)
         uploaded.save(save_path)
+        new_req_hash = compute_file_sha256(save_path)
+
+        # Check if requirements actually changed
+        if module.requirements_hash and module.requirements_hash == new_req_hash:
+            return jsonify({
+                "message": "Requirements content is identical to current version; no update recorded.",
+                "moduleId": module.id,
+                "unchanged": True
+            }), 200
+
+        module.requirements_hash = new_req_hash
 
         db.session.add(
             ModuleUpdate(
                 module_id=module.id,
-                update_type="modified",
+                update_type="requirements",
                 change_level="major",
-                description="Requirements updated",
+                description=f"Dependencies updated (SHA256: {new_req_hash[:8]})",
                 is_updated=True,
                 version_id=None,
             )
@@ -1134,18 +1179,34 @@ def toggle_dataset_association(module_id):
         return jsonify({"message": "Forbidden"}), 403
 
     module = BenchmarkModule.query.get_or_404(module_id)
-    data = request.json
+    data = request.json or {}
     dataset_id = data.get("dataset_id")
     should_link = data.get("should_link")
 
     dataset = Dataset.query.get_or_404(dataset_id)
+    changed = False
 
     if should_link:
         if dataset not in module.compatible_datasets:
             module.compatible_datasets.append(dataset)
+            changed = True
     else:
         if dataset in module.compatible_datasets:
             module.compatible_datasets.remove(dataset)
+            changed = True
 
-    db.session.commit()
+    if changed:
+        action = "linked" if should_link else "unlinked"
+        db.session.add(
+            ModuleUpdate(
+                module_id=module.id,
+                update_type="dataset",
+                change_level="major",
+                description=f"Dataset '{dataset.name}' {action}",
+                is_updated=True,
+                version_id=None,
+            )
+        )
+        db.session.commit()
+
     return jsonify({"message": "Association updated"}), 200

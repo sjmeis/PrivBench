@@ -100,20 +100,18 @@ def _compute_modules_to_update(submission: Submission):
             app_version = versions_by_id.get(update.version_id)
             if not app_version:
                 continue
-            # Only consider updates published after the user's submission version
-            if submission.version and not is_version_greater(
-                app_version.version, submission.version
-            ):
+            if submission.version and not is_version_greater(app_version.version, submission.version):
                 continue
 
-            desc = (update.description or "").lower()
-            if "dataset updated" in desc or "new dataset" in desc:
+            # Deterministic type check
+            u_type = (update.update_type or "").lower()
+            if u_type in ["dataset", "dataset_updated"]:
                 has_dataset_update = True
-            if "requirements updated" in desc:
-                has_requirements_update = True
-            if "logic updated" in desc:
+            elif u_type in ["logic", "logic_updated"]:
                 has_logic_update = True
-            if update.change_level == "major" and update.update_type == "modified":
+            elif u_type in ["requirements", "requirements_updated"]:
+                has_requirements_update = True
+            elif update.change_level == "major":
                 has_other_major_modified = True
 
         # Build reasons array
@@ -124,7 +122,7 @@ def _compute_modules_to_update(submission: Submission):
             reasons.append("requirements")
         if has_dataset_update:
             reasons.append("dataset")
-        if has_other_major_modified:
+        if has_other_major_modified and not reasons:
             reasons.append("modified")
 
         if reasons:
@@ -692,10 +690,7 @@ def benchmark_update():
 @benchmark_bp.route("/submission/finalize-update", methods=["POST"])
 @jwt_required()
 def finalize_submission_update():
-    """
-    Calculates and saves a new version score after an update.
-    """
-    data = request.get_json()
+    data = request.get_json() or {}
     submission_id = data.get("submissionId")
     user_id = get_jwt_identity()
 
@@ -703,56 +698,56 @@ def finalize_submission_update():
     if not submission:
         return jsonify({"message": "Submission not found"}), 404
 
-    all_scores = submission.benchmark_scores
-    if not all_scores:
-        return jsonify({"message": "No scores found for this submission."}), 400
+    # Only include active, non-deleted modules in new version computation
+    active_scores = (
+        db.session.query(BenchmarkScore)
+        .join(BenchmarkModule)
+        .filter(
+            BenchmarkScore.submission_id == submission.id,
+            BenchmarkModule.is_active == True,
+            BenchmarkModule.is_deleted == False,
+        )
+        .all()
+    )
 
-    # Calculate the new overall score by averaging all module scores.
-    new_scores_sum = sum(s.score for s in all_scores)
-    new_module_count = len(all_scores)
-    new_overall_score = new_scores_sum / new_module_count
+    if not active_scores:
+        return jsonify({"message": "No active scores found for this submission."}), 400
 
-    current_app_version_str = AppVersion.get_current_version()
-    significant_version = get_significant_version(current_app_version_str)
+    new_overall_score = round(sum(s.score for s in active_scores) / len(active_scores), 2)
+    current_version_str = AppVersion.get_current_version()  # e.g., "1.1.0"
 
-    # Check if version entry already exists
-    existing_version = (
+    existing_version_score = (
         db.session.query(SubmissionVersionScore)
-        .filter_by(submission_id=submission.id, version=significant_version)
+        .filter_by(submission_id=submission.id, version=current_version_str)
         .first()
     )
 
-    if not existing_version:
-        all_modules_for_new_version = [score.benchmark_module for score in all_scores]
-        # Create the new version score entry only if it doesn't exist
+    all_active_modules = [score.benchmark_module for score in active_scores]
+
+    if not existing_version_score:
         new_version_entry = SubmissionVersionScore(
             submission_id=submission.id,
-            version=significant_version,
+            version=current_version_str,
             score=new_overall_score,
-            modules=all_modules_for_new_version,
+            modules=all_active_modules,
         )
         db.session.add(new_version_entry)
-        logger.info(
-            f"Created new version entry for update: submission {submission.id}, version {current_app_version_str}"
-        )
+    else:
+        existing_version_score.score = new_overall_score
+        existing_version_score.modules = all_active_modules
 
-    # Update the main submission
+    # Mark submission as current
     submission.score = new_overall_score
-    submission.version = significant_version
+    submission.version = current_version_str
     submission.status = SubmissionStatus.COMPLETED
+    submission.outdated_at = None
     db.session.commit()
 
-    return (
-        jsonify(
-            {
-                "message": "Submission updated to new version successfully",
-                "new_version": significant_version,
-                "new_score": new_overall_score,
-            }
-        ),
-        200,
-    )
-
+    return jsonify({
+        "message": "Submission updated to new version successfully",
+        "new_version": current_version_str,
+        "new_score": new_overall_score,
+    }), 200
 
 @benchmark_bp.route("/cancel-benchmark/<submission_id>", methods=["POST"])
 @jwt_required()

@@ -53,6 +53,10 @@ class BenchmarkModule(db.Model):
     is_installed = db.Column(db.Boolean, default=False)
     sample_count = db.Column(db.Integer, nullable=False, default=1000)
 
+    # Deterministic SHA-256 Fingerprints
+    code_hash = db.Column(db.String(64), nullable=True)
+    requirements_hash = db.Column(db.String(64), nullable=True)
+
     # One-to-many relationships
     benchmark_scores = db.relationship(
         "BenchmarkScore", back_populates="benchmark_module", lazy=True
