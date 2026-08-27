@@ -29,7 +29,10 @@ import {
   FormLabel,
   Chip,
   Stack,
+  Card,
+  Skeleton
 } from "@mui/joy";
+import { motion, AnimatePresence } from "framer-motion";
 import StepIndicator from "@mui/joy/StepIndicator";
 import { Add } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
@@ -50,6 +53,26 @@ const stepVariants = {
     },
   }),
 };
+
+const BenchmarkSkeletonCard = () => (
+  <Card
+    sx={{
+      height: 180,
+      width: "100%",
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "space-between",
+      p: 2,
+    }}
+  >
+    <Box>
+      <Skeleton variant="text" level="title-sm" width="70%" sx={{ mb: 1 }} />
+      <Skeleton variant="text" level="body-xs" width="100%" />
+      <Skeleton variant="text" level="body-xs" width="85%" />
+    </Box>
+    <Skeleton variant="rectangular" height={24} width="40%" sx={{ borderRadius: "sm" }} />
+  </Card>
+);
 
 const Information = () => {
   const navigate = useNavigate();
@@ -206,7 +229,7 @@ const Information = () => {
 
           {/* Benchmark Modules & Version Selection */}
           <Grid item sx={{ height: "auto" }} xs={12} md={7}>
-            <Box sx={{ height: "90%" }}>
+            <Box sx={{ height: "90%", minHeight: "350px" }}>
               <Box
                 sx={{
                   display: "flex",
@@ -218,9 +241,7 @@ const Information = () => {
                 }}
               >
                 <Stack direction="row" spacing={1.5} alignItems="center">
-                  <Typography level="h3">
-                    Benchmarking Modules
-                  </Typography>
+                  <Typography level="h3">Benchmarking Modules</Typography>
                   <Chip color="primary" variant="soft" size="sm">
                     {modules.length} {modules.length === 1 ? "module" : "modules"}
                   </Chip>
@@ -228,7 +249,7 @@ const Information = () => {
 
                 {availableVersions.length > 0 && (
                   <FormControl size="sm" sx={{ minWidth: "150px" }}>
-                    <FormLabel sx={{ fontSize: "11px" }}>Protocol Release</FormLabel>
+                    <FormLabel sx={{ fontSize: "11px" }}>PrivBench Release</FormLabel>
                     <Select
                       size="sm"
                       value={selectedVersion}
@@ -244,31 +265,56 @@ const Information = () => {
                 )}
               </Box>
 
-              {loadingModules ? (
-                <Typography level="body-sm" color="neutral" sx={{ py: 4 }}>
-                  Loading modules for v{selectedVersion}...
-                </Typography>
-              ) : (
-                <Grid container spacing={2}>
-                  {modules.map((module) => (
-                    <Grid
-                      sx={{ maxHeight: "200px", maxWidth: "200px" }}
-                      key={module.id}
-                      item
-                      xs={6}
-                      sm={4}
-                      md={3}
+              {/* Smooth Animated Grid */}
+              <Box sx={{ position: "relative", minHeight: "300px" }}>
+                <AnimatePresence mode="wait">
+                  {loadingModules ? (
+                    <motion.div
+                      key="skeleton-loader"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.15 }}
                     >
-                      <BenchmarkCard
-                        title={module.title || module.name}
-                        description={
-                          module.description || "No description available."
-                        }
-                      />
-                    </Grid>
-                  ))}
-                </Grid>
-              )}
+                      <Grid container spacing={2}>
+                        {Array.from({ length: modules.length || 8 }).map((_, idx) => (
+                          <Grid item xs={6} sm={4} md={3} key={`skeleton-${idx}`}>
+                            <BenchmarkSkeletonCard />
+                          </Grid>
+                        ))}
+                      </Grid>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key={`modules-version-${selectedVersion}`}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      transition={{ duration: 0.25, ease: "easeOut" }}
+                    >
+                      <Grid container spacing={2}>
+                        {modules.map((module) => (
+                          <Grid
+                            sx={{ maxHeight: "200px", maxWidth: "200px" }}
+                            key={module.id}
+                            item
+                            xs={6}
+                            sm={4}
+                            md={3}
+                          >
+                            <BenchmarkCard
+                              title={module.title || module.name}
+                              description={
+                                module.description || "No description available."
+                              }
+                            />
+                          </Grid>
+                        ))}
+                      </Grid>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </Box>
             </Box>
 
             <Box
