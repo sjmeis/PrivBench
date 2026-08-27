@@ -591,52 +591,9 @@ const Rankings = () => {
                 sx={{ flexWrap: "wrap", gap: 1 }}
               >
                 {selectedVersion && (
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 0.5,
-                      p: 1,
-                      border: "1px solid",
-                      borderColor: "divider",
-                      borderRadius: "sm",
-                      backgroundColor: "background.surface",
-                    }}
-                  >
-                    <Chip
-                      variant="soft"
-                      color="primary"
-                      size="sm"
-                      endDecorator={
-                        <IconButton
-                          size="sm"
-                          variant="plain"
-                          onClick={removeVersionFilter}
-                          sx={{
-                            minHeight: "20px",
-                            minWidth: "20px",
-                            borderRadius: "50%",
-                            fontSize: "12px",
-                            fontWeight: "bold",
-                            backgroundColor: "background.surface",
-                            border: "1px solid",
-                            borderColor: "divider",
-                            "&:hover": {
-                              backgroundColor: "background.level1",
-                              borderColor: "neutral.outlinedHoverBorder",
-                            },
-                            "&:active": {
-                              backgroundColor: "background.level2",
-                            },
-                          }}
-                        >
-                          ×
-                        </IconButton>
-                      }
-                      >
-                        Version: {selectedVersion}
-                      </Chip>
-                  </Box>
+                  <Chip variant="soft" color="primary" size="sm">
+                    Version: {selectedVersion}
+                  </Chip>
                 )}
                 {selectedModules.map((module) => (
                   <Box
