@@ -125,13 +125,14 @@ const Rankings = () => {
     const loadFilters = async () => {
       try {
         const filterData = await fetchRankingFilters();
-        setAvailableVersions(filterData.versions || []);
+        const versions = filterData.versions || [];
+        setAvailableVersions(versions);
         setAvailableModules(filterData.modules || []);
         setFilteredModules(filterData.modules || []);
 
-        // Default to latest version
-        if (filterData.versions && filterData.versions.length > 0) {
-          setSelectedVersion(filterData.versions[0]);
+        // Default to the first (most current) version
+        if (versions.length > 0) {
+          setSelectedVersion(versions[0]);
         }
       } catch (error) {
         console.error("Failed to load filter options:", error);
@@ -189,6 +190,10 @@ const Rankings = () => {
 
   useEffect(() => {
     const loadRankings = async () => {
+      if (availableVersions.length > 0 && !selectedVersion) {
+        return;
+      }
+
       if (selectedModules.length >= 2 && validWeights === "invalid") {
         return; 
       }
@@ -230,6 +235,7 @@ const Rankings = () => {
     selectedVersion,
     selectedModules,
     validWeights,
+    availableVersions.length
   ]);
 
   useLayoutEffect(() => {
