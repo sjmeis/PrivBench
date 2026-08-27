@@ -747,6 +747,30 @@ const UpdateSubmissionModal = ({ isOpen, onClose, submission, onUpdated }) => {
     }
   };
 
+  const handleDirectFinalize = async () => {
+    if (!submission) return;
+    try {
+      setIsStartingUpdate(true);
+      const result = await BenchmarkService.finalizeBenchmarkUpdate(submission.id);
+      const newScoreValue =
+        result?.new_score !== undefined ? Number(result.new_score) : null;
+      if (!Number.isNaN(newScoreValue) && newScoreValue !== null) {
+        setAverageScore(newScoreValue);
+      }
+      clearPersistedProgress(submission.id);
+      showSnackbar(result?.message || "Submission updated to latest version!", "success");
+      setFinalized(true);
+      onUpdated && onUpdated();
+    } catch (error) {
+      showSnackbar(
+        error.response?.data?.message || "Failed to finalize update.",
+        "error"
+      );
+    } finally {
+      setIsStartingUpdate(false);
+    }
+  };
+
   const handleModalClose = () => {
     onClose && onClose();
   };
@@ -1182,21 +1206,18 @@ const formatDatasetReasonText = (reasons = []) => {
         {tasks.length === 0 && (
           <DialogActions>
             <Button
-              onClick={updateSubmission}
+              onClick={modulesToUpdate.length === 0 ? handleDirectFinalize : updateSubmission}
               disabled={
-                !isFormValid() ||
                 loading ||
                 isStartingUpdate ||
-                modulesToUpdate.length === 0
+                (modulesToUpdate.length > 0 && !isFormValid())
               }
-              color={
-                isFormValid() && modulesToUpdate.length > 0
-                  ? "success"
-                  : "primary"
-              }
+              loading={isStartingUpdate}
+              color="success"
+              variant="solid"
               endDecorator={<Update />}
             >
-              Start Update Process
+              {modulesToUpdate.length === 0 ? "Apply Version Update" : "Start Update Process"}
             </Button>
             <Button
               onClick={onClose}

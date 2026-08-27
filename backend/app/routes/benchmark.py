@@ -714,7 +714,7 @@ def finalize_submission_update():
         return jsonify({"message": "No active scores found for this submission."}), 400
 
     new_overall_score = round(sum(s.score for s in active_scores) / len(active_scores), 2)
-    current_version_str = AppVersion.get_current_version()  # e.g., "1.1.0"
+    current_version_str = AppVersion.get_current_version()
 
     existing_version_score = (
         db.session.query(SubmissionVersionScore)
