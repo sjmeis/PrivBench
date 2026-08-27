@@ -752,15 +752,12 @@ const UpdateSubmissionModal = ({ isOpen, onClose, submission, onUpdated }) => {
     try {
       setIsStartingUpdate(true);
       const result = await BenchmarkService.finalizeBenchmarkUpdate(submission.id);
-      const newScoreValue =
-        result?.new_score !== undefined ? Number(result.new_score) : null;
-      if (!Number.isNaN(newScoreValue) && newScoreValue !== null) {
-        setAverageScore(newScoreValue);
-      }
+      
       clearPersistedProgress(submission.id);
       showSnackbar(result?.message || "Submission updated to latest version!", "success");
-      setFinalized(true);
+      
       onUpdated && onUpdated();
+      onClose && onClose();
     } catch (error) {
       showSnackbar(
         error.response?.data?.message || "Failed to finalize update.",

@@ -125,9 +125,14 @@ const Rankings = () => {
     const loadFilters = async () => {
       try {
         const filterData = await fetchRankingFilters();
-        setAvailableVersions(filterData.versions);
-        setAvailableModules(filterData.modules);
-        setFilteredModules(filterData.modules);
+        setAvailableVersions(filterData.versions || []);
+        setAvailableModules(filterData.modules || []);
+        setFilteredModules(filterData.modules || []);
+
+        // Default to latest version
+        if (filterData.versions && filterData.versions.length > 0) {
+          setSelectedVersion(filterData.versions[0]);
+        }
       } catch (error) {
         console.error("Failed to load filter options:", error);
       }
@@ -300,7 +305,7 @@ const Rankings = () => {
   };
 
   const clearFilters = () => {
-    setSelectedVersion("");
+    setSelectedVersion(availableVersions.length > 0 ? availableVersions[0] : "");
     setSelectedModules([]);
     setModuleWeights({});
     setCurrentPage(1);

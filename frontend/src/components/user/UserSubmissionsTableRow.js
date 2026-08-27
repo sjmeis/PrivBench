@@ -59,47 +59,60 @@ const UserSubmissionsTableRow = ({
   const [selectedVersion, setSelectedVersion] = useState(row.version);
   const [displayedModules, setDisplayedModules] = useState([]);
 
-  // Initialize with the current/latest version
-  useEffect(() => {
-    if (row.version_scores && row.version_scores.length > 0) {
-      // Sort versions and select the latest one by default
-      const sortedVersions = row.version_scores.sort((a, b) =>
+  const getModulesForVersion = (versionData) => {
+    if (!versionData) return [];
+    
+    // If the version object already has embedded scores
+    if (versionData.modules && versionData.modules.length > 0 && versionData.modules[0].score !== undefined) {
+      return versionData.modules;
+    }
+
+    // Match module IDs with the submission's overall benchmarkScores
+    const moduleList = versionData.modules || [];
+    const allScores = row.benchmarkScores || [];
+    
+    return moduleList.map((mod) => {
+      const modId = mod.id || mod.module_id;
+      const matchingScore = allScores.find(
+        (s) => (s.benchmarkModule?.id || s.module_id) === modId
+      );
+      return {
+        ...mod,
+        name: mod.name || mod.title || matchingScore?.benchmarkModule?.name,
+        score: matchingScore ? matchingScore.score : null,
+      };
+    });
+  };
+
+  const getAvailableVersions = () => {
+    const rawVersions = row.version_scores || row.versionScores || [];
+    if (rawVersions.length > 0) {
+      return [...rawVersions].sort((a, b) =>
         b.version.localeCompare(a.version, undefined, { numeric: true })
       );
-      setSelectedVersion(sortedVersions[0]);
-      setDisplayedModules(sortedVersions[0].modules || []);
-    } else {
-      // Fallback to current submission data
-      setSelectedVersion({
+    }
+    return [
+      {
         version: row.version,
-        score: row.overallScore,
+        score: row.overallScore ?? row.score,
         modules: row.benchmarkScores || [],
-      });
-      setDisplayedModules(row.benchmarkScores || []);
+      },
+    ];
+  };
+
+  useEffect(() => {
+    const versions = getAvailableVersions();
+    if (versions.length > 0) {
+      // Find matching current version or default to the highest version
+      const active = versions.find((v) => v.version === row.version) || versions[0];
+      setSelectedVersion(active);
+      setDisplayedModules(getModulesForVersion(active));
     }
   }, [row]);
 
   const handleVersionChange = (versionData) => {
     setSelectedVersion(versionData);
-    setDisplayedModules(versionData.modules || []);
-  };
-
-  // Get all available versions for the dropdown
-  const getAvailableVersions = () => {
-    if (row.version_scores && row.version_scores.length > 0) {
-      return row.version_scores.sort((a, b) =>
-        b.version.localeCompare(a.version, undefined, { numeric: true })
-      );
-    } else {
-      // If no version_scores, return current version as single option
-      return [
-        {
-          version: row.version,
-          score: row.overallScore,
-          modules: row.benchmarkScores || [],
-        },
-      ];
-    }
+    setDisplayedModules(getModulesForVersion(versionData));
   };
 
   const availableVersions = getAvailableVersions();

@@ -686,7 +686,6 @@ def benchmark_update():
         logger.error(f"Error in benchmark update endpoint: {str(e)}", exc_info=True)
         return jsonify({"message": str(e)}), 500, response_headers
 
-
 @benchmark_bp.route("/submission/finalize-update", methods=["POST"])
 @jwt_required()
 def finalize_submission_update():
@@ -698,10 +697,10 @@ def finalize_submission_update():
     if not submission:
         return jsonify({"message": "Submission not found"}), 404
 
-    # Only include active, non-deleted modules in new version computation
+    # Fetch scores only for modules that are currently active and not deleted
     active_scores = (
         db.session.query(BenchmarkScore)
-        .join(BenchmarkModule)
+        .join(BenchmarkModule, BenchmarkScore.module_id == BenchmarkModule.id)
         .filter(
             BenchmarkScore.submission_id == submission.id,
             BenchmarkModule.is_active == True,
@@ -711,40 +710,43 @@ def finalize_submission_update():
     )
 
     if not active_scores:
-        return jsonify({"message": "No active scores found for this submission."}), 400
+        return jsonify({"message": "No active module scores found for this submission."}), 400
 
+    # Recalculate average score strictly across the remaining active modules
     new_overall_score = round(sum(s.score for s in active_scores) / len(active_scores), 2)
     current_version_str = AppVersion.get_current_version()
 
+    # Create or update the SubmissionVersionScore record for this new version
     existing_version_score = (
         db.session.query(SubmissionVersionScore)
         .filter_by(submission_id=submission.id, version=current_version_str)
         .first()
     )
 
-    all_active_modules = [score.benchmark_module for score in active_scores]
+    active_modules = [score.benchmark_module for score in active_scores]
 
     if not existing_version_score:
         new_version_entry = SubmissionVersionScore(
             submission_id=submission.id,
             version=current_version_str,
             score=new_overall_score,
-            modules=all_active_modules,
+            modules=active_modules,
         )
         db.session.add(new_version_entry)
     else:
         existing_version_score.score = new_overall_score
-        existing_version_score.modules = all_active_modules
+        existing_version_score.modules = active_modules
 
-    # Mark submission as current
+    # 4. Update the parent submission entity
     submission.score = new_overall_score
     submission.version = current_version_str
     submission.status = SubmissionStatus.COMPLETED
     submission.outdated_at = None
+    
     db.session.commit()
 
     return jsonify({
-        "message": "Submission updated to new version successfully",
+        "message": "Submission updated successfully",
         "new_version": current_version_str,
         "new_score": new_overall_score,
     }), 200
