@@ -1,3 +1,18 @@
-# https://www.robotstxt.org/robotstxt.html
-User-agent: *
+User-agent: GPTBot
+User-agent: ChatGPT-User
+User-agent: CCBot
+User-agent: anthropic-ai
+User-agent: Claude-Web
+User-agent: Bytespider
+User-agent: Diffbot
 Disallow: /
+
+User-agent: *
+Disallow: /api/
+Disallow: /admin
+Disallow: /profile
+Disallow: /upload
+Disallow: /verify-email/
+Disallow: /reset-password/
+
+Crawl-delay: 5
