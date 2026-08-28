@@ -19,7 +19,7 @@ import DocumentPage from "../components/shared/DocumentPage";
 const PrivacyPolicy = () => {
   return (
     <DocumentPage title="Privacy Policy">
-      Last Updated: July 2026
+      Last Updated: August 2026
 
       <Typography level="h4" sx={{ mt: 3, mb: 1 }}>1. An Overview of Data Protection</Typography>
       <p>
@@ -34,13 +34,14 @@ const PrivacyPolicy = () => {
         you enter in our registration form (your name and email address) and any optional data you choose 
         to provide (such as a profile picture). 
       </p>
-      <p><strong>Data Storage and International Transfers (EU to US)</strong></p>
+      <p><strong>Server Location and International Data Transfers</strong></p>
       <p>
-        Our hosting and processing servers are physically located in the United States. If you are 
-        accessing this service from the European Economic Area (EEA), your personal data (name, email, profile picture, 
-        and system logs) will be transferred to and stored on our US infrastructure. To ensure an adequate level of 
-        data protection matching GDPR requirements, we utilize Standard Contractual Clauses (SCCs) approved by the 
-        European Commission to legally safeguard these cross-border transfers.
+        PrivBench is hosted on self-managed infrastructure physically located in the United States. 
+        If you access this service from the European Economic Area (EEA), the United Kingdom, or Switzerland, 
+        your personal data (such as your account credentials, evaluation uploads, and system logs) will be transferred 
+        to and processed directly on our US-based servers. This transfer is necessary for the performance of our 
+        services and benchmarking evaluations pursuant to Article 49(1)(b) GDPR. We apply appropriate technical 
+        safeguards, including TLS encryption in transit and encrypted data storage at rest, to protect all incoming data.
       </p>
       <p><strong>System Log Files</strong></p>
       <p>
@@ -56,7 +57,23 @@ const PrivacyPolicy = () => {
         and secure operation of the "Upload" and "Profile" areas. They do not track your behavior across other websites.
       </p>
 
-      <Typography level="h4" sx={{ mt: 3, mb: 1 }}>4. Benchmarking Datasets</Typography>
+      <Typography level="h4" sx={{ mt: 3, mb: 1 }}>4. External Avatar Service (Gravatar)</Typography>
+      <p>
+        To provide default avatar icons without requiring image uploads, our platform integrates with 
+        Gravatar (operated by Automattic Inc., 60 29th Street #343, San Francisco, CA 94110, USA). 
+        When you view rankings or your profile, a cryptographic SHA-256/MD5 hash of your email address is sent 
+        to Gravatar's servers to check for a linked avatar image. 
+      </p>
+      <p>
+        This request discloses your IP address and hashed email to Automattic based on our legitimate interest 
+        (Article 6(1)(f) GDPR) in presenting user profile imagery. Your raw email address is never sent to Gravatar. 
+        For details on Automattic’s data handling, please refer to their privacy policy:{" "}
+        <a href="https://automattic.com/privacy/" target="_blank" rel="noopener noreferrer" style={{ color: "inherit" }}>
+          automattic.com/privacy
+        </a>.
+      </p>
+
+      <Typography level="h4" sx={{ mt: 3, mb: 1 }}>5. Benchmarking Datasets</Typography>
       <p>
         PrivBench is a platform for privacy-first benchmarking. While the datasets provided 
         for downloading contain sensitive data for research purposes, we ensure that:
@@ -67,32 +84,31 @@ const PrivacyPolicy = () => {
         <ListItem>Submissions are evaluated securely on our server.</ListItem>
       </List>
 
-      <Typography level="h4" sx={{ mt: 3, mb: 1 }}>5. Public Leaderboard Feature (Optional)</Typography>
+      <Typography level="h4" sx={{ mt: 3, mb: 1 }}>6. Public Leaderboard and Email Visibility</Typography>
       <p>
-        If you choose to participate in our competitive benchmarking leaderboard, you have the option 
-        to make your email address visible to other users and the public. This feature is entirely 
-        optional and is disabled by default. We will only display your email address on the leaderboard 
-        if you explicitly opt-in and grant us your consent (Article 6(1)(a) GDPR). You can withdraw this 
-        consent at any time by toggling the feature off in your account settings.
+        When you publish a benchmark submission, your achieved metric scores, chosen username, and research institute 
+        are made visible on the public leaderboard. Your email address is hidden by default. 
+        We will only display your email address alongside public submissions if you explicitly enable 
+        public email visibility in your account settings (Article 6(1)(a) GDPR). You can withdraw this 
+        visibility at any time by toggling the option off in your profile.
       </p>
 
-      <Typography level="h4" sx={{ mt: 3, mb: 1 }}>6. Purpose Limitation and Use of Data</Typography>
+      <Typography level="h4" sx={{ mt: 3, mb: 1 }}>7. Purpose Limitation and Use of Data</Typography>
       <p>
-        We process your name, email address, and profile picture strictly for the core functionality 
-        of the platform as described in this policy. We do not use third-party analytics, payment 
-        processors, or external tracking services. Your data will never be sold, rented, or shared with 
-        third parties, nor will it be used for marketing newsletters. We will not use your personal 
-        information for any secondary purposes without your explicit consent.
+        We process your data exclusively for operating and securing the PrivBench platform. 
+        With the exception of the avatar lookup service (Gravatar) described in Section 4, we do not use 
+        third-party analytics, behavioral trackers, or external marketing networks. Your data is never sold, 
+        rented, or utilized for commercial ad profiling.
       </p>
 
-      <Typography level="h4" sx={{ mt: 3, mb: 1 }}>7. Data Security</Typography>
+      <Typography level="h4" sx={{ mt: 3, mb: 1 }}>8. Data Security</Typography>
       <p>
         All personal data is stored securely on our internal infrastructure. We implement appropriate 
         technical and organizational security measures to protect your name, email address, and profile 
         pictures against unauthorized access, loss, or alteration.
       </p>
 
-      <Typography level="h4" sx={{ mt: 3, mb: 1 }}>8. Your Rights</Typography>
+      <Typography level="h4" sx={{ mt: 3, mb: 1 }}>9. Your Rights</Typography>
       <p>
         Under the GDPR, you possess specific, enforceable rights regarding your personal data. You can 
         exercise these rights at any time by contacting us at <strong>admin@privbench.com</strong>.
@@ -126,7 +142,7 @@ const PrivacyPolicy = () => {
         </ListItem>
       </List>
 
-      <Typography level="h4" sx={{ mt: 3, mb: 1 }}>9. Children's Privacy</Typography>
+      <Typography level="h4" sx={{ mt: 3, mb: 1 }}>10. Children's Privacy</Typography>
       <p>
         Our platform and benchmarking datasets are intended strictly for academic and professional research. 
         We do not knowingly collect or solicit personal data from children under the age of 16. If we learn 
@@ -134,7 +150,7 @@ const PrivacyPolicy = () => {
         we will delete that information as quickly as possible.
       </p>
 
-      <Typography level="h4" sx={{ mt: 3, mb: 1 }}>10. Changes to this Privacy Policy</Typography>
+      <Typography level="h4" sx={{ mt: 3, mb: 1 }}>11. Changes to this Privacy Policy</Typography>
       <p>
         We may update our Privacy Policy from time to time. We will notify you of any changes by posting 
         the new Privacy Policy on this page and updating the "Last Updated" date at the top of this document. 
