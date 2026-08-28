@@ -15,7 +15,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
 
 
 import React, { useState } from 'react';
-import { Box, Typography, Link } from "@mui/joy";
+import { Box, Typography, Link, Stack } from "@mui/joy";
 import { useNavigate } from "react-router-dom";
 import { ContactFormModal } from "./ContactFormModal";
 
@@ -96,25 +96,6 @@ const Footer = () => {
         <Typography level="body2" textColor="text.primary">
           {"·"}
         </Typography>
-        {/* <Link
-          href="https://www.cs.cit.tum.de/sebis/"
-          target="_blank"
-          rel="noopener noreferrer"
-          level="body1"
-          sx={{
-            textDecoration: "none",
-            fontWeight: "md",
-            fontSize: "1rem",
-            "&:hover": {
-              textDecoration: "underline",
-            },
-          }}
-        >
-          sebis Homepage
-        </Link>
-        <Typography level="body2" textColor="text.primary">
-          {"·"} 
-        </Typography>*/}
         <Typography level="body2" textColor="text.primary">
           © {new Date().getFullYear()} PrivBench
         </Typography>
@@ -148,6 +129,43 @@ const Footer = () => {
           Contact Us
         </Link>
       </Box>
+
+      {/* CC BY-NC-ND License Notice */}
+      <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={1.5}
+          alignItems="center"
+          justifyContent="center"
+          sx={{ textAlign: "center" }}
+        >
+          <Link
+            href="https://creativecommons.org/licenses/by-nc-nd/4.0/"
+            target="_blank"
+            rel="noopener noreferrer"
+            sx={{ display: "inline-flex", alignItems: "center" }}
+          >
+            <img
+              src="https://licensebuttons.net/l/by-nc-nd/4.0/88x31.png"
+              alt="Creative Commons License (CC BY-NC-ND 4.0)"
+              style={{ height: "26px", border: 0 }}
+            />
+          </Link>
+          <Typography level="body-xs" textColor="text.secondary">
+            This platform is licensed under a{" "}
+            <Link
+              href="https://creativecommons.org/licenses/by-nc-nd/4.0/"
+              target="_blank"
+              rel="noopener noreferrer"
+              underline="hover"
+              textColor="text.primary"
+              sx={{ fontWeight: "md" }}
+            >
+              Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-NC-ND 4.0) License
+            </Link>
+            .
+          </Typography>
+        </Stack>
+
       <ContactFormModal 
         open={isContactOpen} 
         onClose={() => setIsContactOpen(false)} 
