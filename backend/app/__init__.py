@@ -19,6 +19,7 @@ from flask_jwt_extended import JWTManager
 from flask_mail import Mail
 from celery import Celery
 from datetime import datetime
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from .utils.monitor import start_monitor
 from .utils.container_manager import container_manager
@@ -28,9 +29,6 @@ import logging
 import os
 
 jwt = JWTManager()
-#migrate = Migrate()
-#mail = Mail()
-
 
 def make_celery(app):
     celery = Celery(
@@ -51,6 +49,8 @@ def make_celery(app):
 
 def create_app():
     app = Flask(__name__)
+
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=2, x_proto=2, x_host=2, x_prefix=2)
 
     # Set up logging
     logging.basicConfig(
