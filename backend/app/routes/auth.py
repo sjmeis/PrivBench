@@ -28,6 +28,7 @@ from itsdangerous import URLSafeTimedSerializer
 from datetime import timedelta
 from flask_mail import Message
 from ..extensions import mail, limiter
+from ..utils.email_validator import is_disposable_email
 
 from ..models.user import User
 from .. import db
@@ -72,6 +73,12 @@ def register():
         email_regex = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
         if not re.match(email_regex, mail_address):
             return jsonify({"message": "Invalid email address format!"}), 400
+
+        # Block temp / bad domains
+        if is_disposable_email(mail_address):
+            return jsonify({
+                "message": "Registration with disposable or temporary email addresses is not allowed. Please use an institutional or standard email provider."
+            }), 400
 
         # Check if email address already in use
         if User.query.filter_by(mail_address=mail_address).first():

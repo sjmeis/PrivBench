@@ -48,6 +48,8 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt && \
     pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.5.0/en_core_web_sm-3.5.0-py3-none-any.whl
 
+ADD https://raw.githubusercontent.com/disposable-email-domains/disposable-email-domains/main/disposable_email_blocklist.conf /app/app/utils/disposable_email_blocklist.conf
+
 COPY backend/ .
 RUN chmod +x /app/entrypoint.sh /app/celery_entrypoint.sh && \
     chown -R celeryuser:celeryuser /app
