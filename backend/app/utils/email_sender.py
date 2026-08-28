@@ -80,10 +80,12 @@ def send_support_email(sender_email, sender_username, subject, body):
         from app import app
         config = app.config
 
+    sender_address = config.get('ADMIN_EMAIL_WEB') or config.get('ADMIN_EMAIL') or config.get('MAIL_DEFAULT_SENDER')
+
     msg = Message(
         subject=f"[PrivBench Support] {subject}",
-        sender=config['MAIL_USERNAME'],
-        recipients=[config['ADMIN_EMAIL_WEB']],
+        sender=sender_address,
+        recipients=[sender_address],
         reply_to=sender_email
     )
     
