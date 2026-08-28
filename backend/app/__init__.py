@@ -23,7 +23,7 @@ from datetime import datetime
 from .utils.monitor import start_monitor
 from .utils.container_manager import container_manager
 from .config import Config
-from .extensions import db, mail, migrate, Limiter
+from .extensions import db, mail, migrate, limiter
 import logging
 import os
 
