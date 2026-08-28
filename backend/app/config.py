@@ -76,3 +76,4 @@ class Config:
     MAIL_PASSWORD = os.getenv("MAIL_PASSWORD")
     MAIL_DEFAULT_SENDER = os.getenv("MAIL_DEFAULT_SENDER", "PrivBench <admin@privbench.com>")
     ADMIN_EMAIL = os.getenv("ADMIN_EMAIL_WEB")
+    ADMIN_EMAIL_WEB = os.getenv("ADMIN_EMAIL_WEB")
