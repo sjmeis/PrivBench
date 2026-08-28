@@ -56,6 +56,9 @@ const Register = () => {
     const [isResending, setIsResending] = useState(false);
     const { showSnackbar } = useSnackbar();
 
+    const [formLoadedAt] = useState(Date.now());
+    const [honeypot, setHoneypot] = useState(''); // :)
+
     const isPasswordSecure = (pwd) => /^(?=.*[A-Za-z])(?=.*\d).{8,}$/.test(pwd);
     
     const navigate = useNavigate();
@@ -99,6 +102,16 @@ const Register = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+
+        if (honeypot) {
+            setIsSubmitted(true);
+            return;
+        }
+
+        if (Date.now() - formLoadedAt < 2000) {
+            setError("Form submitted too quickly. Please try again. Unless you really are that quick...");
+            return;
+        }
 
         if (!validateForm()) {
             return;
@@ -217,6 +230,33 @@ const Register = () => {
                             autoComplete="username"
                         />
                     </FormControl>
+
+                    <div 
+                        style={{ 
+                            position: 'absolute', 
+                            opacity: 0, 
+                            zIndex: -1, 
+                            pointerEvents: 'none', 
+                            height: 0, 
+                            width: 0,
+                            margin: 0,
+                            padding: 0,
+                            overflow: 'hidden' 
+                        }} 
+                        aria-hidden="true"
+                    >
+                        <label htmlFor="website_hp">Website</label>
+                        <input
+                            type="text"
+                            id="website_hp"
+                            name="website"
+                            tabIndex="-1"
+                            value={honeypot}
+                            onChange={(e) => setHoneypot(e.target.value)}
+                            autoComplete="off"
+                        />
+                    </div>
+
                     <FormControl>
                         <FormLabel>Research Institute</FormLabel>
                         <Input

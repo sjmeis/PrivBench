@@ -49,6 +49,10 @@ def register():
 
         data = request.get_json()
 
+        # it's a trap!
+        if data.get("website"):
+            return jsonify({"message": "Verification email sent"}), 201
+
         if not all(k in data for k in ["username", "mailAddress", "password"]):
             return jsonify({"message": "All fields are required!"}), 400
         
