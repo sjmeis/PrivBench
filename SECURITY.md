@@ -23,7 +23,7 @@ We actively provide security patches and updates for the following versions of P
 If you discover a security vulnerability , please report it responsibly using one of the following methods:
 
 1.  **GitHub Private Vulnerability Reporting:** Navigate to the **Security** tab of this repository, click on **Vulnerability reporting**, and select **Report a vulnerability**. This allows you to collaborate with us privately.
-2.  **Private Email:** If you prefer, you can email us directly at [privbench@web.de].
+2.  **Private Email:** If you prefer, you can email us directly at [admin@privbench.com].
 
 ### What to Include in Your Report:
 To help us triage and patch the issue quickly, please include:

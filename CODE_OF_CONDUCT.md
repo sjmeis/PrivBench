@@ -84,7 +84,7 @@ This Code of Conduct applies within all community spaces, and also applies when 
 ### Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the community leaders responsible for enforcement at 
-[privbench@web.de]. All complaints will be reviewed and investigated and will result in a response that is deemed necessary and appropriate to the circumstances.
+[admin@privbench.com]. All complaints will be reviewed and investigated and will result in a response that is deemed necessary and appropriate to the circumstances.
 
 ## Attribution
 
