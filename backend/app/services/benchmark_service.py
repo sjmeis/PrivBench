@@ -313,6 +313,16 @@ The PrivBench Team
 
         except Exception as e:
             logger.error(f"Sequential processing failure encountered: {e}", exc_info=True)
+            try:
+                db.session.rollback()
+                # Update submission status so UI doesn't hang in PENDING/PROCESSING
+                sub = db.session.query(Submission).get(submission_id)
+                if sub and sub.status != SubmissionStatus.COMPLETED:
+                    sub.status = SubmissionStatus.FAILED
+                    db.session.commit()
+            except Exception as db_err:
+                logger.error(f"Failed to mark submission as FAILED: {db_err}")
+
             if queue_entry_id:
                 QueueService.complete_processing(queue_entry_id, success=False)
                 BenchmarkService.process_next_in_queue(module_id)

@@ -23,7 +23,7 @@ from datetime import datetime
 from .utils.monitor import start_monitor
 from .utils.container_manager import container_manager
 from .config import Config
-from .extensions import db, mail, migrate
+from .extensions import db, mail, migrate, Limiter
 import logging
 import os
 
@@ -81,6 +81,7 @@ def create_app():
     jwt.init_app(app)
     migrate.init_app(app, db)
     mail.init_app(app)
+    limiter.init_app(app)
 
     from .routes.auth import auth_bp
     from .routes.main import main_bp

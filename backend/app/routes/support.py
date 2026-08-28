@@ -18,21 +18,28 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from ..models.user import User
 from ..utils.email_sender import send_support_email
+from ..extensions import limiter
 
 support_bp = Blueprint("support", __name__)
 
 @support_bp.route('/support/contact', methods=['POST'])
 @jwt_required()
+@limiter.limit("5 per hour")
 def contact_admin():
     user_id = get_jwt_identity()
     user = User.query.get(user_id)
+    if not user:
+        return jsonify({"message": "User not found"}), 404
     
-    data = request.get_json()
-    subject = data.get('subject', 'General Support Request')
-    message = data.get('message')
+    data = request.get_json() or {}
+    subject = (data.get('subject') or 'General Support Request').strip()[:200]
+    message = (data.get('message') or '').strip()
 
     if not message:
         return jsonify({"message": "Message content is required"}), 400
+
+    if len(message) > 5000:
+        return jsonify({"message": "Message exceeds maximum length of 5000 characters"}), 400
 
     send_support_email(
         sender_email=user.mail_address,

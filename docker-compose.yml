@@ -51,6 +51,8 @@ services:
       - MAIL_USERNAME=${MAIL_USERNAME}
       - MAIL_PASSWORD=${MAIL_PASSWORD}
       - MAIL_DEFAULT_SENDER=${ADMIN_EMAIL_WEB}
+      - DEBUG=${DEBUG}
+      - TESTING=${TESTING}
     depends_on:
       db:
         condition: service_healthy

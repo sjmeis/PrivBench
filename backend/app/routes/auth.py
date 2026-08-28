@@ -27,7 +27,7 @@ from itsdangerous import URLSafeTimedSerializer
 
 from datetime import timedelta
 from flask_mail import Message
-from ..extensions import mail
+from ..extensions import mail, limiter
 
 from ..models.user import User
 from .. import db
@@ -40,6 +40,7 @@ def generate_verification_token(email):
     return serializer.dumps(email, salt='email-confirm')
 
 @auth_bp.route("/register", methods=["POST"])
+@limiter.limit("3 per minute")
 def register():
     try:
         if not request.is_json:
@@ -76,11 +77,13 @@ def register():
         if User.query.filter_by(mail_address=mail_address).first():
             return jsonify({"message": "Mail address already registered!"}), 409
 
+        hashed_password = generate_password_hash(password)
+
         new_user = User(
             username=username,
             mail_address=mail_address,
             research_institute=data.get("researchInstitute", ""),
-            password=password,
+            password=hashed_password,
             is_verified=False
         )
 
@@ -120,6 +123,7 @@ def verify_email(token):
     return jsonify({"message": "Account verified successfully!"}), 200
 
 @auth_bp.route("/resend-verification", methods=["POST"])
+@limiter.limit("3 per minute")
 def resend_verification():
     data = request.get_json()
     identifier = data.get("mailAddress")
@@ -148,6 +152,7 @@ def resend_verification():
         return jsonify({"message": "Failed to send email. Please try again later."}), 500
 
 @auth_bp.route("/login", methods=["POST"])
+@limiter.limit("10 per minute")
 def login():
     try:
         if not request.is_json:
@@ -166,7 +171,10 @@ def login():
         if not user.is_verified:
             return jsonify({"message": "Please verify your email address before logging in."}), 401
 
-        additional_claims = {"is_admin": user.admin}
+        additional_claims = {
+            "is_admin": getattr(user, "admin", False),
+            "is_superadmin": getattr(user, "is_superadmin", False),
+        }
         access_token = create_access_token(identity=str(user.id), additional_claims=additional_claims)
 
         response = jsonify(
@@ -231,6 +239,7 @@ def logout():
         return jsonify({"message": "Logout failed!"}), 500
 
 @auth_bp.route("/auth/forgot-password", methods=["POST"])
+@limiter.limit("3 per minute")
 def forgot_password():
     data = request.get_json() or {}
     email = data.get("email", "").strip()

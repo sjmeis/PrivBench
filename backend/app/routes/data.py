@@ -16,6 +16,7 @@
 from flask import Blueprint, request, jsonify, current_app
 from flask import send_from_directory, send_file
 import os
+import io
 from werkzeug.utils import secure_filename
 from ..extensions import db
 from ..models import PrivatizedDataset, Submission, Dataset, BenchmarkModule, ModuleDatasetChoice
@@ -36,6 +37,10 @@ logger = logging.getLogger(__name__)
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
 DATASET_FOLDER = os.path.join(PROJECT_ROOT, "data/datasets")
 PRIVATIZED_DATASETS_FOLDER = os.path.join(PROJECT_ROOT, "data", "privatized_datasets")
+
+def is_safe_path(base_dir: str, path: str) -> bool:
+    matchpath = os.path.abspath(path)
+    return base_dir == os.path.commonpath((base_dir, matchpath))
 
 logger.info(f"Dataset folder path: {DATASET_FOLDER}")
 
@@ -137,15 +142,17 @@ def get_dataset_list():
 
 
 @data_bp.route("/datasets/<path:filename>", methods=["GET"])
+@jwt_required()
 def get_dataset(filename):
     try:
-        filename = unquote(filename)
-        file_path = os.path.join(DATASET_FOLDER, filename)
-        if not os.path.isfile(file_path):
+        sanitized_filename = secure_filename(unquote(filename))
+        file_path = os.path.join(DATASET_FOLDER, sanitized_filename)
+
+        if not is_safe_path(DATASET_FOLDER, file_path) or not os.path.isfile(file_path):
             return jsonify({"error": "Dataset not found"}), 404
 
         return send_from_directory(
-            DATASET_FOLDER, filename, as_attachment=True, conditional=False
+            DATASET_FOLDER, sanitized_filename, as_attachment=True, conditional=False
         )
 
     except Exception as e:
@@ -208,18 +215,13 @@ def upload_privatized_dataset():
 
         orig_row_count = len(orig_ids) + 1 # +1 for header
 
-        # Read uploaded file using csv.reader to handle quoted fields correctly
-        file_content_bytes = file.read()
-        if not file_content_bytes:
-            return jsonify({"error": "Uploaded file is empty"}), 400
+        # Stream-parse uploaded CSV in memory without redundant large string copies
+        stream = io.StringIO(file.stream.read().decode("utf-8", errors="replace"), newline=None)
+        csv_reader = csv.reader(stream)
         
-        file_content_str = file_content_bytes.decode("utf-8")
-        uploaded_rows = list(csv.reader(file_content_str.strip().splitlines()))
-        if not uploaded_rows:
+        uploaded_header = next(csv_reader, None)
+        if not uploaded_header:
             return jsonify({"error": "Uploaded file is empty"}), 400
-
-        uploaded_header = uploaded_rows[0]
-        uploaded_row_count = len(uploaded_rows)
 
         # Validate column names match
         if uploaded_header != orig_header:
@@ -227,16 +229,24 @@ def upload_privatized_dataset():
                 "error": f"Column mismatch: expected {orig_header}, got {uploaded_header}"
             }), 400
 
+        uploaded_ids = []
+        for row_idx, row in enumerate(csv_reader, start=2):
+            if not row:
+                continue
+            if len(row) <= id_index:
+                return jsonify({"error": f"Malformed row at line {row_idx}"}), 400
+            uploaded_ids.append(row[id_index])
+
+        uploaded_row_count = len(uploaded_ids) + 1
+
         # Validate row count matches
         if uploaded_row_count != orig_row_count:
             return jsonify({
                 "error": f"Row count mismatch: expected {orig_row_count}, got {uploaded_row_count}"
             }), 400
-        
-        # validate IDs and their order against the original
-        uploaded_ids = [row[id_index] for row in uploaded_rows[1:]] # Skip header
+
+        # Validate IDs and their order against the original
         if uploaded_ids != orig_ids:
-            # find where the mismatch starts for better error reporting
             mismatch_idx = next((i for i, (a, b) in enumerate(zip(uploaded_ids, orig_ids)) if a != b), 0)
             return jsonify({
                 "error": f"ID sequence mismatch starting at row {mismatch_idx + 2}. "
@@ -250,8 +260,12 @@ def upload_privatized_dataset():
         file_path = os.path.join(PRIVATIZED_DATASETS_FOLDER, filename)
 
         # Write the already-read content to disk
-        with open(file_path, "wb") as f:
-            f.write(file_content_bytes)
+        if not is_safe_path(PRIVATIZED_DATASETS_FOLDER, file_path):
+            return jsonify({"error": "Invalid storage path"}), 400
+
+        stream.seek(0)
+        with open(file_path, "w", newline="", encoding="utf-8") as f:
+            f.write(stream.read())
 
         privatized_dataset = PrivatizedDataset(
             submission_id=submission_id,

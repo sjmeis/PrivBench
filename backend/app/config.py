@@ -19,26 +19,53 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+def str_to_bool(value, default=False):
+    """Safely cast string environment variables to booleans."""
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in ["true", "1", "yes", "t", "on"]
 
 class Config:
     FRONTEND_URL = os.getenv("FRONTEND_URL", "https://privbench.com")
-    SECRET_KEY = os.getenv("SECRET_KEY", "supersecretkey")
-    SQLALCHEMY_DATABASE_URI = os.getenv(
-        "DATABASE_URL", "postgresql://user:password@db:5432/dbname"
-    )
+    SECRET_KEY = os.getenv("SECRET_KEY")
+
+    if not SECRET_KEY:
+        raise ValueError("CRITICAL: SECRET_KEY environment variable is not set.")
+    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL")
+    if not SQLALCHEMY_DATABASE_URI:
+        raise ValueError("CRITICAL: DATABASE_URL environment variable is not set.")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "jwtsecretkey")
+    SQLALCHEMY_ECHO = False
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "pool_pre_ping": True,
+        "pool_recycle": 300
+    }
+
+    JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+    if not JWT_SECRET_KEY:
+        raise ValueError("CRITICAL: JWT_SECRET_KEY environment variable is not set.")
+    
     # JWT settings
     JWT_TOKEN_LOCATION = ["cookies"]
-    JWT_COOKIE_SECURE = os.getenv("FLASK_ENV", "development") == "production"  # Only True in production
+    JWT_COOKIE_SECURE = True
+    JWT_COOKIE_HTTPONLY = True
     JWT_SESSION_COOKIE_NAME = "access_token_cookie"
     JWT_COOKIE_SAMESITE = "Lax"
     JWT_COOKIE_CSRF_PROTECT = False
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(days=1)
 
+    DEBUG = str_to_bool(os.getenv("DEBUG", "False"))
+    TESTING = str_to_bool(os.getenv("TESTING", "False"))
+
+    MAX_CONTENT_LENGTH = int(os.getenv("MAX_CONTENT_LENGTH", 25 * 1024 * 1024))
+
     # Celery settings
     CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0")
     CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://redis:6379/0")
+    CELERY_TASK_TIME_LIMIT = int(os.getenv("CELERY_TASK_TIME_LIMIT", 1800))
+    CELERY_TASK_SOFT_TIME_LIMIT = int(os.getenv("CELERY_TASK_SOFT_TIME_LIMIT", 1500))
 
     # Mail settings
     MAIL_SERVER = os.getenv("MAIL_SERVER", "smtp.office365.com")

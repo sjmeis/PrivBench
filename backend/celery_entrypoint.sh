@@ -48,4 +48,9 @@ echo "Python version: $(python --version)"
 echo "Celery version: $(python -m celery --version)"
 
 # exec python3 -m celery -A celery_app.celery worker --loglevel=debug -c 2
-exec python3 -m celery -A celery_app.celery worker "$@"
+exec python3 -m celery -A celery_app.celery worker \
+    --loglevel=INFO \
+    --max-tasks-per-child=10 \
+    --max-memory-per-child=4000000 \
+    -Ofair \
+    "$@"

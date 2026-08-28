@@ -138,37 +138,50 @@ if __name__ == '__main__':
                 container.put_archive("/app", tar_stream)
             
             client = docker.from_env()
-            exec_instance = client.api.exec_create(container.id, ["python3", "/app/runner.py"])
+            exec_instance = client.api.exec_create(
+                container.id, 
+                ["python3", "/app/runner.py"],
+                environment={"PYTHONUNBUFFERED": "1"}
+            )
             output_stream = client.api.exec_start(exec_instance['Id'], stream=True)
             
             score = None
             processed_rows = 0           
-            for chunk in output_stream:
-                raw = chunk.decode("utf-8")
-                for line in raw.splitlines():
-                    line = line.strip()
-                    if not line or "\r" in line or "%" in line or "it/s" in line:
-                        continue
-                    if line.startswith("PROGRESS:"):
-                        try:
-                            rows = int(line.replace("PROGRESS:", "").strip())
-                            processed_rows = rows
-                            if progress_callback:
-                                progress_callback(rows)
-                        except ValueError:
-                            pass
-                    if "SCORE:" in line:
-                        try:
-                            score_part = line[line.find("SCORE:") + 6 :]
-                            score = float(score_part.strip())
-                        except ValueError:
+            try:
+                for chunk in output_stream:
+                    raw = chunk.decode("utf-8", errors="replace")
+                    for line in raw.splitlines():
+                        line = line.strip()
+                        if not line or "\r" in line or "%" in line or "it/s" in line:
                             continue
-                    elif "ERROR:" in line or line.startswith("Traceback"):
-                        raise Exception(line.replace("ERROR:", "").strip())
+                        if line.startswith("PROGRESS:"):
+                            try:
+                                rows = int(line.replace("PROGRESS:", "").strip())
+                                processed_rows = rows
+                                if progress_callback:
+                                    progress_callback(rows)
+                            except ValueError:
+                                pass
+                        if "SCORE:" in line:
+                            try:
+                                score_part = line[line.find("SCORE:") + 6 :]
+                                score = float(score_part.strip())
+                            except ValueError:
+                                continue
+                        elif "ERROR:" in line or line.startswith("Traceback"):
+                            raise Exception(line.replace("ERROR:", "").strip())
 
-            exit_status = client.api.exec_inspect(exec_instance['Id'])['ExitCode']
-            if exit_status != 0:
-                raise Exception(f"Benchmark run exited with code {exit_status}")
+                exit_status = client.api.exec_inspect(exec_instance['Id'])['ExitCode']
+                if exit_status != 0:
+                    raise Exception(f"Benchmark run exited with code {exit_status}")
+
+            finally:
+                # Clean up copied files inside container to prevent bloat
+                try:
+                    cleanup_cmd = f"rm -f /app/runner.py /app/dataset.csv /app/privatized_dataset.csv /app/{module_stem}.py"
+                    client.api.exec_start(client.api.exec_create(container.id, ["sh", "-c", cleanup_cmd])['Id'])
+                except Exception as clean_err:
+                    logger.warning(f"Failed to clean container temp files: {clean_err}")
                 
             return score
     except Exception as e:

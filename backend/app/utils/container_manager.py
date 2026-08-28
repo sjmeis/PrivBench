@@ -13,11 +13,16 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import os
 import docker
 from docker.types import DeviceRequest
 import logging
 import threading
 from ..models import BenchmarkModule
+
+CONTAINER_MEM_LIMIT = os.getenv("BENCHMARK_CONTAINER_MEM_LIMIT", "8g")
+CONTAINER_CPUS = int(float(os.getenv("BENCHMARK_CONTAINER_CPUS", "4.0")) * 1e9)
+CONTAINER_PIDS_LIMIT = int(os.getenv("BENCHMARK_CONTAINER_PIDS_LIMIT", 256))
 
 logger = logging.getLogger(__name__)
 
@@ -175,6 +180,10 @@ class ContainerManager:
                     device_requests=device_requests,
                     detach=True,
                     remove=False,
+                    network_mode="none",
+                    mem_limit=CONTAINER_MEM_LIMIT,
+                    nano_cpus=CONTAINER_CPUS,
+                    pids_limit=CONTAINER_PIDS_LIMIT
                 )
 
                 # Create /app directory in container
