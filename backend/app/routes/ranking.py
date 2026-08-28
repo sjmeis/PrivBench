@@ -529,7 +529,7 @@ def get_all_filtered():
                 "user": {
                     "id": submission.user.id,
                     "username": submission.user.username,
-                    "mailAddress": submission.user.mail_address,
+                    "mailAddress": submission.user.mail_address if getattr(submission.user, "is_email_public", False) else None,
                     "badges": submission.user.badges,
                     "researchInstitute": submission.user.research_institute,
                     "profilePicturePath": submission.user.profile_picture_path,
