@@ -88,13 +88,11 @@ def register():
         if User.query.filter_by(mail_address=mail_address).first():
             return jsonify({"message": "Mail address already registered!"}), 409
 
-        hashed_password = generate_password_hash(password)
-
         new_user = User(
             username=username,
             mail_address=mail_address,
             research_institute=data.get("researchInstitute", ""),
-            password=hashed_password,
+            password=password,
             is_verified=False
         )
 
