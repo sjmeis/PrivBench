@@ -146,17 +146,9 @@ def benchmark():
     """Endpoint to start benchmark tasks."""
     submission = None
     try:
-        # Add CORS headers
-        response_headers = {
-            "Access-Control-Allow-Origin": "http://localhost:3000",
-            "Access-Control-Allow-Credentials": "true",
-            "Access-Control-Allow-Methods": "POST, OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type",
-        }
-
         # Handle preflight OPTIONS request
         if request.method == "OPTIONS":
-            return ("", 204, response_headers)
+            return ("", 204)
 
         # Guard: block starting benchmark if unpublished module updates exist
         pending_block = db.session.query(
@@ -175,12 +167,37 @@ def benchmark():
                         "message": "Submissions disabled: admin must publish pending benchmark module updates."
                     }
                 ),
-                423,
-                response_headers,
+                423
             )
 
         user_id = get_jwt_identity()
         user = User.query.get(user_id)
+        if not user:
+            return jsonify({"message": "User not found"}), 404
+
+        # Enforce rolling 24-hour submission limit
+        daily_limit = user.daily_submission_limit if user.daily_submission_limit is not None else 5
+        twenty_four_hours_ago = datetime.utcnow() - datetime.timedelta(hours=24)
+        
+        recent_submissions_count = (
+            db.session.query(Submission)
+            .filter(
+                Submission.user_id == user_id,
+                Submission.created_at >= twenty_four_hours_ago,
+                Submission.status.in_([
+                    SubmissionStatus.COMPLETED,
+                    SubmissionStatus.IN_PROGRESS,
+                    SubmissionStatus.PENDING
+                ])
+            )
+            .count()
+        )
+
+        if recent_submissions_count >= daily_limit:
+            return jsonify({
+                "message": f"Daily submission limit reached ({daily_limit} submissions per 24 hours). Please try again later."
+            }), 429
+
         logger.info(f"Starting benchmark for user {user_id}")
 
         # Print Celery configuration for debugging
@@ -211,8 +228,7 @@ def benchmark():
             logger.error("No pending or in-progress submissions found")
             return (
                 jsonify({"message": "No pending or in-progress submissions found"}),
-                404,
-                response_headers,
+                404
             )
 
         # Only update status if it's PENDING
@@ -337,7 +353,7 @@ The PrivBench Team
         logger.info(
             f"Successfully queued {len(queue_entries)} modules, {len(immediate_tasks)} started immediately"
         )
-        return jsonify(response_data), 202, response_headers
+        return jsonify(response_data), 202
 
     except Exception as e:
         logger.error(f"Error in benchmark endpoint: {str(e)}", exc_info=True)
@@ -540,16 +556,9 @@ def task_status(task_id):
 def benchmark_update():
     """Queue selected modules for update for an OUTDATED submission."""
     try:
-        response_headers = {
-            "Access-Control-Allow-Origin": "http://localhost:3000",
-            "Access-Control-Allow-Credentials": "true",
-            "Access-Control-Allow-Methods": "POST, OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type",
-        }
-
         if request.method == "OPTIONS":
             logger.info("CORS preflight request received")
-            return ("", 204, response_headers)
+            return ("", 204)
 
         request_data = request.get_json() or {}
         submission_id = request_data.get("submissionId")
@@ -558,17 +567,16 @@ def benchmark_update():
         if not submission_id:
             return (
                 jsonify({"message": "Missing submission_id in request body"}),
-                400,
-                response_headers,
+                400
             )
 
         user_id = get_jwt_identity()
         submission = Submission.query.get(submission_id)
         if not submission:
-            return jsonify({"message": "Submission not found"}), 404, response_headers
+            return jsonify({"message": "Submission not found"}), 404
 
         if str(submission.user_id) != str(user_id):
-            return jsonify({"message": "Unauthorized"}), 403, response_headers
+            return jsonify({"message": "Unauthorized"}), 403
 
         if submission.status != SubmissionStatus.OUTDATED:
             return jsonify({"message": "Submission is already up-to-date"}), 200
@@ -585,7 +593,7 @@ def benchmark_update():
             modules_to_update = computed
 
         if not modules_to_update:
-            return jsonify({"message": "No modules to update"}), 200, response_headers
+            return jsonify({"message": "No modules to update"}), 200
 
         # Add to queue
         queue_entries = []
@@ -667,8 +675,7 @@ def benchmark_update():
                         "message": "No modules could be queued. Some modules may require dataset upload first."
                     }
                 ),
-                400,
-                response_headers,
+                400
             )
 
         response_data = {
@@ -680,11 +687,11 @@ def benchmark_update():
         if immediate_tasks:
             response_data["task_ids"] = immediate_tasks
 
-        return jsonify(response_data), 202, response_headers
+        return jsonify(response_data), 202
 
     except Exception as e:
         logger.error(f"Error in benchmark update endpoint: {str(e)}", exc_info=True)
-        return jsonify({"message": str(e)}), 500, response_headers
+        return jsonify({"message": str(e)}), 500
 
 @benchmark_bp.route("/submission/finalize-update", methods=["POST"])
 @jwt_required()
@@ -869,12 +876,17 @@ def delete_latest_submission():
         # Delete all privatized datasets for this submission
         PrivatizedDataset.query.filter_by(submission_id=submission.id).delete()
 
-        # Delete the submission itself
+        # Revoke only the tasks belonging to this submission
+        for queue_entry in submission.tasks_in_queue:
+            if queue_entry.task_id:
+                try:
+                    celery.control.revoke(queue_entry.task_id, terminate=True)
+                except Exception as rev_err:
+                    logger.warning(f"Could not revoke task {queue_entry.task_id}: {rev_err}")
+
+        # Delete the submission (cascades to scores, queue, and privatized datasets)
         db.session.delete(submission)
         db.session.commit()
-
-        # Revoke any running tasks in Celery
-        celery.control.purge()
 
         return jsonify({"message": "Latest submission deleted successfully"}), 200
 

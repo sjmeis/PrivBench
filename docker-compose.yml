@@ -5,8 +5,6 @@ services:
       dockerfile: backend/Dockerfile
     env_file:
       - .env
-    ports:
-      - "5000:5000"
     deploy:
       resources:
         reservations:
@@ -15,9 +13,8 @@ services:
               count: all
               capabilities: [gpu]
     volumes:
-      - ./backend:/app
       - ./data/datasets:/data/datasets
-      - /home/ubuntu/privbench_data/privatized_datasets:/data/privatized_datasets
+      - ${PRIVATIZED_DATASETS_DIR:-./data/privatized_datasets}:/data/privatized_datasets
       - ./modules:/app/modules
       - ./benchmarks:/app/benchmarks
       - /var/run/docker.sock:/var/run/docker.sock
@@ -68,7 +65,7 @@ services:
     hostname: cpu_worker
     volumes:
       - ./data/datasets:/data/datasets
-      - /home/ubuntu/privbench_data/privatized_datasets:/data/privatized_datasets
+      - ${PRIVATIZED_DATASETS_DIR:-./data/privatized_datasets}:/data/privatized_datasets
       - ./modules:/app/modules
       - ./benchmarks:/app/benchmarks
       - /var/run/docker.sock:/var/run/docker.sock
@@ -107,7 +104,7 @@ services:
     hostname: gpu_worker
     volumes:
       - ./data/datasets:/data/datasets
-      - /home/ubuntu/privbench_data/privatized_datasets:/data/privatized_datasets
+      - ${PRIVATIZED_DATASETS_DIR:-./data/privatized_datasets}:/data/privatized_datasets
       - ./modules:/app/modules
       - ./benchmarks:/app/benchmarks
       - /var/run/docker.sock:/var/run/docker.sock
@@ -167,9 +164,6 @@ services:
       - /etc/letsencrypt:/etc/letsencrypt:ro
       - /var/lib/letsencrypt:/var/lib/letsencrypt:ro
       - ./backend/static/uploads:/app/static/uploads:ro
-    # ports:
-    #   - "80:80"
-    #   - "443:443"
     depends_on:
       - backend
       - frontend
@@ -178,7 +172,7 @@ services:
       - web-traffic
     labels:
       - "traefik.enable=true"
-      - "traver.docker.network=web-traffic"
+      - "traefik.docker.network=web-traffic"
       - "traefik.http.routers.privbench.rule=Host(`privbench.com`) || Host(`www.privbench.com`)"
       - "traefik.http.routers.privbench.entrypoints=websecure"
       - "traefik.http.routers.privbench.tls=true"
@@ -191,9 +185,7 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB}
     volumes:
-      - /home/ubuntu/privbench_data/postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5433:5432"
+      - ${POSTGRES_DATA_DIR:-./data/postgres_data}:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
@@ -202,8 +194,6 @@ services:
 
   redis:
     image: redis:6.2
-    ports:
-      - "6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s

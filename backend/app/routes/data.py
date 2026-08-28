@@ -215,6 +215,17 @@ def upload_privatized_dataset():
 
         orig_row_count = len(orig_ids) + 1 # +1 for header
 
+        raw_bytes = file.stream.read()
+        
+        # Check for binary null bytes (prevents compiled binaries/executables disguised as csv)
+        if b"\x00" in raw_bytes[:1024]:
+            return jsonify({"error": "Invalid file format: Binary files are not permitted."}), 400
+
+        # Check for malicious HTML/JS payloads
+        start_snippet = raw_bytes[:512].lower()
+        if b"<html" in start_snippet or b"<script" in start_snippet or b"<!doctype" in start_snippet:
+            return jsonify({"error": "Invalid file format: HTML/Script content detected."}), 400
+
         # Stream-parse uploaded CSV in memory without redundant large string copies
         stream = io.StringIO(file.stream.read().decode("utf-8", errors="replace"), newline=None)
         csv_reader = csv.reader(stream)
