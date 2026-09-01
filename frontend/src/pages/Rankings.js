@@ -345,7 +345,6 @@ const Rankings = () => {
     const newModules = newValue || [];
     setSelectedModules(newModules);
 
-    // Auto-distribute equal weights across all selected modules
     if (newModules.length > 0) {
       const equalWeight = Number((1.0 / newModules.length).toFixed(4));
       const newWeights = {};
@@ -586,18 +585,19 @@ const Rankings = () => {
               <Select
                 multiple
                 placeholder="All modules"
-                value={selectedModules}
-                onChange={handleModuleChange}
+                value={selectedModules.map((m) => m.id)}
+                onChange={(event, newIds) => {
+                  const selectedObjs = filteredModules.filter((m) => (newIds || []).includes(m.id));
+                  handleModuleChange(event, selectedObjs);
+                }}
                 renderValue={(selected) =>
                   selected.length === 0
                     ? "All modules"
-                    : `${selected.length} module${
-                        selected.length > 1 ? "s" : ""
-                      } selected`
+                    : `${selected.length} module${selected.length > 1 ? "s" : ""} selected`
                 }
               >
                 {filteredModules.map((module) => (
-                  <Option key={module.id} value={module}>
+                  <Option key={module.id} value={module.id}>
                     {module.name} (v{module.version})
                   </Option>
                 ))}
