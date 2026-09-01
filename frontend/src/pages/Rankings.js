@@ -147,7 +147,7 @@ const Rankings = () => {
         CACHE_KEY,
         JSON.stringify({
           version: selectedVersion,
-          modules: selectedModules,
+          moduleIds: selectedModuleIds,
           weights: moduleWeights,
           search: searchTerm,
           page: currentPage,
@@ -161,7 +161,7 @@ const Rankings = () => {
     }
   }, [
     selectedVersion,
-    selectedModules,
+    selectedModuleIds,
     moduleWeights,
     searchTerm,
     currentPage,
@@ -206,17 +206,14 @@ const Rankings = () => {
     const loadModulesForVersion = async () => {
       try {
         const filterData = await fetchRankingFilters(selectedVersion);
-        setFilteredModules(filterData.modules || []);
+        const mods = filterData.modules || [];
+        setFilteredModules(mods);
 
-        if (selectedModules.length > 0) {
-          const availableModuleIds = (filterData.modules || []).map((m) => m.id);
-          const validSelectedModules = selectedModules.filter((module) =>
-            availableModuleIds.includes(module.id)
-          );
-          if (validSelectedModules.length !== selectedModules.length) {
-            setSelectedModules(validSelectedModules);
-          }
-        }
+        // Keep only the IDs that exist in the newly selected version
+        const validIds = mods.map((m) => m.id);
+        setSelectedModuleIds((prevIds) =>
+          prevIds.filter((id) => validIds.includes(id))
+        );
       } catch (error) {
         console.error("Failed to load modules for version:", error);
         setFilteredModules(availableModules);
@@ -233,18 +230,15 @@ const Rankings = () => {
     const loadRankings = async () => {
       try {
         setIsLoading(true);
-        const moduleIds = selectedModules.map((module) => module.id);
 
-        // Compute weights to send
         let weightsToSend = {};
-        if (selectedModules.length >= 2) {
+        if (selectedModuleIds.length >= 2) {
           if (validWeights !== "invalid") {
             weightsToSend = JSON.parse(validWeights);
           } else {
-            // Default to equal weights if custom weights are not configured
-            const equalWeight = 1.0 / selectedModules.length;
-            selectedModules.forEach((m) => {
-              weightsToSend[m.id] = equalWeight;
+            const equalWeight = 1.0 / selectedModuleIds.length;
+            selectedModuleIds.forEach((id) => {
+              weightsToSend[id] = equalWeight;
             });
           }
         }
@@ -256,7 +250,7 @@ const Rankings = () => {
           order,
           orderBy,
           selectedVersion || null,
-          moduleIds,
+          selectedModuleIds,
           weightsToSend
         );
         setRankings(data.results || []);
@@ -278,7 +272,7 @@ const Rankings = () => {
     order,
     orderBy,
     selectedVersion,
-    selectedModules,
+    selectedModuleIds,
     validWeights,
   ]);
 
@@ -369,7 +363,7 @@ const Rankings = () => {
   const clearFilters = () => {
     const defaultVer = availableVersions.length > 0 ? availableVersions[0] : "";
     setSelectedVersion(defaultVer);
-    setSelectedModules([]);
+    setSelectedModuleIds([]);
     setModuleWeights({});
     setSearchValue("");
     setSearchTerm("");
@@ -385,16 +379,16 @@ const Rankings = () => {
 
   const removeModuleFilter = (event, moduleToRemove) => {
     event.stopPropagation();
-    const updatedModules = selectedModules.filter(
-      (module) => module.id !== moduleToRemove.id
+    const updatedIds = selectedModuleIds.filter(
+      (id) => id !== moduleToRemove.id
     );
-    setSelectedModules(updatedModules);
+    setSelectedModuleIds(updatedIds);
 
-    if (updatedModules.length > 0) {
-      const equalWeight = Number((1.0 / updatedModules.length).toFixed(4));
+    if (updatedIds.length > 0) {
+      const equalWeight = Number((1.0 / updatedIds.length).toFixed(4));
       const newWeights = {};
-      updatedModules.forEach((mod) => {
-        newWeights[mod.id] = equalWeight;
+      updatedIds.forEach((id) => {
+        newWeights[id] = equalWeight;
       });
       setModuleWeights(newWeights);
     } else {
