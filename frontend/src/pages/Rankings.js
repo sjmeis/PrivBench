@@ -119,28 +119,28 @@ const Rankings = () => {
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
   const [selectedModuleIds, setSelectedModuleIds] = useState(
-    cachedState.moduleIds || []
+    (cachedState.moduleIds || []).map(Number)
   );
   const selectedModules = useMemo(() => {
-    return filteredModules.filter((m) => selectedModuleIds.includes(m.id));
+    return filteredModules.filter((m) => selectedModuleIds.includes(Number(m.id)));
   }, [filteredModules, selectedModuleIds]);
 
   const validWeights = useMemo(() => {
-    if (selectedModules.length < 2) return "{}";
+    if (selectedModuleIds.length < 2) return "{}";
     const total = getTotalWeight();
     const isValid = Math.abs(total - 1.0) < 0.01;
 
     if (isValid) {
-      // Build normalized map for all selected modules
       const weights = {};
-      const equalWeight = 1.0 / selectedModules.length;
-      selectedModules.forEach((m) => {
-        weights[m.id] = moduleWeights[m.id] !== undefined ? moduleWeights[m.id] : equalWeight;
+      const equalWeight = 1.0 / selectedModuleIds.length;
+      selectedModuleIds.forEach((id) => {
+        const numId = Number(id);
+        weights[numId] = moduleWeights[numId] !== undefined ? moduleWeights[numId] : equalWeight;
       });
       return JSON.stringify(weights);
     }
     return "invalid";
-  }, [moduleWeights, selectedModules]);
+  }, [moduleWeights, selectedModuleIds]);
 
   // Persist filter state into sessionStorage whenever values change
   useEffect(() => {
@@ -286,7 +286,7 @@ const Rankings = () => {
   const handleWeightChange = (moduleId, newWeight) => {
     setModuleWeights((prev) => ({
       ...prev,
-      [moduleId]: newWeight,
+      [Number(moduleId)]: Number(newWeight),
     }));
     setCurrentPage(1);
   };
@@ -323,21 +323,21 @@ const Rankings = () => {
     if (isNaN(num)) num = 0;
     if (num < 0) num = 0;
     if (num > 100) num = 100;
-    handleWeightChange(moduleId, Number((num / 100).toFixed(2)));
+    handleWeightChange(Number(moduleId), Number((num / 100).toFixed(4)));
   };
 
   const isWeightsValid = () => {
-    if (selectedModules.length < 2) return true;
+    if (selectedModuleIds.length < 2) return true;
     const total = getTotalWeight();
     return Math.abs(total - 1.0) < 0.01;
-  };
+  }
 
   const resetWeights = () => {
-    if (selectedModules.length < 2) return;
-    const equalWeight = Number((1.0 / selectedModules.length).toFixed(4));
+    if (selectedModuleIds.length < 2) return;
+    const equalWeight = Number((1.0 / selectedModuleIds.length).toFixed(4));
     const resetMap = {};
-    selectedModules.forEach((m) => {
-      resetMap[m.id] = equalWeight;
+    selectedModuleIds.forEach((id) => {
+      resetMap[Number(id)] = equalWeight;
     });
     setModuleWeights(resetMap);
   };
@@ -367,14 +367,14 @@ const Rankings = () => {
   };
 
   const handleModuleChange = (event, newIds) => {
-    const ids = Array.isArray(newIds) ? newIds : [];
+    const ids = Array.isArray(newIds) ? newIds.map(Number) : [];
     setSelectedModuleIds(ids);
 
     if (ids.length > 0) {
       const equalWeight = Number((1.0 / ids.length).toFixed(4));
       const newWeights = {};
       ids.forEach((id) => {
-        newWeights[id] = equalWeight;
+        newWeights[Number(id)] = equalWeight;
       });
       setModuleWeights(newWeights);
     } else {
@@ -403,16 +403,15 @@ const Rankings = () => {
 
   const removeModuleFilter = (event, moduleToRemove) => {
     event.stopPropagation();
-    const updatedIds = selectedModuleIds.filter(
-      (id) => id !== moduleToRemove.id
-    );
+    const removeId = Number(moduleToRemove.id);
+    const updatedIds = selectedModuleIds.filter((id) => Number(id) !== removeId);
     setSelectedModuleIds(updatedIds);
 
     if (updatedIds.length > 0) {
       const equalWeight = Number((1.0 / updatedIds.length).toFixed(4));
       const newWeights = {};
       updatedIds.forEach((id) => {
-        newWeights[id] = equalWeight;
+        newWeights[Number(id)] = equalWeight;
       });
       setModuleWeights(newWeights);
     } else {
@@ -619,7 +618,7 @@ const Rankings = () => {
                 }
               >
                 {filteredModules.map((module) => (
-                  <Option key={module.id} value={module.id}>
+                  <Option key={module.id} value={Number(module.id)}>
                     {module.name} (v{module.version})
                   </Option>
                 ))}
@@ -772,12 +771,13 @@ const Rankings = () => {
 
           <Stack spacing={3}>
             {selectedModules.map((module) => {
-              const defaultEqual = 1.0 / selectedModules.length;
-              const weight = moduleWeights[module.id] !== undefined ? moduleWeights[module.id] : defaultEqual;
+              const numId = Number(module.id);
+              const defaultEqual = selectedModules.length > 0 ? 1.0 / selectedModules.length : 1.0;
+              const weight = moduleWeights[numId] !== undefined ? moduleWeights[numId] : defaultEqual;
               const percentage = Math.round(weight * 100);
 
               return (
-                <Box key={module.id} sx={{ px: 1 }}>
+                <Box key={numId} sx={{ px: 1 }}>
                   <Box
                     sx={{
                       display: "flex",
@@ -794,7 +794,7 @@ const Rankings = () => {
                       type="number"
                       value={percentage}
                       onChange={(e) =>
-                        handleWeightNumberInputChange(module.id, e.target.value)
+                        handleWeightNumberInputChange(numId, e.target.value)
                       }
                       slotProps={{ input: { min: 0, max: 100, step: 1 } }}
                       endDecorator="%"
@@ -804,7 +804,7 @@ const Rankings = () => {
                   <Slider
                     value={weight}
                     onChange={(event, newValue) =>
-                      handleWeightChange(module.id, newValue)
+                      handleWeightChange(numId, newValue)
                     }
                     min={0}
                     max={1.0}
@@ -829,17 +829,14 @@ const Rankings = () => {
             <Typography level="body-sm" sx={{ fontWeight: 500, mb: 1 }}>
               Weight Summary:
             </Typography>
-            <Stack
-              direction="row"
-              spacing={2}
-              sx={{ flexWrap: "wrap", gap: 1 }}
-            >
+            <Stack direction="row" spacing={2} sx={{ flexWrap: "wrap", gap: 1 }}>
               {selectedModules.map((module) => {
-                const weight =
-                  moduleWeights[module.id] || 1.0 / selectedModules.length;
+                const numId = Number(module.id);
+                const defaultEqual = 1.0 / selectedModules.length;
+                const weight = moduleWeights[numId] !== undefined ? moduleWeights[numId] : defaultEqual;
                 const percentage = Math.round(weight * 100);
                 return (
-                  <Chip key={module.id} variant="soft" size="sm">
+                  <Chip key={numId} variant="soft" size="sm">
                     {module.name}: {percentage}%
                   </Chip>
                 );
