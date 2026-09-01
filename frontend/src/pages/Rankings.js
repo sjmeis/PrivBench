@@ -355,11 +355,6 @@ const Rankings = () => {
     setCurrentPage(1);
   };
 
-  const handleModuleChange = (event, newValue) => {
-    setSelectedModules(newValue || []);
-    setCurrentPage(1);
-  };
-
   const clearFilters = () => {
     const defaultVer = availableVersions.length > 0 ? availableVersions[0] : "";
     setSelectedVersion(defaultVer);
