@@ -222,14 +222,25 @@ const Rankings = () => {
   // Effect to initialize weights when modules change
   useEffect(() => {
     if (!initialLoadComplete) return;
-    if (selectedModules.length >= 2 && validWeights === "invalid") return;
 
     const loadRankings = async () => {
       try {
         setIsLoading(true);
         const moduleIds = selectedModules.map((module) => module.id);
-        const weightsToSend =
-          validWeights === "invalid" ? {} : JSON.parse(validWeights);
+
+        // Compute weights to send
+        let weightsToSend = {};
+        if (selectedModules.length >= 2) {
+          if (validWeights !== "invalid") {
+            weightsToSend = JSON.parse(validWeights);
+          } else {
+            // Fallback to equal distribution if sliders are mid-edit
+            const equalWeight = 1.0 / selectedModules.length;
+            selectedModules.forEach((m) => {
+              weightsToSend[m.id] = equalWeight;
+            });
+          }
+        }
 
         const data = await fetchRankings(
           searchTerm,
@@ -325,8 +336,22 @@ const Rankings = () => {
     }, 500);
   };
 
-  const handleVersionChange = (event, newValue) => {
-    setSelectedVersion(newValue || "");
+  const handleModuleChange = (event, newValue) => {
+    const newModules = newValue || [];
+    setSelectedModules(newModules);
+
+    // Auto-distribute equal weights across all selected modules
+    if (newModules.length > 0) {
+      const equalWeight = Number((1.0 / newModules.length).toFixed(4));
+      const newWeights = {};
+      newModules.forEach((mod) => {
+        newWeights[mod.id] = equalWeight;
+      });
+      setModuleWeights(newWeights);
+    } else {
+      setModuleWeights({});
+    }
+
     setCurrentPage(1);
   };
 
@@ -354,9 +379,22 @@ const Rankings = () => {
 
   const removeModuleFilter = (event, moduleToRemove) => {
     event.stopPropagation();
-    setSelectedModules((prev) =>
-      prev.filter((module) => module.id !== moduleToRemove.id)
+    const updatedModules = selectedModules.filter(
+      (module) => module.id !== moduleToRemove.id
     );
+    setSelectedModules(updatedModules);
+
+    if (updatedModules.length > 0) {
+      const equalWeight = Number((1.0 / updatedModules.length).toFixed(4));
+      const newWeights = {};
+      updatedModules.forEach((mod) => {
+        newWeights[mod.id] = equalWeight;
+      });
+      setModuleWeights(newWeights);
+    } else {
+      setModuleWeights({});
+    }
+
     setCurrentPage(1);
   };
 
