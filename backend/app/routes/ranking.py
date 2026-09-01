@@ -124,10 +124,10 @@ def get_ranking_filters():
                 .all()
             )
 
-        for module in modules:
-            print(
-                f"DEBUG: Module ID: {module.id}, Name: {module.name}, Version: {module.version}"
-            )
+        # for module in modules:
+        #     print(
+        #         f"DEBUG: Module ID: {module.id}, Name: {module.name}, Version: {module.version}"
+        #     )
 
         return (
             jsonify(
@@ -390,7 +390,15 @@ def get_all_filtered():
         sort_order = data.get("sortOrder", "desc")
         version_filter = data.get("version", None)
         module_ids = data.get("moduleIds", [])
-        module_weights = data.get("moduleWeights", {})
+        
+        # Normalize weights: ensure integer keys and float values
+        raw_weights = data.get("moduleWeights", {}) or {}
+        module_weights = {}
+        for k, v in raw_weights.items():
+            try:
+                module_weights[int(k)] = float(v)
+            except (ValueError, TypeError):
+                continue
 
         # Base query for public submissions
         query = (
@@ -423,7 +431,7 @@ def get_all_filtered():
                 )
             )
 
-        # 2. Module filtering
+        # 2. Strict AND Module filtering (must contain ALL selected modules)
         if module_ids and len(module_ids) > 0:
             module_ids = [int(mid) for mid in module_ids]
             submission_ids_with_modules = (
@@ -480,47 +488,54 @@ def get_all_filtered():
             if module_ids and len(module_ids) > 0:
                 for mid in module_ids:
                     bs = score_lookup.get(mid)
-                    if bs:
+                    if bs and bs.score is not None:
                         module_scores.append({
                             "moduleId": bs.module_id,
                             "moduleName": bs.benchmark_module.name,
                             "moduleVersion": bs.benchmark_module.version,
-                            "score": bs.score,
+                            "score": float(bs.score),
                         })
 
-                if module_weights and module_scores:
-                    total_weighted_score = sum(
-                        ms["score"] * module_weights.get(ms["moduleId"], 1.0)
-                        for ms in module_scores
-                    )
-                    total_weight = sum(
-                        module_weights.get(ms["moduleId"], 1.0)
-                        for ms in module_scores
-                    )
-                    if total_weight > 0:
-                        display_score = round(total_weighted_score / total_weight, 2)
-                elif module_scores:
-                    display_score = round(sum(ms["score"] for ms in module_scores) / len(module_scores), 2)
+                # Dynamic Recalculation based on selected modules
+                if module_scores:
+                    if module_weights:
+                        total_weighted_score = sum(
+                            ms["score"] * module_weights.get(ms["moduleId"], 1.0)
+                            for ms in module_scores
+                        )
+                        total_weight = sum(
+                            module_weights.get(ms["moduleId"], 1.0)
+                            for ms in module_scores
+                        )
+                        if total_weight > 0:
+                            display_score = round(total_weighted_score / total_weight, 2)
+                        else:
+                            display_score = round(sum(ms["score"] for ms in module_scores) / len(module_scores), 2)
+                    else:
+                        # Equal weight unweighted mean
+                        display_score = round(sum(ms["score"] for ms in module_scores) / len(module_scores), 2)
+                else:
+                    display_score = None
             else:
                 # Include modules recorded in the version snapshot (including historical/archived modules)
                 if matching_snapshot and matching_snapshot.modules:
                     for mod in matching_snapshot.modules:
                         bs = score_lookup.get(mod.id)
-                        if bs:
+                        if bs and bs.score is not None:
                             module_scores.append({
                                 "moduleId": mod.id,
                                 "moduleName": mod.name,
                                 "moduleVersion": mod.version,
-                                "score": bs.score,
+                                "score": float(bs.score),
                             })
                 else:
                     for bs in submission.benchmark_scores:
-                        if bs.benchmark_module:
+                        if bs.benchmark_module and bs.score is not None:
                             module_scores.append({
                                 "moduleId": bs.module_id,
                                 "moduleName": bs.benchmark_module.name,
                                 "moduleVersion": bs.benchmark_module.version,
-                                "score": bs.score,
+                                "score": float(bs.score),
                             })
 
             submission_data = {

@@ -341,15 +341,16 @@ const Rankings = () => {
     setCurrentPage(1);
   };
 
-  const handleModuleChange = (event, newValue) => {
-    const newModules = newValue || [];
-    setSelectedModules(newModules);
+  const handleModuleChange = (event, newModules) => {
+    const mods = Array.isArray(newModules) ? newModules : [];
+    setSelectedModules(mods);
 
-    if (newModules.length > 0) {
-      const equalWeight = Number((1.0 / newModules.length).toFixed(4));
+    // Auto-distribute equal weights across all selected modules
+    if (mods.length > 0) {
+      const equalWeight = Number((1.0 / mods.length).toFixed(4));
       const newWeights = {};
-      newModules.forEach((mod) => {
-        newWeights[mod.id] = equalWeight;
+      mods.forEach((m) => {
+        newWeights[m.id] = equalWeight;
       });
       setModuleWeights(newWeights);
     } else {
@@ -357,7 +358,7 @@ const Rankings = () => {
     }
 
     setCurrentPage(1);
-  };
+};
 
   const clearFilters = () => {
     const defaultVer = availableVersions.length > 0 ? availableVersions[0] : "";
@@ -379,15 +380,15 @@ const Rankings = () => {
   const removeModuleFilter = (event, moduleToRemove) => {
     event.stopPropagation();
     const updatedModules = selectedModules.filter(
-      (module) => module.id !== moduleToRemove.id
+      (m) => m.id !== moduleToRemove.id
     );
     setSelectedModules(updatedModules);
 
     if (updatedModules.length > 0) {
       const equalWeight = Number((1.0 / updatedModules.length).toFixed(4));
       const newWeights = {};
-      updatedModules.forEach((mod) => {
-        newWeights[mod.id] = equalWeight;
+      updatedModules.forEach((m) => {
+        newWeights[m.id] = equalWeight;
       });
       setModuleWeights(newWeights);
     } else {
@@ -587,7 +588,9 @@ const Rankings = () => {
                 placeholder="All modules"
                 value={selectedModules.map((m) => m.id)}
                 onChange={(event, newIds) => {
-                  const selectedObjs = filteredModules.filter((m) => (newIds || []).includes(m.id));
+                  const selectedObjs = filteredModules.filter((m) =>
+                    (newIds || []).includes(m.id)
+                  );
                   handleModuleChange(event, selectedObjs);
                 }}
                 renderValue={(selected) =>
