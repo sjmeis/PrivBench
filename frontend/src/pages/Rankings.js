@@ -336,6 +336,11 @@ const Rankings = () => {
     }, 500);
   };
 
+  const handleVersionChange = (event, newValue) => {
+    setSelectedVersion(newValue || "");
+    setCurrentPage(1);
+  };
+
   const handleModuleChange = (event, newValue) => {
     const newModules = newValue || [];
     setSelectedModules(newModules);
