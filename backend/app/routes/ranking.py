@@ -489,8 +489,14 @@ def get_all_filtered():
                         })
 
                 if module_weights and module_scores:
-                    total_weighted_score = sum(ms["score"] * module_weights.get(str(ms["moduleId"]), 1.0) for ms in module_scores)
-                    total_weight = sum(module_weights.get(str(ms["moduleId"]), 1.0) for ms in module_scores)
+                    total_weighted_score = sum(
+                        ms["score"] * module_weights.get(ms["moduleId"], 1.0)
+                        for ms in module_scores
+                    )
+                    total_weight = sum(
+                        module_weights.get(ms["moduleId"], 1.0)
+                        for ms in module_scores
+                    )
                     if total_weight > 0:
                         display_score = round(total_weighted_score / total_weight, 2)
                 elif module_scores:
@@ -572,7 +578,9 @@ def get_submission_detail():
         data = request.get_json() or {}
         submission_id = data.get("id")
         target_version = data.get("version")
-        module_weights = data.get("moduleWeights", {})
+        module_weights = {
+            int(k): float(v) for k, v in data.get("moduleWeights", {}).items()
+        }
 
         if module_weights:
             total_w = sum(module_weights.values())

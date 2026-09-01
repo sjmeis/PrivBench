@@ -234,7 +234,7 @@ const Rankings = () => {
           if (validWeights !== "invalid") {
             weightsToSend = JSON.parse(validWeights);
           } else {
-            // Fallback to equal distribution if sliders are mid-edit
+            // Automatically divide weights equally across all selected modules
             const equalWeight = 1.0 / selectedModules.length;
             selectedModules.forEach((m) => {
               weightsToSend[m.id] = equalWeight;
