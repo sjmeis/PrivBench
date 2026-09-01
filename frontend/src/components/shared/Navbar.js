@@ -13,7 +13,6 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.*/
 
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -27,6 +26,8 @@ import {
   Stack,
   Tooltip,
   useColorScheme,
+  IconButton,
+  Link as JoyLink,
 } from "@mui/joy";
 import { Box, Button, Typography } from "@mui/joy";
 import {
@@ -35,6 +36,7 @@ import {
   Timeline,
   UploadFile,
   Login,
+  Close
 } from "@mui/icons-material";
 import { useAuth } from "../../contexts/AuthContext";
 import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
@@ -52,12 +54,23 @@ import SlideshowIcon from '@mui/icons-material/Slideshow';
 import { useSnackbar } from "../../contexts/SnackbarProvider";
 import { ModuleService } from "../../services/ModuleService";
 
+const BANNER_STORAGE_KEY = "privbench_hide_beta_banner";
+
 const Navbar = () => {
   const navigate = useNavigate();
   const { mode, setMode } = useColorScheme();
   const { user, logout } = useAuth();
   const { showSnackbar } = useSnackbar();
   const [submissionsBlocked, setSubmissionsBlocked] = useState(false);
+
+  const [showBanner, setShowBanner] = useState(() => {
+    return localStorage.getItem(BANNER_STORAGE_KEY) !== "true";
+  });
+
+  const handleCloseBanner = () => {
+    setShowBanner(false);
+    localStorage.setItem(BANNER_STORAGE_KEY, "true");
+  };
 
   useEffect(() => {
     let ignore = false;
@@ -119,6 +132,75 @@ const Navbar = () => {
   }
 
   return (
+    <Box sx={{ width: "100%" }}>
+    {/* Beta Banner */}
+      {showBanner && (
+        <Box
+          sx={{
+            width: "100%",
+            py: 1,
+            px: 2,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            bgcolor: isLightMode ? "primary.softBg" : "primary.500",
+            color: isLightMode ? "primary.softColor" : "primary.100",
+            borderBottom: "1px solid",
+            borderColor: isLightMode ? "primary.softBorder" : "primary.400",
+          }}
+        >
+          {/* Invisible spacer to keep text centered */}
+          <Box sx={{ width: 32, display: { xs: "none", sm: "block" } }} />
+
+          <Typography
+            level="body-sm"
+            sx={{
+              fontWeight: 500,
+              textAlign: "center",
+              flex: 1,
+              color: "inherit",
+            }}
+          >
+            🚀 <strong>PrivBench is live in Beta!</strong> Check out our paper{" "}
+            <JoyLink
+              href="http://arxiv.org/abs/2608.29624"
+              target="_blank"
+              rel="noopener noreferrer"
+              underline="always"
+              sx={{
+                fontWeight: 600,
+                color: isLightMode ? "primary.700" : "primary.200",
+                "&:hover": {
+                  color: isLightMode ? "primary.900" : "primary.50",
+                },
+              }}
+            >
+              here
+            </JoyLink>
+            .
+          </Typography>
+
+          <IconButton
+            size="sm"
+            variant="plain"
+            color="neutral"
+            onClick={handleCloseBanner}
+            aria-label="Close beta banner"
+            sx={{
+              color: "inherit",
+              minHeight: 24,
+              minWidth: 24,
+              borderRadius: "50%",
+              "&:hover": {
+                bgcolor: isLightMode ? "rgba(0, 0, 0, 0.05)" : "rgba(255, 255, 255, 0.1)",
+              },
+            }}
+          >
+            <Close fontSize="small" />
+          </IconButton>
+        </Box>
+      )}
+
     <Box
       sx={{
         width: "100%",
@@ -373,6 +455,7 @@ const Navbar = () => {
         </Grid>
       </Grid>
     </Box>
+  </Box>
   );
 };
 
