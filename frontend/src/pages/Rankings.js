@@ -233,14 +233,10 @@ const Rankings = () => {
 
         let weightsToSend = {};
         if (selectedModuleIds.length >= 2) {
-          if (validWeights !== "invalid") {
-            weightsToSend = JSON.parse(validWeights);
-          } else {
-            const equalWeight = 1.0 / selectedModuleIds.length;
-            selectedModuleIds.forEach((id) => {
-              weightsToSend[id] = equalWeight;
-            });
-          }
+          const equalWeight = Number((1.0 / selectedModuleIds.length).toFixed(4));
+          selectedModuleIds.forEach((id) => {
+            weightsToSend[id] = moduleWeights[id] ?? equalWeight;
+          });
         }
 
         const data = await fetchRankings(
@@ -292,6 +288,29 @@ const Rankings = () => {
     setCurrentPage(1);
   };
 
+  useEffect(() => {
+    if (selectedModuleIds.length === 0) {
+      setModuleWeights({});
+      return;
+    }
+
+    const equalWeight = Number((1.0 / selectedModuleIds.length).toFixed(4));
+    
+    // Check if we already have valid custom weights for all selected modules
+    const allKeysPresent = selectedModuleIds.every((id) => id in moduleWeights);
+    const total = Object.values(moduleWeights).reduce((sum, w) => sum + (Number(w) || 0), 0);
+    const isTotalValid = Math.abs(total - 1.0) < 0.01;
+
+    // If keys are missing or weights don't sum to 100%, reset to equal split
+    if (!allKeysPresent || !isTotalValid) {
+      const defaultWeights = {};
+      selectedModuleIds.forEach((id) => {
+        defaultWeights[id] = equalWeight;
+      });
+      setModuleWeights(defaultWeights);
+    }
+  }, [selectedModuleIds]);
+
   // Allow manual number entry (0–100%) and convert to 0–1 weight
   const handleWeightNumberInputChange = (moduleId, rawValue) => {
     const cleaned = String(rawValue)
@@ -305,24 +324,26 @@ const Rankings = () => {
   };
 
   const isWeightsValid = () => {
+    if (selectedModuleIds.length < 2) return true;
     const total = getTotalWeight();
-    return Math.abs(total - 1.0) < 0.01; // Allow small rounding differences
+    return Math.abs(total - 1.0) < 0.01;
   };
 
   const resetWeights = () => {
-    if (selectedModules.length < 2) return;
-
-    const equalWeight = 1.0 / selectedModules.length; // Equal distribution
-    const resetWeights = {};
-    selectedModules.forEach((module) => {
-      resetWeights[module.id] = equalWeight;
+    if (selectedModuleIds.length < 2) return;
+    const equalWeight = Number((1.0 / selectedModuleIds.length).toFixed(4));
+    const resetWeightsMap = {};
+    selectedModuleIds.forEach((id) => {
+      resetWeightsMap[id] = equalWeight;
     });
-    setModuleWeights(resetWeights);
+    setModuleWeights(resetWeightsMap);
   };
 
   const getTotalWeight = () => {
-    return Object.values(moduleWeights).reduce(
-      (sum, weight) => sum + weight,
+    if (selectedModuleIds.length === 0) return 0;
+    const equalWeight = 1.0 / selectedModuleIds.length;
+    return selectedModuleIds.reduce(
+      (sum, id) => sum + (Number(moduleWeights[id]) ?? equalWeight),
       0
     );
   };
@@ -757,7 +778,8 @@ const Rankings = () => {
 
           <Stack spacing={3}>
             {selectedModules.map((module) => {
-              const weight = moduleWeights[module.id] || 1.0;
+              const defaultEqual = 1.0 / selectedModules.length;
+              const weight = moduleWeights[module.id] ?? defaultEqual;
               const percentage = Math.round(weight * 100);
 
               return (
@@ -787,17 +809,17 @@ const Rankings = () => {
                     />
                   </Box>
                   <Slider
-                    value={weight}
-                    onChange={(event, newValue) =>
-                      handleWeightChange(module.id, newValue)
-                    }
-                    min={0}
-                    max={1.0}
-                    step={0.01}
-                    valueLabelDisplay="auto"
-                    valueLabelFormat={(value) => `${Math.round(value * 100)}%`}
-                    sx={{ color: "primary.solidBg" }}
-                  />
+                      value={weight}
+                      onChange={(event, newValue) =>
+                        handleWeightChange(module.id, newValue)
+                      }
+                      min={0}
+                      max={1.0}
+                      step={0.01}
+                      valueLabelDisplay="auto"
+                      valueLabelFormat={(value) => `${Math.round(value * 100)}%`}
+                      sx={{ color: "primary.solidBg" }}
+                    />
                 </Box>
               );
             })}
