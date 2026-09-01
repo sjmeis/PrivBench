@@ -126,18 +126,21 @@ const Rankings = () => {
   }, [filteredModules, selectedModuleIds]);
 
   const validWeights = useMemo(() => {
-    const total = Object.values(moduleWeights).reduce(
-      (sum, weight) => sum + weight,
-      0
-    );
+    if (selectedModules.length < 2) return "{}";
+    const total = getTotalWeight();
     const isValid = Math.abs(total - 1.0) < 0.01;
 
-    // Return a stringified version to create stable references
     if (isValid) {
-      return JSON.stringify(moduleWeights);
+      // Build normalized map for all selected modules
+      const weights = {};
+      const equalWeight = 1.0 / selectedModules.length;
+      selectedModules.forEach((m) => {
+        weights[m.id] = moduleWeights[m.id] !== undefined ? moduleWeights[m.id] : equalWeight;
+      });
+      return JSON.stringify(weights);
     }
-    return "invalid"; // Always return the same string when invalid
-  }, [moduleWeights]);
+    return "invalid";
+  }, [moduleWeights, selectedModules]);
 
   // Persist filter state into sessionStorage whenever values change
   useEffect(() => {
@@ -324,28 +327,28 @@ const Rankings = () => {
   };
 
   const isWeightsValid = () => {
-    if (selectedModuleIds.length < 2) return true;
+    if (selectedModules.length < 2) return true;
     const total = getTotalWeight();
     return Math.abs(total - 1.0) < 0.01;
   };
 
   const resetWeights = () => {
-    if (selectedModuleIds.length < 2) return;
-    const equalWeight = Number((1.0 / selectedModuleIds.length).toFixed(4));
-    const resetWeightsMap = {};
-    selectedModuleIds.forEach((id) => {
-      resetWeightsMap[id] = equalWeight;
+    if (selectedModules.length < 2) return;
+    const equalWeight = Number((1.0 / selectedModules.length).toFixed(4));
+    const resetMap = {};
+    selectedModules.forEach((m) => {
+      resetMap[m.id] = equalWeight;
     });
-    setModuleWeights(resetWeightsMap);
+    setModuleWeights(resetMap);
   };
 
   const getTotalWeight = () => {
-    if (selectedModuleIds.length === 0) return 0;
-    const equalWeight = 1.0 / selectedModuleIds.length;
-    return selectedModuleIds.reduce(
-      (sum, id) => sum + (Number(moduleWeights[id]) ?? equalWeight),
-      0
-    );
+    if (selectedModules.length === 0) return 0;
+    const equalWeight = 1.0 / selectedModules.length;
+    return selectedModules.reduce((sum, mod) => {
+      const w = moduleWeights[mod.id] !== undefined ? moduleWeights[mod.id] : equalWeight;
+      return sum + Number(w);
+    }, 0);
   };
 
   const handleSearchInputChange = (event) => {
@@ -736,25 +739,16 @@ const Rankings = () => {
               onClick={() => {
                 const totalWeight = getTotalWeight();
                 if (totalWeight > 0) {
+                  const equalWeight = 1.0 / selectedModules.length;
                   const normalizedWeights = {};
-                  Object.keys(moduleWeights).forEach((moduleId) => {
-                    normalizedWeights[moduleId] =
-                      moduleWeights[moduleId] / totalWeight;
+                  selectedModules.forEach((module) => {
+                    const currentW = moduleWeights[module.id] !== undefined ? moduleWeights[module.id] : equalWeight;
+                    normalizedWeights[module.id] = Number((currentW / totalWeight).toFixed(4));
                   });
                   setModuleWeights(normalizedWeights);
                 }
               }}
               disabled={isWeightsValid()}
-              sx={{
-                color: "primary.softColor",
-                fontWeight: 700,
-                textTransform: "none",
-                // ensure readable text when disabled in light/dark
-                "&.Mui-disabled": {
-                  opacity: 1,
-                  color: "text.secondary",
-                },
-              }}
             >
               Normalize to 100%
             </Button>
@@ -779,7 +773,7 @@ const Rankings = () => {
           <Stack spacing={3}>
             {selectedModules.map((module) => {
               const defaultEqual = 1.0 / selectedModules.length;
-              const weight = moduleWeights[module.id] ?? defaultEqual;
+              const weight = moduleWeights[module.id] !== undefined ? moduleWeights[module.id] : defaultEqual;
               const percentage = Math.round(weight * 100);
 
               return (
@@ -795,7 +789,6 @@ const Rankings = () => {
                     <Typography level="body-sm" sx={{ fontWeight: 500 }}>
                       {module.name}
                     </Typography>
-                    {/* Numeric input for manual percentage entry */}
                     <Input
                       size="sm"
                       type="number"
@@ -809,17 +802,17 @@ const Rankings = () => {
                     />
                   </Box>
                   <Slider
-                      value={weight}
-                      onChange={(event, newValue) =>
-                        handleWeightChange(module.id, newValue)
-                      }
-                      min={0}
-                      max={1.0}
-                      step={0.01}
-                      valueLabelDisplay="auto"
-                      valueLabelFormat={(value) => `${Math.round(value * 100)}%`}
-                      sx={{ color: "primary.solidBg" }}
-                    />
+                    value={weight}
+                    onChange={(event, newValue) =>
+                      handleWeightChange(module.id, newValue)
+                    }
+                    min={0}
+                    max={1.0}
+                    step={0.01}
+                    valueLabelDisplay="auto"
+                    valueLabelFormat={(value) => `${Math.round(value * 100)}%`}
+                    sx={{ color: "primary.solidBg" }}
+                  />
                 </Box>
               );
             })}
