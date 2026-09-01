@@ -131,3 +131,18 @@ The public web portal instance running at [privbench.com](https://privbench.com)
 On the public website, we clearly state our Privacy Policy and Terms of Service, in order to main compliance with data protection regulations, as well as to remain transparent about the operation of the public, free-to-use web application.
 
 For details please review the Privacy Policy and Terms of Service links found in the footer of the live web application at [privbench.com](https://privbench.com).
+
+## Reference
+For details about the background, construction, and deployment of PrivBench, check out our EMNLP 2026 System Demonstrations paper (currently a preprint). We would appreciate a citation if you find our work useful!
+
+```
+@misc{meisenbacher2026privbenchholisticmodularbenchmarking,
+      title={PrivBench: A Holistic and Modular Benchmarking Platform for Evaluating Text-to-Text Privatization}, 
+      author={Stephen Meisenbacher and Andreea-Elena Bodea and Ahmet Bilal Akın and Alexandra Klymenko and Jana Diesner and Florian Matthes},
+      year={2026},
+      eprint={2608.29624},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2608.29624}, 
+}
+```
