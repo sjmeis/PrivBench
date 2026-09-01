@@ -125,23 +125,6 @@ const Rankings = () => {
     return filteredModules.filter((m) => selectedModuleIds.includes(Number(m.id)));
   }, [filteredModules, selectedModuleIds]);
 
-  const validWeights = useMemo(() => {
-    if (selectedModuleIds.length < 2) return "{}";
-    const total = getTotalWeight();
-    const isValid = Math.abs(total - 1.0) < 0.01;
-
-    if (isValid) {
-      const weights = {};
-      const equalWeight = 1.0 / selectedModuleIds.length;
-      selectedModuleIds.forEach((id) => {
-        const numId = Number(id);
-        weights[numId] = moduleWeights[numId] !== undefined ? moduleWeights[numId] : equalWeight;
-      });
-      return JSON.stringify(weights);
-    }
-    return "invalid";
-  }, [moduleWeights, selectedModuleIds]);
-
   // Persist filter state into sessionStorage whenever values change
   useEffect(() => {
     if (!initialLoadComplete) return;
@@ -283,6 +266,90 @@ const Rankings = () => {
     };
   }, []);
 
+  // Helper to get active weight for any module ID (defaults to equal distribution)
+  const getWeightForId = (id) => {
+    const numId = Number(id);
+    if (moduleWeights[numId] !== undefined) {
+      return Number(moduleWeights[numId]);
+    }
+    return selectedModuleIds.length > 0 ? 1.0 / selectedModuleIds.length : 1.0;
+  };
+
+  const getTotalWeight = () => {
+    if (selectedModuleIds.length === 0) return 0;
+    return selectedModuleIds.reduce((sum, id) => sum + getWeightForId(id), 0);
+  };
+
+  const isWeightsValid = () => {
+    if (selectedModuleIds.length < 2) return true;
+    const total = getTotalWeight();
+    return Math.abs(total - 1.0) < 0.01;
+  };
+
+  const validWeights = useMemo(() => {
+    if (selectedModuleIds.length < 2) return "{}";
+    const total = getTotalWeight();
+    const isValid = Math.abs(total - 1.0) < 0.01;
+
+    if (isValid) {
+      const weights = {};
+      selectedModuleIds.forEach((id) => {
+        weights[Number(id)] = getWeightForId(id);
+      });
+      return JSON.stringify(weights);
+    }
+    return "invalid";
+  }, [moduleWeights, selectedModuleIds]);
+
+  const handleModuleChange = (event, newIds) => {
+    const ids = Array.isArray(newIds) ? newIds.map(Number) : [];
+    setSelectedModuleIds(ids);
+
+    // Auto-initialize equal weights immediately
+    if (ids.length > 0) {
+      const equalWeight = Number((1.0 / ids.length).toFixed(4));
+      const newWeights = {};
+      ids.forEach((id) => {
+        newWeights[Number(id)] = equalWeight;
+      });
+      setModuleWeights(newWeights);
+    } else {
+      setModuleWeights({});
+    }
+
+    setCurrentPage(1);
+  };
+
+  const removeModuleFilter = (event, moduleToRemove) => {
+    event.stopPropagation();
+    const removeId = Number(moduleToRemove.id);
+    const updatedIds = selectedModuleIds.filter((id) => Number(id) !== removeId);
+    setSelectedModuleIds(updatedIds);
+
+    if (updatedIds.length > 0) {
+      const equalWeight = Number((1.0 / updatedIds.length).toFixed(4));
+      const newWeights = {};
+      updatedIds.forEach((id) => {
+        newWeights[Number(id)] = equalWeight;
+      });
+      setModuleWeights(newWeights);
+    } else {
+      setModuleWeights({});
+    }
+
+    setCurrentPage(1);
+  };
+
+  const resetWeights = () => {
+    if (selectedModuleIds.length < 2) return;
+    const equalWeight = Number((1.0 / selectedModuleIds.length).toFixed(4));
+    const resetMap = {};
+    selectedModuleIds.forEach((id) => {
+      resetMap[Number(id)] = equalWeight;
+    });
+    setModuleWeights(resetMap);
+  };
+
   const handleWeightChange = (moduleId, newWeight) => {
     const numId = Number(moduleId);
     setModuleWeights((prev) => ({
@@ -304,32 +371,6 @@ const Rankings = () => {
     handleWeightChange(Number(moduleId), Number((num / 100).toFixed(4)));
   };
 
-  const isWeightsValid = () => {
-    if (selectedModuleIds.length < 2) return true;
-    const total = getTotalWeight();
-    return Math.abs(total - 1.0) < 0.01;
-  };
-
-  const resetWeights = () => {
-    if (selectedModuleIds.length < 2) return;
-    const equalWeight = Number((1.0 / selectedModuleIds.length).toFixed(4));
-    const resetMap = {};
-    selectedModuleIds.forEach((id) => {
-      resetMap[Number(id)] = equalWeight;
-    });
-    setModuleWeights(resetMap);
-  };
-
-  const getTotalWeight = () => {
-    if (selectedModuleIds.length === 0) return 0;
-    const equalWeight = 1.0 / selectedModuleIds.length;
-    return selectedModuleIds.reduce((sum, id) => {
-      const numId = Number(id);
-      const w = moduleWeights[numId] !== undefined ? moduleWeights[numId] : equalWeight;
-      return sum + Number(w);
-    }, 0);
-  };
-
   const handleSearchInputChange = (event) => {
     const newInputValue = event.target.value;
     setSearchValue(newInputValue);
@@ -342,24 +383,6 @@ const Rankings = () => {
 
   const handleVersionChange = (event, newValue) => {
     setSelectedVersion(newValue || "");
-    setCurrentPage(1);
-  };
-
-  const handleModuleChange = (event, newIds) => {
-    const ids = Array.isArray(newIds) ? newIds.map(Number) : [];
-    setSelectedModuleIds(ids);
-
-    if (ids.length > 0) {
-      const equalWeight = Number((1.0 / ids.length).toFixed(4));
-      const newWeights = {};
-      ids.forEach((id) => {
-        newWeights[Number(id)] = equalWeight;
-      });
-      setModuleWeights(newWeights);
-    } else {
-      setModuleWeights({});
-    }
-
     setCurrentPage(1);
   };
 
@@ -377,26 +400,6 @@ const Rankings = () => {
   const removeVersionFilter = (event) => {
     event.stopPropagation();
     setSelectedVersion(availableVersions.length > 0 ? availableVersions[0] : "");
-    setCurrentPage(1);
-  };
-
-  const removeModuleFilter = (event, moduleToRemove) => {
-    event.stopPropagation();
-    const removeId = Number(moduleToRemove.id);
-    const updatedIds = selectedModuleIds.filter((id) => Number(id) !== removeId);
-    setSelectedModuleIds(updatedIds);
-
-    if (updatedIds.length > 0) {
-      const equalWeight = Number((1.0 / updatedIds.length).toFixed(4));
-      const newWeights = {};
-      updatedIds.forEach((id) => {
-        newWeights[Number(id)] = equalWeight;
-      });
-      setModuleWeights(newWeights);
-    } else {
-      setModuleWeights({});
-    }
-
     setCurrentPage(1);
   };
 
@@ -717,15 +720,10 @@ const Rankings = () => {
               onClick={() => {
                 const totalWeight = getTotalWeight();
                 if (totalWeight > 0) {
-                  const equalWeight = 1.0 / selectedModuleIds.length;
                   const normalizedWeights = {};
                   selectedModuleIds.forEach((id) => {
-                    const numId = Number(id);
-                    const currentW =
-                      moduleWeights[numId] !== undefined
-                        ? moduleWeights[numId]
-                        : equalWeight;
-                    normalizedWeights[numId] = Number(
+                    const currentW = getWeightForId(id);
+                    normalizedWeights[Number(id)] = Number(
                       (currentW / totalWeight).toFixed(4)
                     );
                   });
@@ -757,8 +755,7 @@ const Rankings = () => {
           <Stack spacing={3}>
             {selectedModules.map((module) => {
               const numId = Number(module.id);
-              const defaultEqual = selectedModules.length > 0 ? 1.0 / selectedModules.length : 1.0;
-              const weight = moduleWeights[numId] !== undefined ? moduleWeights[numId] : defaultEqual;
+              const weight = getWeightForId(numId);
               const percentage = Math.round(weight * 100);
 
               return (
@@ -817,8 +814,7 @@ const Rankings = () => {
             <Stack direction="row" spacing={2} sx={{ flexWrap: "wrap", gap: 1 }}>
               {selectedModules.map((module) => {
                 const numId = Number(module.id);
-                const defaultEqual = 1.0 / selectedModules.length;
-                const weight = moduleWeights[numId] !== undefined ? moduleWeights[numId] : defaultEqual;
+                const weight = getWeightForId(numId);
                 const percentage = Math.round(weight * 100);
                 return (
                   <Chip key={numId} variant="soft" size="sm">
