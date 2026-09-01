@@ -105,7 +105,7 @@ const Rankings = () => {
   const [searchTerm, setSearchTerm] = useState(cachedState.search || "");
   const [availableVersions, setAvailableVersions] = useState([]);
   const [availableModules, setAvailableModules] = useState([]);
-  const [selectedModules, setSelectedModules] = useState(cachedState.modules || []);
+  //const [selectedModules, setSelectedModules] = useState(cachedState.modules || []);
   const [filteredModules, setFilteredModules] = useState([]);
   const [selectedVersion, setSelectedVersion] = useState(cachedState.version || "");
   const [moduleWeights, setModuleWeights] = useState(cachedState.weights || {});
@@ -117,6 +117,13 @@ const Rankings = () => {
 
   const [isLoading, setIsLoading] = useState(false);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+
+  const [selectedModuleIds, setSelectedModuleIds] = useState(
+    cachedState.moduleIds || []
+  );
+  const selectedModules = useMemo(() => {
+    return filteredModules.filter((m) => selectedModuleIds.includes(m.id));
+  }, [filteredModules, selectedModuleIds]);
 
   const validWeights = useMemo(() => {
     const total = Object.values(moduleWeights).reduce(
@@ -234,7 +241,7 @@ const Rankings = () => {
           if (validWeights !== "invalid") {
             weightsToSend = JSON.parse(validWeights);
           } else {
-            // Automatically divide weights equally across all selected modules
+            // Default to equal weights if custom weights are not configured
             const equalWeight = 1.0 / selectedModules.length;
             selectedModules.forEach((m) => {
               weightsToSend[m.id] = equalWeight;
@@ -341,16 +348,15 @@ const Rankings = () => {
     setCurrentPage(1);
   };
 
-  const handleModuleChange = (event, newModules) => {
-    const mods = Array.isArray(newModules) ? newModules : [];
-    setSelectedModules(mods);
+  const handleModuleChange = (event, newIds) => {
+    const ids = Array.isArray(newIds) ? newIds : [];
+    setSelectedModuleIds(ids);
 
-    // Auto-distribute equal weights across all selected modules
-    if (mods.length > 0) {
-      const equalWeight = Number((1.0 / mods.length).toFixed(4));
+    if (ids.length > 0) {
+      const equalWeight = Number((1.0 / ids.length).toFixed(4));
       const newWeights = {};
-      mods.forEach((m) => {
-        newWeights[m.id] = equalWeight;
+      ids.forEach((id) => {
+        newWeights[id] = equalWeight;
       });
       setModuleWeights(newWeights);
     } else {
@@ -358,7 +364,7 @@ const Rankings = () => {
     }
 
     setCurrentPage(1);
-};
+  };
 
   const clearFilters = () => {
     const defaultVer = availableVersions.length > 0 ? availableVersions[0] : "";
@@ -380,15 +386,15 @@ const Rankings = () => {
   const removeModuleFilter = (event, moduleToRemove) => {
     event.stopPropagation();
     const updatedModules = selectedModules.filter(
-      (m) => m.id !== moduleToRemove.id
+      (module) => module.id !== moduleToRemove.id
     );
     setSelectedModules(updatedModules);
 
     if (updatedModules.length > 0) {
       const equalWeight = Number((1.0 / updatedModules.length).toFixed(4));
       const newWeights = {};
-      updatedModules.forEach((m) => {
-        newWeights[m.id] = equalWeight;
+      updatedModules.forEach((mod) => {
+        newWeights[mod.id] = equalWeight;
       });
       setModuleWeights(newWeights);
     } else {
@@ -586,17 +592,12 @@ const Rankings = () => {
               <Select
                 multiple
                 placeholder="All modules"
-                value={selectedModules.map((m) => m.id)}
-                onChange={(event, newIds) => {
-                  const selectedObjs = filteredModules.filter((m) =>
-                    (newIds || []).includes(m.id)
-                  );
-                  handleModuleChange(event, selectedObjs);
-                }}
+                value={selectedModuleIds}
+                onChange={handleModuleChange}
                 renderValue={(selected) =>
-                  selected.length === 0
+                  selectedModuleIds.length === 0
                     ? "All modules"
-                    : `${selected.length} module${selected.length > 1 ? "s" : ""} selected`
+                    : `${selectedModuleIds.length} module${selectedModuleIds.length > 1 ? "s" : ""} selected`
                 }
               >
                 {filteredModules.map((module) => (
