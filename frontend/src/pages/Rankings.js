@@ -125,6 +125,42 @@ const Rankings = () => {
     return filteredModules.filter((m) => selectedModuleIds.includes(Number(m.id)));
   }, [filteredModules, selectedModuleIds]);
 
+  // Helper to get active weight for any module ID (defaults to equal distribution)
+  const getWeightForId = (id) => {
+    const numId = Number(id);
+    if (moduleWeights[numId] !== undefined) {
+      return Number(moduleWeights[numId]);
+    }
+    return selectedModuleIds.length > 0 ? 1.0 / selectedModuleIds.length : 1.0;
+  };
+
+  const getTotalWeight = () => {
+    if (selectedModuleIds.length === 0) return 0;
+    return selectedModuleIds.reduce((sum, id) => sum + getWeightForId(id), 0);
+  };
+
+  const isWeightsValid = () => {
+    if (selectedModuleIds.length < 2) return true;
+    const total = getTotalWeight();
+    return Math.abs(total - 1.0) < 0.01;
+  };
+
+  const validWeights = useMemo(() => {
+    if (selectedModuleIds.length < 2) return "{}";
+    const total = getTotalWeight();
+    const isValid = Math.abs(total - 1.0) < 0.01;
+
+    if (isValid) {
+      const weights = {};
+      selectedModuleIds.forEach((id) => {
+        weights[Number(id)] = getWeightForId(id);
+      });
+      return JSON.stringify(weights);
+    }
+    return "invalid";
+  }, [moduleWeights, selectedModuleIds]);
+
+
   // Persist filter state into sessionStorage whenever values change
   useEffect(() => {
     if (!initialLoadComplete) return;
@@ -265,41 +301,6 @@ const Rankings = () => {
       window.removeEventListener("resize", getDynamicRowPerPageCount);
     };
   }, []);
-
-  // Helper to get active weight for any module ID (defaults to equal distribution)
-  const getWeightForId = (id) => {
-    const numId = Number(id);
-    if (moduleWeights[numId] !== undefined) {
-      return Number(moduleWeights[numId]);
-    }
-    return selectedModuleIds.length > 0 ? 1.0 / selectedModuleIds.length : 1.0;
-  };
-
-  const getTotalWeight = () => {
-    if (selectedModuleIds.length === 0) return 0;
-    return selectedModuleIds.reduce((sum, id) => sum + getWeightForId(id), 0);
-  };
-
-  const isWeightsValid = () => {
-    if (selectedModuleIds.length < 2) return true;
-    const total = getTotalWeight();
-    return Math.abs(total - 1.0) < 0.01;
-  };
-
-  const validWeights = useMemo(() => {
-    if (selectedModuleIds.length < 2) return "{}";
-    const total = getTotalWeight();
-    const isValid = Math.abs(total - 1.0) < 0.01;
-
-    if (isValid) {
-      const weights = {};
-      selectedModuleIds.forEach((id) => {
-        weights[Number(id)] = getWeightForId(id);
-      });
-      return JSON.stringify(weights);
-    }
-    return "invalid";
-  }, [moduleWeights, selectedModuleIds]);
 
   const handleModuleChange = (event, newIds) => {
     const ids = Array.isArray(newIds) ? newIds.map(Number) : [];
