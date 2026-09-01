@@ -143,13 +143,12 @@ const Navbar = () => {
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            bgcolor: isLightMode ? "primary.softBg" : "primary.500",
+            bgcolor: isLightMode ? "primary.softBg" : "primary.600",
             color: isLightMode ? "primary.softColor" : "primary.100",
             borderBottom: "1px solid",
-            borderColor: isLightMode ? "primary.softBorder" : "primary.400",
+            borderColor: isLightMode ? "primary.softBorder" : "primary.500",
           }}
         >
-          {/* Invisible spacer to keep text centered */}
           <Box sx={{ width: 32, display: { xs: "none", sm: "block" } }} />
 
           <Typography
@@ -161,7 +160,7 @@ const Navbar = () => {
               color: "inherit",
             }}
           >
-            🚀 <strong>PrivBench is live in Beta!</strong> Check out our paper{" "}
+            <strong>PrivBench is live in Beta!</strong> Check out our paper{" "}
             <JoyLink
               href="http://arxiv.org/abs/2608.29624"
               target="_blank"
