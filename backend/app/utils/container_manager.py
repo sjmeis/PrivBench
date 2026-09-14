@@ -37,11 +37,11 @@ def module_container_name(name: str) -> str:
 
 class ContainerManager:
     def __init__(self):
-        self.docker_client = docker.from_env()
+        self.docker_client = None
+        self._client_pid = None
         self.running_containers = {}
         self.installing_containers = set()  # Track containers being installed
         self._installation_lock = threading.Lock()
-        self._discover_existing_containers()
 
     @property
     def docker_client(self):
@@ -50,7 +50,15 @@ class ContainerManager:
         if self._docker_client is None or self._client_pid != current_pid:
             self._docker_client = docker.from_env()
             self._client_pid = current_pid
+            if current_pid not in self._discovered_pids:
+                self._discovered_pids.add(current_pid)
+                self._discover_existing_containers()
         return self._docker_client
+
+    @docker_client.setter
+    def docker_client(self, value):
+        self._docker_client = value
+        self._client_pid = os.getpid()
 
     def _discover_existing_containers(self):
         """Discover existing module containers and add them to tracking"""
@@ -178,7 +186,7 @@ class ContainerManager:
                     self._mark_installation_complete(container_name)
                     raise docker.errors.ImageNotFound(error_msg)
 
-                hf_cache_dir = os.path.expanduser("~/.cache/huggingface")
+                hf_cache_dir = os.getenv("HOST_HF_CACHE_DIR", os.path.expanduser("~/.cache/huggingface"))
                 os.makedirs(hf_cache_dir, exist_ok=True)
 
                 # Start new container
