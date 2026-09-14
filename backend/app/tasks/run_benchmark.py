@@ -126,67 +126,69 @@ if __name__ == '__main__':
             logger.info(f"Using existing container for module {module_name}")
             (temp_path / "runner.py").write_text(runner_script)
 
-            for file_name in os.listdir(temp_path):
-                file_path = temp_path / file_name
-                logger.info(f"Copying {file_name} into container...")
-
-                tar_stream = BytesIO()
-                with tarfile.open(fileobj=tar_stream, mode="w") as tar:
-                    tar.add(str(file_path), arcname=file_name)
-                tar_stream.seek(0)
-
-                container.put_archive("/app", tar_stream)
-            
             client = docker.from_env()
-            exec_instance = client.api.exec_create(
-                container.id, 
-                ["python3", "/app/runner.py"],
-                environment={"PYTHONUNBUFFERED": "1"}
-            )
-            output_stream = client.api.exec_start(exec_instance['Id'], stream=True)
-            
-            score = None
-            processed_rows = 0           
             try:
-                for chunk in output_stream:
-                    raw = chunk.decode("utf-8", errors="replace")
-                    for line in raw.splitlines():
-                        line = line.strip()
-                        if not line or "\r" in line or "%" in line or "it/s" in line:
-                            continue
-                        if line.startswith("PROGRESS:"):
-                            try:
-                                rows = int(line.replace("PROGRESS:", "").strip())
-                                processed_rows = rows
-                                if progress_callback:
-                                    progress_callback(rows)
-                            except ValueError:
-                                pass
-                        if "SCORE:" in line:
-                            try:
-                                score_part = line[line.find("SCORE:") + 6 :]
-                                score = float(score_part.strip())
-                            except ValueError:
-                                continue
-                        elif "ERROR:" in line or line.startswith("Traceback"):
-                            raise Exception(line.replace("ERROR:", "").strip())
+                active_container = client.containers.get(container.id)
 
-                exit_status = client.api.exec_inspect(exec_instance['Id'])['ExitCode']
-                if exit_status != 0:
-                    raise Exception(f"Benchmark run exited with code {exit_status}")
+                for file_name in os.listdir(temp_path):
+                    file_path = temp_path / file_name
+                    logger.info(f"Copying {file_name} into container...")
 
-            finally:
-                # Clean up copied files inside container to prevent bloat
-                try:
-                    cleanup_cmd = f"rm -f /app/runner.py /app/dataset.csv /app/privatized_dataset.csv /app/{module_stem}.py"
-                    client.api.exec_start(client.api.exec_create(container.id, ["sh", "-c", cleanup_cmd])['Id'])
-                except Exception as clean_err:
-                    logger.warning(f"Failed to clean container temp files: {clean_err}")
+                    tar_stream = BytesIO()
+                    with tarfile.open(fileobj=tar_stream, mode="w") as tar:
+                        tar.add(str(file_path), arcname=file_name)
+                    tar_stream.seek(0)
+
+                    active_container.put_archive("/app", tar_stream)
+
+                exec_instance = client.api.exec_create(
+                    active_container.id, 
+                    ["python3", "/app/runner.py"],
+                    environment={"PYTHONUNBUFFERED": "1"}
+                )
+                output_stream = client.api.exec_start(exec_instance['Id'], stream=True)
                 
-            return score
-    except Exception as e:
-        logger.error(f"Execution handling step failed: {e}")
-        raise
+                score = None
+                processed_rows = 0          
+                try:
+                    for chunk in output_stream:
+                        raw = chunk.decode("utf-8", errors="replace")
+                        for line in raw.splitlines():
+                            line = line.strip()
+                            if not line or "\r" in line or "%" in line or "it/s" in line:
+                                continue
+                            if line.startswith("PROGRESS:"):
+                                try:
+                                    rows = int(line.replace("PROGRESS:", "").strip())
+                                    processed_rows = rows
+                                    if progress_callback:
+                                        progress_callback(rows)
+                                except ValueError:
+                                    pass
+                            if "SCORE:" in line:
+                                try:
+                                    score_part = line[line.find("SCORE:") + 6 :]
+                                    score = float(score_part.strip())
+                                except ValueError:
+                                    continue
+                            elif "ERROR:" in line or line.startswith("Traceback"):
+                                raise Exception(line.replace("ERROR:", "").strip())
+
+                    exit_status = client.api.exec_inspect(exec_instance['Id'])['ExitCode']
+                    if exit_status != 0:
+                        raise Exception(f"Benchmark run exited with code {exit_status}")
+
+                finally:
+                    try:
+                        cleanup_cmd = f"rm -f /app/runner.py /app/dataset.csv /app/privatized_dataset.csv /app/{module_stem}.py"
+                        clean_exec = client.api.exec_create(active_container.id, ["sh", "-c", cleanup_cmd])
+                        client.api.exec_start(clean_exec['Id'])
+                    except Exception as clean_err:
+                        logger.warning(f"Failed to clean container temp files: {clean_err}")
+                    
+                return score
+            finally:
+                client.close()
 
 
 def wait_for_container_with_installation_check(
