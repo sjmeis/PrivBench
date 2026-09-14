@@ -43,6 +43,18 @@ class ContainerManager:
         self._installation_lock = threading.Lock()
         self._discover_existing_containers()
 
+    @property
+    def docker_client(self):
+        """Ensure each thread/process has a live, open Docker client socket."""
+        try:
+            if self._docker_client is not None:
+                self._docker_client.ping()
+                return self._docker_client
+        except Exception:
+            pass
+        self._docker_client = docker.from_env()
+        return self._docker_client
+
     def _discover_existing_containers(self):
         """Discover existing module containers and add them to tracking"""
         try:
@@ -122,9 +134,8 @@ class ContainerManager:
                         # Remove stopped container
                         container.remove(force=True)
                         del self.running_containers[container_name]
-                except docker.errors.NotFound:
-                    # Container was removed externally
-                    del self.running_containers[container_name]
+                except (docker.errors.NotFound, Exception):
+                    self.running_containers.pop(container_name, None)
 
             # Check for existing containers in Docker (not in our tracking)
             try:
@@ -170,17 +181,30 @@ class ContainerManager:
                     self._mark_installation_complete(container_name)
                     raise docker.errors.ImageNotFound(error_msg)
 
+                hf_cache_dir = os.path.expanduser("~/.cache/huggingface")
+                os.makedirs(hf_cache_dir, exist_ok=True)
+
                 # Start new container
                 container = self.docker_client.containers.run(
                     image=image_tag,
                     name=container_name,
                     command="sleep infinity",
                     working_dir="/app",
-                    environment={"PYTHONPATH": "/app", "PYTHONUNBUFFERED": "1", "NVIDIA_VISIBLE_DEVICES": "all"},
+                    environment={
+                        "PYTHONPATH": "/app",
+                        "PYTHONUNBUFFERED": "1",
+                        "NVIDIA_VISIBLE_DEVICES": "all",
+                        "HF_HOME": "/root/.cache/huggingface",
+                        "TRANSFORMERS_CACHE": "/root/.cache/huggingface",
+                        "HF_TOKEN": os.getenv("HF_TOKEN", ""),
+                    },
+                    volumes={
+                        hf_cache_dir: {"bind": "/root/.cache/huggingface", "mode": "rw"}
+                    },
                     device_requests=device_requests,
                     detach=True,
                     remove=False,
-                    network_mode="none",
+                    network_mode="bridge",
                     mem_limit=CONTAINER_MEM_LIMIT,
                     nano_cpus=CONTAINER_CPUS,
                     pids_limit=CONTAINER_PIDS_LIMIT
@@ -220,11 +244,9 @@ class ContainerManager:
                 if container.status == "running":
                     return container
                 else:
-                    # Container stopped, remove from our tracking
-                    del self.running_containers[container_name]
-            except docker.errors.NotFound:
-                # Container was removed externally
-                del self.running_containers[container_name]
+                    self.running_containers.pop(container_name, None)
+            except Exception:
+                self.running_containers.pop(container_name, None)
 
         # If not in our tracking, check Docker directly
         try:
