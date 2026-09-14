@@ -39,6 +39,7 @@ class ContainerManager:
     def __init__(self):
         self.docker_client = None
         self._client_pid = None
+        self._discovered_pids = set()
         self.running_containers = {}
         self.installing_containers = set()  # Track containers being installed
         self._installation_lock = threading.Lock()
