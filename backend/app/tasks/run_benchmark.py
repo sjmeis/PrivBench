@@ -189,6 +189,10 @@ if __name__ == '__main__':
                 return score
             finally:
                 client.close()
+                
+    except Exception as e:
+        logger.error(f"Execution handling step failed: {e}")
+        raise
 
 
 def wait_for_container_with_installation_check(
