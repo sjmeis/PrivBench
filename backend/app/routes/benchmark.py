@@ -32,11 +32,10 @@ from ..models import (
     ModuleUpdate,
 )
 from ..enums import SubmissionStatus
-from datetime import datetime
+from datetime import datetime, timedelta
 from ..utils.email_sender import send_email
 from ..utils.version_utils import get_significant_version, is_version_greater
 from celery.utils.log import get_task_logger
-from datetime import datetime
 from ..config import Config
 
 logger = get_task_logger(__name__)
@@ -177,7 +176,7 @@ def benchmark():
 
         # Enforce rolling 24-hour submission limit
         daily_limit = user.daily_submission_limit if user.daily_submission_limit is not None else 5
-        twenty_four_hours_ago = datetime.utcnow() - datetime.timedelta(hours=24)
+        twenty_four_hours_ago = datetime.utcnow() - timedelta(hours=24)
         
         recent_submissions_count = (
             db.session.query(Submission)
