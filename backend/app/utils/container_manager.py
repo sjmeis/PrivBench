@@ -46,13 +46,10 @@ class ContainerManager:
     @property
     def docker_client(self):
         """Ensure each thread/process has a live, open Docker client socket."""
-        try:
-            if self._docker_client is not None:
-                self._docker_client.ping()
-                return self._docker_client
-        except Exception:
-            pass
-        self._docker_client = docker.from_env()
+        current_pid = os.getpid()
+        if self._docker_client is None or self._client_pid != current_pid:
+            self._docker_client = docker.from_env()
+            self._client_pid = current_pid
         return self._docker_client
 
     def _discover_existing_containers(self):
@@ -205,6 +202,7 @@ class ContainerManager:
                     detach=True,
                     remove=False,
                     network_mode="bridge",
+                    dns=["8.8.8.8", "1.1.1.1"],
                     mem_limit=CONTAINER_MEM_LIMIT,
                     nano_cpus=CONTAINER_CPUS,
                     pids_limit=CONTAINER_PIDS_LIMIT
