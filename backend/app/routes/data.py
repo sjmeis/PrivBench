@@ -227,7 +227,7 @@ def upload_privatized_dataset():
             return jsonify({"error": "Invalid file format: HTML/Script content detected."}), 400
 
         # Stream-parse uploaded CSV in memory without redundant large string copies
-        stream = io.StringIO(file.stream.read().decode("utf-8", errors="replace"), newline=None)
+        stream = io.StringIO(raw_bytes.decode("utf-8", errors="replace"), newline=None)
         csv_reader = csv.reader(stream)
         
         uploaded_header = next(csv_reader, None)
