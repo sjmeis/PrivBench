@@ -133,16 +133,27 @@ On the public website, we clearly state our Privacy Policy and Terms of Service,
 For details please review the Privacy Policy and Terms of Service links found in the footer of the live web application at [privbench.com](https://privbench.com).
 
 ## Reference
-For details about the background, construction, and deployment of PrivBench, check out our EMNLP 2026 System Demonstrations paper (currently a preprint). We would appreciate a citation if you find our work useful!
+For details about the background, construction, and deployment of PrivBench, check out our EMNLP 2026 System Demonstrations paper. We would appreciate a citation if you find our work useful! Stay tuned for more...
 
 ```
-@misc{meisenbacher2026privbenchholisticmodularbenchmarking,
-      title={PrivBench: A Holistic and Modular Benchmarking Platform for Evaluating Text-to-Text Privatization}, 
-      author={Stephen Meisenbacher and Andreea-Elena Bodea and Ahmet Bilal Akın and Alexandra Klymenko and Jana Diesner and Florian Matthes},
-      year={2026},
-      eprint={2608.29624},
-      archivePrefix={arXiv},
-      primaryClass={cs.CL},
-      url={https://arxiv.org/abs/2608.29624}, 
+@inproceedings{meisenbacher-etal-2026-privbench,
+    title = "{P}riv{B}ench: A Holistic and Modular Benchmarking Platform for Evaluating Text-to-Text Privatization",
+    author = "Meisenbacher, Stephen  and
+      Bodea, Andreea-Elena  and
+      Akin, Ahmet Bilal  and
+      Klymenko, Alexandra  and
+      Diesner, Jana  and
+      Matthes, Florian",
+    editor = "Agrawal, Sweta  and
+      Abad, Alberto",
+    booktitle = "Proceedings of the 2026 Conference on Empirical Methods in Natural Language Processing: System Demonstrations",
+    month = oct,
+    year = "2026",
+    address = "Budapest, Hungary",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2026.emnlp-demos.39/",
+    doi = "10.18653/2026.emnlp-demos.39",
+    pages = "391--413",
+    ISBN = "979-8-89176-461-3"
 }
 ```
